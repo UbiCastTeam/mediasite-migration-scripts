@@ -48,4 +48,4 @@ Step 2/5 : RUN apt update && apt install -y         python3-coverage         pyt
 Types of videos : {'mono': '11%', 'mono + slides': '88%', 'multiple': '1%'}
 ```
 
-Script will take a while (~ 5 minutes minutes per 1000 media), and global stats will be printed on your terminal. Also, some of the collected metadata are stored in json files in the root folder (presentations_folders.json and composition_videos.json).
+Script will take a while (~ 5 minutes per 1000 media), and global stats will be printed on your terminal. Also, some of the collected metadata are stored in json files in the root folder (data.json mostly).
