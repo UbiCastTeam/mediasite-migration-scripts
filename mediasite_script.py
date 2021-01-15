@@ -107,7 +107,7 @@ if __name__ == "__main__":
                 presentation['videos'] = get_videos_infos(presentation)
                 presentation['slides'] = get_slides_infos(presentation)
             presentations_folders.append({**folder,
-                                          'path': find_folder_path(folder['id']),
+                                          'path': find_folder_path(folder['id'], folders),
                                           'presentations': presentations})
 
             i += 1
@@ -127,6 +127,7 @@ if __name__ == "__main__":
             for file in video['value']:
                 content_server = mediasite.presentation.get_content_server(file['ContentServerId'])
                 if 'DistributionUrl' in content_server:
+                    # popping odata query params, we just need the route
                     splitted_url = content_server['DistributionUrl'].split('/')
                     splitted_url.pop()
                     storage_url = '/'.join(splitted_url)
@@ -289,7 +290,7 @@ if __name__ == "__main__":
                 videos_infos.append(prez)
         videos_formats_stats = compute_videos_stats(videos_infos)
         videos_type_stats = compute_global_stats(videos_infos)
-        print(f'Formats : {videos_formats_stats}', f'Type of video : {videos_type_stats}', sep='\n')
+        print(f'Formats : {videos_formats_stats}', f'Types of videos : {videos_type_stats}', sep='\n')
 
         # Videos ISM
         try:
