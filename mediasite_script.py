@@ -84,53 +84,58 @@ if __name__ == "__main__":
     mediasite = mediasite_controller.controller(config_data)
     presentations_length = mediasite.presentation.get_number_of_presentations()
     api_url = config_data['mediasite_base_url']
-    splited_url = api_url.split('/')
-    host_url = splited_url[0] + '//' + splited_url[2]
     iterations = 0
 
-    def get_videos_infos(presentations_folders, stats=False):
-        logging.info("Gathering all videos infos")
+    def order_presentations_by_folder(folders, parent_id=None):
+        """
+        Create a list of all folders in association with their presentations
+
+        returns:
+            list ot items containing folder ID, parent folder ID, name, and
+                list of his presentations containing ID, title and owner
+        """
+        logging.info('Gathering and ordering all presentations infos ')
+        if not parent_id:
+            parent_id = mediasite.folder.root_folder_id
 
         i = 0
-        videos_infos = []
-        for folder in presentations_folders:
+        presentations_folders = []
+        for folder in folders:
             print('Requesting: ', f'{i} / {len(folders)} folders', end='\r', flush=True)
-            for presentation in folder['presentations']:
-                video = mediasite.presentation.get_presentation_content(presentation['id'], 'OnDemandContent')
-                videos_infos.append({
-                    'presentation_id': presentation['id'],
-                    'presentation_title': presentation['title'],
-                    'folder': find_folder_path(folder['id'], presentations_folders),
-                    'videos': get_video_detail(video)
-                })
+            presentations = mediasite.folder.get_folder_presentations(folder['id'])
+            for presentation in presentations:
+                presentation['videos'] = get_videos_infos(presentation)
+                presentation['slides'] = get_slides_infos(presentation)
+            presentations_folders.append({**folder,
+                                          'path': find_folder_path(folder['id']),
+                                          'presentations': presentations})
+
             i += 1
+        return presentations_folders
+
+    def get_videos_infos(presentation):
+        logging.debug(f"Gathering video info for presentation : {presentation['id']}")
+
+        videos_infos = []
+        video = mediasite.presentation.get_presentation_content(presentation['id'], 'OnDemandContent')
+        videos_infos = get_video_detail(video)
         return videos_infos
 
-        global presentations_length
-        if stats:
-            video_count = {}
-            for video in videos_infos:
-                for video_format in video['video_formats']:
-                    if video_format in video_count:
-                        video_count[video_format] += 1
-                    else:
-                        video_count[video_format] = 1
-            stats = {}
-            for video_format, count in video_count.items():
-                stats[video_format] = str(round(count / presentations_length * 100)) + '%'
-
-            print(stats)
-
     def get_video_detail(video):
-        global host_url
-        videos_dir = f'{host_url}/MediasiteDeliver/MP4Video/'
         video_list = []
         if video:
             for file in video['value']:
-                file_name = file['FileNameWithExtension']
-                video_url = os.path.join(videos_dir, file_name) if (file_name) else None
-                file_infos = {'format': file['ContentMimeType'], 'url': video_url}
+                content_server = mediasite.presentation.get_content_server(file['ContentServerId'])
+                if 'DistributionUrl' in content_server:
+                    splitted_url = content_server['DistributionUrl'].split('/')
+                    splitted_url.pop()
+                    storage_url = '/'.join(splitted_url)
+                else:
+                    storage_url = None
 
+                file_name = file['FileNameWithExtension']
+                video_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
+                file_infos = {'format': file['ContentMimeType'], 'url': video_url}
                 stream = file['StreamType']
                 in_list = False
                 for v in video_list:
@@ -142,9 +147,9 @@ if __name__ == "__main__":
                                        'files': [file_infos]})
         return video_list
 
-    def compute_videos_stats(videos_infos):
+    def compute_videos_stats(presentations):
         count = {}
-        for video in videos_infos:
+        for video in presentations:
             video_format = find_best_format(video)
             if video_format in count:
                 count[video_format] += 1
@@ -153,7 +158,21 @@ if __name__ == "__main__":
 
         stats = {}
         for v_format, v_count in count.items():
-            stats[v_format] = str(round((v_count / len(videos_infos)) * 100)) + '%'
+            stats[v_format] = str(round((v_count / len(presentations)) * 100)) + '%'
+        return stats
+
+    def compute_global_stats(presentations):
+        stats = {'mono': 0, 'mono + slides': 0, 'multiple': 0}
+        for presentation in presentations:
+            if is_video_composition(presentation):
+                stats['multiple'] += 1
+            elif len(presentation['slides']) > 0:
+                stats['mono + slides'] += 1
+            else:
+                stats['mono'] += 1
+        for stat, count in stats.items():
+            stats[stat] = str(round((count / len(presentations) * 100))) + '%'
+
         return stats
 
     def find_best_format(video):
@@ -173,21 +192,31 @@ if __name__ == "__main__":
     def is_video_composition(presentation_videos):
         return len(presentation_videos['videos']) > 1
 
-    def get_slides_infos(slides):
-        global splited_url
-        site_url = splited_url[0] + '//' + splited_url[2] + splited_url[3]
+    def get_slides_infos(presentation, details=False):
+        logging.debug(f"Gathering slides infos for presentation: {presentation['id']}")
+
         slides_infos = {}
-        if slides:
-            content_server_id = slides.get('ContentServerId')
-            presentation_id = slides.get('ParentResourceId')
-            slides_dir = f"[{site_url}]/FileServer/{content_server_id}/Presentation/{presentation_id}"
-            slides_urls = []
-            for i in range(int(slides['Length']) + 1):
-                #fill into 4 digits
-                link = f'{slides_dir}/slide_{i+1:04}.jpg'
-                slides_urls.append(link)
-            slides_infos['urls'] = slides_urls
-            slides_infos['details'] = slides['SlideDetails']
+        option = 'SlideDetailsContent' if details else 'SlideContent'
+        slides_result = mediasite.presentation.get_presentation_content(presentation['id'], option)
+        if slides_result:
+            for slides in slides_result['value']:
+                content_server_id = slides['ContentServerId']
+                content_server = mediasite.presentation.get_content_server(content_server_id, slide=True)
+                content_server_url = content_server['Url']
+                presentation_id = slides['ParentResourceId']
+
+                slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
+                slides_urls = []
+                slides_files_names = slides['FileNameWithExtension']
+                for i in range(int(slides['Length'])):
+                    # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
+                    file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
+                    link = f'{slides_base_url}/{file_name}'
+                    slides_urls.append(link)
+
+                slides_infos['urls'] = slides_urls
+                slides_infos['details'] = slides['SlideDetails'] if details else None
+
         return slides_infos
 
     def find_folder_path(folder_id, folders, path=''):
@@ -237,27 +266,6 @@ if __name__ == "__main__":
                 folder_tree.append(child_folders)
         return folder_tree
 
-    def order_presentations_by_folder(folders, parent_id=None):
-        """
-        Create a list of all folders in association with their presentations
-
-        returns:
-            list ot items containing folder ID, parent folder ID, name, and
-                list of his presentations containing ID, title and owner
-        """
-        logging.info('Creating presentations by folders listing')
-        if not parent_id:
-            parent_id = mediasite.folder.root_folder_id
-
-        i = 0
-        presentations_folders = []
-        for folder in folders:
-            print('Requesting: ', f'{i} / {len(folders)} folders', end='\r', flush=True)
-            presentations_folders.append({**folder,
-                                          'presentations': mediasite.folder.get_folder_presentations(folder['id'])})
-            i += 1
-        return presentations_folders
-
     # ------------------------------- Script
 
     test_dir = 'tests/data'
@@ -265,38 +273,30 @@ if __name__ == "__main__":
 
     # Listing folders with their presentations
     try:
-        with open('presentations_folders.json') as f:
-            presentations_folders = json.load(f)
-        if type(presentations_folders) is not list:
-            raise FileNotFoundError
-    except FileNotFoundError:
-        with open('presentations_folders.json', 'w') as f:
-            presentations_folders = order_presentations_by_folder(folders)
-            json.dump(presentations_folders, f)
+        with open('data.json') as f:
+            data = json.load(f)
+    except Exception as e:
+        logging.debug(e)
+        with open('data.json', 'w') as f:
+            data = order_presentations_by_folder(folders)
+            json.dump(data, f)
 
-    # All videos infos
-    try:
-        with open('videos.json') as f:
-            videos_infos = json.load(f)
-        if type(videos_infos) is not list:
-            raise FileNotFoundError
-    except FileNotFoundError:
-        with open('videos.json', 'w') as f:
-            videos_infos = get_videos_infos(presentations_folders)
-            json.dump(videos_infos, f)
-
-    # Specific videos
+    # Stats
     if options.stats:
-        videos_stats = compute_videos_stats(videos_infos)
-        print(videos_stats)
+        videos_infos = []
+        for folder in data:
+            for prez in folder['presentations']:
+                videos_infos.append(prez)
+        videos_formats_stats = compute_videos_stats(videos_infos)
+        videos_type_stats = compute_global_stats(videos_infos)
+        print(f'Formats : {videos_formats_stats}', f'Type of video : {videos_type_stats}', sep='\n')
 
         # Videos ISM
         try:
             with open('videos_ism.json') as f:
                 videos_ism = json.load(f)
-            if type(videos_ism) is not list:
-                raise FileNotFoundError
-        except FileNotFoundError:
+        except Exception as e:
+            logging.debug(e)
             videos_ism = []
             for video in videos_infos:
                 videos_ism.append(video) if is_only_ism(video) else None
@@ -307,9 +307,8 @@ if __name__ == "__main__":
         try:
             with open('composition_videos.json') as f:
                 composition_videos = json.load(f)
-            if type(composition_videos) is not list:
-                raise FileNotFoundError
-        except FileNotFoundError:
+        except Exception as e:
+            logging.debug(e)
             composition_videos = []
             for video in videos_infos:
                 composition_videos.append(video) if is_video_composition(video) else None

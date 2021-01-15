@@ -7,6 +7,16 @@ script: build
 		--rm mediasite \
 		python3 mediasite_script.py
 
+script_dev: build
+ifeq ($(is_build),)
+	make build
+endif
+	docker run -it \
+		-v ${CURDIR}:/src \
+		-w /src \
+		--rm mediasite \
+		python3 mediasite_script.py --info
+
 script_verbose: build
 	docker run -it \
 		-v ${CURDIR}:/src \
