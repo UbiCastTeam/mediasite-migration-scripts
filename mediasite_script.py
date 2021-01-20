@@ -270,7 +270,10 @@ if __name__ == "__main__":
     # ------------------------------- Script
 
     test_dir = 'tests/data'
-    folders = mediasite.folder.get_all_folders()
+    if not os.path.isfile('data.json'):
+        folders = mediasite.folder.get_all_folders()
+    else:
+        print('data.json already found, not fetching catalog data')
 
     # Listing folders with their presentations
     try:
