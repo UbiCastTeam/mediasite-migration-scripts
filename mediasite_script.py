@@ -101,15 +101,15 @@ if __name__ == "__main__":
         i = 0
         presentations_folders = []
         for folder in folders:
-            print('Requesting: ', f'{i} / {len(folders)} folders', end='\r', flush=True)
+            print('Requesting: ', round(i / len(folders) * 100, 1), '%', end='\r', flush=True)
             presentations = mediasite.folder.get_folder_presentations(folder['id'])
+
             for presentation in presentations:
                 presentation['videos'] = get_videos_infos(presentation)
                 presentation['slides'] = get_slides_infos(presentation)
             presentations_folders.append({**folder,
                                           'path': find_folder_path(folder['id'], folders),
                                           'presentations': presentations})
-
             i += 1
         return presentations_folders
 
@@ -238,6 +238,20 @@ if __name__ == "__main__":
                 return path
         return ''
 
+    def find_presentations_not_in_folder(presentations, presentations_folders):
+        presentations_not_in_folders = list()
+        for prez in presentations:
+            found = False
+            i = 0
+            while not found and i < len(presentations_folders):
+                if prez['id'] == presentations_folders[i]['id']:
+                    found = True
+                i += 1
+            if not found:
+                presentations_not_in_folders.append(prez)
+
+        return presentations_not_in_folders
+
     def make_data_structure(folders, parent_id=None, i=0):
         """
         Construct recursively a data representation of the folder-tree structure of Mediasite folders
@@ -270,20 +284,44 @@ if __name__ == "__main__":
     # ------------------------------- Script
 
     test_dir = 'tests/data'
-    if not os.path.isfile('data.json'):
-        folders = mediasite.folder.get_all_folders()
-    else:
-        print('data.json already found, not fetching catalog data')
+
+    # Listing all presentations
+    try:
+        with open('presentations.json') as f:
+            presentations = json.load(f)
+    except Exception as e:
+        logging.debug(e)
+        with open('presentations.json', 'w') as f:
+            presentations = mediasite.presentation.get_all_presentations()
+            json.dump(presentations, f)
 
     # Listing folders with their presentations
     try:
         with open('data.json') as f:
             data = json.load(f)
+            logging.info('data.json already found, not fetching catalog data')
     except Exception as e:
         logging.debug(e)
+        folders = mediasite.folder.get_all_folders()
         with open('data.json', 'w') as f:
             data = order_presentations_by_folder(folders)
             json.dump(data, f)
+
+    # Listing presentations that are not referenced in folders
+    presentations_not_in_folders = list()
+    try:
+        with open('presentations_not_in_folders.json') as f:
+            presentations_not_in_folders = json.load(f)
+    except Exception as e:
+        logging.debug(e)
+        with open('presentations_not_in_folders.json', 'w') as f:
+            presentations_in_folders = []
+            for folder in data:
+                for prez in folder['presentations']:
+                    presentations_in_folders.append(prez)
+
+            presentations_not_in_folders = find_presentations_not_in_folder(presentations, presentations_in_folders)
+            json.dump(presentations_not_in_folders, f)
 
     # Stats
     if options.stats:
