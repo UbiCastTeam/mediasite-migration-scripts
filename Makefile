@@ -20,12 +20,12 @@ script_verbose: build
 		--rm mediasite \
 		python3 mediasite_script.py --verbose
 
-script_investigate:
+script_doctor:
 	docker run -it \
 			-v ${CURDIR}:/src \
 			-w /src \
 			--rm mediasite \
-			python3 mediasite_script.py --investigate
+			python3 mediasite_script.py --doctor
 
 stats: build
 	docker run -it \
