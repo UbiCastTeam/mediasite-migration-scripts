@@ -288,14 +288,6 @@ if __name__ == "__main__":
                 folder_tree.append(child_folders)
         return folder_tree
 
-    def check_whitelisting(folders):
-        global folders_whitelist
-        for folder in folders:
-            for fw in folders_whitelist:
-                if not folder['path'].find(fw):
-                    return False
-        return True
-
     # ------------------------------- Script
 
     test_dir = 'tests/data'

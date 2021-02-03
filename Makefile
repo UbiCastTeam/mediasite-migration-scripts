@@ -1,5 +1,6 @@
 build:
 	docker build -t mediasite -f Dockerfile .
+	# export PYTHONPATH=${shell echo $PYTHONPATH}:/src/
 
 script: build
 	docker run -it \
@@ -20,7 +21,7 @@ script_verbose: build
 		--rm mediasite \
 		python3 mediasite_script.py --verbose
 
-script_doctor:
+script_doctor: build
 	docker run -it \
 			-v ${CURDIR}:/src \
 			-w /src \
@@ -33,7 +34,7 @@ stats: build
 		--rm mediasite \
 		python3 mediasite_script.py --stats
 
-shell: build
+bash: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
