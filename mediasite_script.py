@@ -23,6 +23,9 @@ if __name__ == "__main__":
         parser.add_argument('-i', '--info', action='store_true',
                             dest='info', default=False,
                             help='print more status messages to stdout.')
+        parser.add_argument('-D', '--doctor', action='store_true',
+                            dest='doctor', default=False,
+                            help='check what presentations have not been acounted')
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=False,
                             help='print all status messages to stdout.')
@@ -84,6 +87,7 @@ if __name__ == "__main__":
     mediasite = mediasite_controller.controller(config_data)
     presentations_length = mediasite.presentation.get_number_of_presentations()
     api_url = config_data['mediasite_base_url']
+    folders_whitelist = ['Presentations II', 'Mediasite Users']
     iterations = 0
 
     def order_presentations_by_folder(folders, parent_id=None):
@@ -95,21 +99,26 @@ if __name__ == "__main__":
                 list of his presentations containing ID, title and owner
         """
         logging.info('Gathering and ordering all presentations infos ')
+
         if not parent_id:
             parent_id = mediasite.folder.root_folder_id
 
+        global folders_whitelist
         i = 0
         presentations_folders = []
         for folder in folders:
-            print('Requesting: ', f'{i} / {len(folders)} folders', end='\r', flush=True)
-            presentations = mediasite.folder.get_folder_presentations(folder['id'])
-            for presentation in presentations:
-                presentation['videos'] = get_videos_infos(presentation)
-                presentation['slides'] = get_slides_infos(presentation)
-            presentations_folders.append({**folder,
-                                          'path': find_folder_path(folder['id'], folders),
-                                          'presentations': presentations})
-
+            print('Requesting: ', round(i / len(folders) * 100, 1), '%', end='\r', flush=True)
+            path = find_folder_path(folder['id'], folders)
+            for fw in folders_whitelist:
+                if path.find(fw):
+                    logging.debug('Found folder : ' + path)
+                    presentations = mediasite.folder.get_folder_presentations(folder['id'])
+                    for presentation in presentations:
+                        presentation['videos'] = get_videos_infos(presentation)
+                        presentation['slides'] = get_slides_infos(presentation)
+                    presentations_folders.append({**folder,
+                                                  'path': path,
+                                                  'presentations': presentations})
             i += 1
         return presentations_folders
 
@@ -238,6 +247,18 @@ if __name__ == "__main__":
                 return path
         return ''
 
+    def find_presentations_not_in_folder(presentations, folders_presentations):
+        not_in_folders = list()
+        for index, presentation in enumerate(presentations):
+            found = False
+            for folder_presentation in folders_presentations:
+                if presentation['id'] == folder_presentation['id']:
+                    found = True
+                    break
+            if not found:
+                not_in_folders.append(presentation)
+        return not_in_folders
+
     def make_data_structure(folders, parent_id=None, i=0):
         """
         Construct recursively a data representation of the folder-tree structure of Mediasite folders
@@ -267,23 +288,61 @@ if __name__ == "__main__":
                 folder_tree.append(child_folders)
         return folder_tree
 
+    def check_whitelisting(folders):
+        global folders_whitelist
+        for folder in folders:
+            for fw in folders_whitelist:
+                if not folder['path'].find(fw):
+                    return False
+        return True
+
     # ------------------------------- Script
 
     test_dir = 'tests/data'
-    if not os.path.isfile('data.json'):
-        folders = mediasite.folder.get_all_folders()
-    else:
-        print('data.json already found, not fetching catalog data')
 
     # Listing folders with their presentations
     try:
         with open('data.json') as f:
             data = json.load(f)
+            logging.info('data.json already found, not fetching catalog data')
     except Exception as e:
         logging.debug(e)
+        folders = mediasite.folder.get_all_folders()
+        data = order_presentations_by_folder(folders)
         with open('data.json', 'w') as f:
-            data = order_presentations_by_folder(folders)
             json.dump(data, f)
+
+    if options.doctor:
+        # Listing all presentations
+        try:
+            with open('presentations.json') as f:
+                presentations = json.load(f)
+        except Exception as e:
+            logging.debug(e)
+            presentations = mediasite.presentation.get_all_presentations()
+            with open('presentations.json', 'w') as f:
+                json.dump(presentations, f)
+
+        # Listing presentations that are not referenced in folders
+        presentations_in_folders = []
+        for folder in data:
+            for prez in folder['presentations']:
+                presentations_in_folders.append(prez)
+
+        presentations_not_in_folders = list()
+        try:
+            with open('presentations_not_in_folders.json') as f:
+                presentations_not_in_folders = json.load(f)
+        except Exception as e:
+            logging.debug(e)
+            presentations_not_in_folders = find_presentations_not_in_folder(presentations, presentations_in_folders)
+            with open('presentations_not_in_folders.json', 'w') as f:
+                json.dump(presentations_not_in_folders, f)
+
+        print('All presentations: ', len(presentations))
+        print('Presentations in folders: ', len(presentations_in_folders))
+        print(f'Presentations not acounted : {len(presentations_not_in_folders)}. Check on presentations_not_in_folder.json for more infos.')
+        print('Check whitelisting :', check_whitelisting(data))
 
     # Stats
     if options.stats:
