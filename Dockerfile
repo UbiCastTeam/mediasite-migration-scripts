@@ -14,4 +14,4 @@ COPY requirements-pip.txt /src
 
 RUN pip3 install -r requirements-pip.txt
 
-ENV PYTHONPATH "${PYTHONPATH}/src"
+ENV PYTHONPATH "/src/mediasite_migration_scripts:${PYTHONPATH}"
