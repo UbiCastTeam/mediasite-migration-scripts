@@ -12,8 +12,9 @@ from assets.mediasite import controller as mediasite_controller
 
 
 class MediasiteSetup():
-    def __init__(self):
-        self.config = self.setup()
+    def __init__(self, config_data=None):
+        extra_data = config_data if config_data else {}
+        self.config = self.setup(extra_data)
         self.mediasite = mediasite_controller.controller(self.config)
 
     def setup(self, config_extra={}):
@@ -23,14 +24,15 @@ class MediasiteSetup():
                 "mediasite_api_secret": config('MEDIASITE_API_KEY'),
                 "mediasite_api_user": config('MEDIASITE_API_USER'),
                 "mediasite_api_pass": config('MEDIASITE_API_PASSWORD'),
-                'mediasite_folders_whitelist': config_extra.get('MEDIASITE_FOLDERS_WHITELIST')
+                'mediasite_folders_whitelist': config_extra.get('whitelist')
             }
 
         except KeyError:
             logging.error('No environment file')
         return config_data
 
-    def set_logger(self, options):
+    @staticmethod
+    def set_logger(options):
         run_path = os.path.dirname(os.path.realpath(__file__))
 
         # params

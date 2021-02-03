@@ -1,6 +1,11 @@
 from argparse import RawTextHelpFormatter
 import argparse
-from mediasite_migration_scripts.metadata_extractor import MetadataExtractor
+import os
+import json
+import logging
+
+from metadata_extractor import MetadataExtractor
+from lib.utils import MediasiteSetup
 
 if __name__ == '__main__':
 
@@ -29,8 +34,16 @@ if __name__ == '__main__':
     options = manage_opts()
 
     #--------------------------- Script
+    try:
+        with open('config.json') as js:
+            config_data = json.load(js)
+    except Exception as e:
+        logging.debug(e)
+        config_data = None
 
-    extractor = Metad
+    extractor = MetadataExtractor(config_data)
+    logger = MediasiteSetup.set_logger(options)
+
     # Listing folders with their presentations
     try:
         with open('data.json') as f:
@@ -38,9 +51,9 @@ if __name__ == '__main__':
             logging.info('data.json already found, not fetching catalog data')
     except Exception as e:
         logging.debug(e)
-        folders = mediasite.folder.get_all_folders()
+        folders = extractor.get_all_folders()
         with open('data.json', 'w') as f:
-            data = order_presentations_by_folder(folders)
+            data = extractor.order_presentations_by_folder(folders)
             json.dump(data, f)
 
     if options.investigate:
@@ -51,7 +64,7 @@ if __name__ == '__main__':
         except Exception as e:
             logging.debug(e)
             with open('presentations.json', 'w') as f:
-                presentations = mediasite.presentation.get_all_presentations()
+                presentations = extractor.mediasite.presentation.get_all_presentations()
                 json.dump(presentations, f)
 
         # Listing presentations that are not referenced in folders
@@ -67,7 +80,7 @@ if __name__ == '__main__':
                     for prez in folder['presentations']:
                         presentations_in_folders.append(prez)
 
-                presentations_not_in_folders = find_presentations_not_in_folder(presentations, presentations_in_folders)
+                presentations_not_in_folders = extractor.find_presentations_not_in_folder(presentations, presentations_in_folders)
                 json.dump(presentations_not_in_folders, f)
 
         print(f'Presentations not accounted : {len(presentations_not_in_folders)}. Check on presentations_not_in_folder.json for more infos.')

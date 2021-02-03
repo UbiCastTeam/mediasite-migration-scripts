@@ -1,6 +1,11 @@
 build:
 	docker build -t mediasite -f Dockerfile .
-	# export PYTHONPATH=${shell echo $PYTHONPATH}:/src/
+
+doctor: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/metadata_extract.py --info
 
 script: build
 	docker run -it \

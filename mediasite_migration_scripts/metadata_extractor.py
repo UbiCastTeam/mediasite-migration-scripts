@@ -1,14 +1,13 @@
 import os
 import logging
-from mediasite_migration_scripts.lib.utils import MediasiteSetup
+from lib.utils import MediasiteSetup
 
 
 class MetadataExtractor():
 
-    def __init__(self):
-        self.setup = MediasiteSetup()
+    def __init__(self, config_file=None):
+        self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
-        self.folders_whitelist = self.setup['mediasite_folders_whitelist']
 
     def order_presentations_by_folder(self, folders, parent_id=None):
         """
@@ -35,14 +34,14 @@ class MetadataExtractor():
                     presentation['videos'] = self.get_videos_infos(presentation)
                     presentation['slides'] = self.get_slides_infos(presentation)
                 presentations_folders.append({**folder,
-                                                'path': path,
-                                                'presentations': presentations})
+                                              'path': path,
+                                              'presentations': presentations})
             i += 1
         return presentations_folders
 
     def is_folder_to_add(self, path):
-        if self.folders_whitelist:
-            for fw in self.folders_whitelist:
+        if self.setup.config['mediasite_folders_whitelist']:
+            for fw in self.setup.config['mediasite_folders_whitelist']:
                 if path.find(fw):
                     return True
             return False
@@ -110,6 +109,9 @@ class MetadataExtractor():
 
         return slides_infos
 
+    def get_all_folders(self):
+        return self.mediasite.folder.get_all_folders()
+
     def find_folder_path(self, folder_id, folders, path=''):
         """
         Provide the folder's path delimited by '/'
@@ -141,12 +143,3 @@ class MetadataExtractor():
                 presentations_not_in_folders.append(prez)
 
         return presentations_not_in_folders
-
-        def check_whitelisting(self, folders):
-            global folders_whitelist
-            for folder in folders:
-                for fw in folders_whitelist:
-                    if not folder['path'].find(fw):
-                        return False
-            return True
-

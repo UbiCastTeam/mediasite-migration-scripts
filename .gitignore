@@ -130,6 +130,7 @@ dmypy.json
 # MediaServer client
 *.json
 tests/content/
+config.json.backup
 
 # VS Code
 .vscode
