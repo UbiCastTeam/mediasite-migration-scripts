@@ -338,10 +338,7 @@ if __name__ == "__main__":
 
     # Stats
     if options.stats:
-        videos_infos = []
-        for folder in data:
-            for prez in folder['presentations']:
-                videos_infos.append(prez)
+
         videos_formats_stats = compute_videos_stats(videos_infos)
         videos_type_stats = compute_global_stats(videos_infos)
         print(f'Formats : {videos_formats_stats}', f'Types of videos : {videos_type_stats}', sep='\n')

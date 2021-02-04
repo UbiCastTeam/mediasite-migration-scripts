@@ -17,7 +17,6 @@ with_mp4 = list()
 more_than_one_presentation = list()
 exactly_one_presentation = list()
 mp4_urls = list()
-downloadable_mp4 = list()
 
 for folder in folders:
     if folder['presentations']:
@@ -48,18 +47,3 @@ for folder in folders:
 print(f'{len(empty_folders)} folders have no presentation inside {len(empty_user_folders)} user folders)')
 print(f'{len(no_mp4)} videos without mp4 vs {len(with_mp4)} with mp4')
 
-status_codes = dict()
-print(f'Counting downloadable mp4s (among {len(mp4_urls)} urls)')
-with requests.Session() as s:
-    for index, u in enumerate(mp4_urls):
-        print(f'[{index + 1}]/[{len(mp4_urls)}]', end='\r')
-        check = s.head(f['url'])
-        code = str(check.status_code)
-        if not status_codes.get(code):
-            status_codes[code] = 0
-        status_codes[code] += 1
-
-        if check.ok:
-            downloadable_mp4.append(f['url'])
-
-print(f'{len(downloadable_mp4)} downloadable mp4s, status codes: {status_codes}')

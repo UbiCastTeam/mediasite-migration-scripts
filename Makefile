@@ -1,55 +1,53 @@
 build:
 	docker build -t mediasite -f Dockerfile .
 
-doctor: build
-	docker run -it \
-		-v ${CURDIR}:/src \
-		--rm mediasite \
-		python3 bin/metadata_extract.py --info
-
-script: build
-	docker run -it \
-		-v ${CURDIR}:/src \
-		--rm mediasite \
-		python3 mediasite_script.py
-
-script_dev: build
-	docker run -it \
-		-v ${CURDIR}:/src \
-		-w /src \
-		--rm mediasite \
-		python3 mediasite_script.py --info
-
-script_verbose: build
-	docker run -it \
-		-v ${CURDIR}:/src \
-		--rm mediasite \
-		python3 mediasite_script.py --verbose
-
-script_doctor: build
-	docker run -it \
-			-v ${CURDIR}:/src \
-			-w /src \
-			--rm mediasite \
-			python3 mediasite_script.py --doctor
-
-stats: build
-	docker run -it \
-		-v ${CURDIR}:/src \
-		--rm mediasite \
-		python3 mediasite_script.py --stats
-
 bash: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		/bin/bash
 
-local_script:
-	python3 mediasite_script.py --info
+import_data: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/import_data.py
 
-local_script_verbose:
-	python3 mediasite_script.py --verbose
+import_data_dev: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/import_data.py --info
 
-local_stats:
-	python3 mediasite_script.py --stats
+import_data_verbose: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/import_data.py --verbose
+
+analyze_data: build import_data
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/analyze_data.py
+
+
+analyze_data_dev: build import_data_dev
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/analyze_data.py --info
+
+
+analyze_data_verbose: build import_data_verbose
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/analyze_data.py --verbose
+
+
+analyze_data_doctor: build import_data_dev
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/analyze_data.py --doctor
