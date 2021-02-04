@@ -8,8 +8,9 @@ class DataExtractor():
     def __init__(self, config_file=None):
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
+        self.folders = self.mediasite.folder.get_all_folders()
 
-    def order_presentations_by_folder(self, folders, parent_id=None):
+    def order_presentations_by_folder(self, parent_id=None):
         """
         Create a list of all folders in association with their presentations
 
@@ -23,10 +24,10 @@ class DataExtractor():
 
         i = 0
         presentations_folders = []
-        for folder in folders:
-            print('Requesting: ', f'[{i}/{len(folders)}] --', round(i / len(folders) * 100, 1), '%', end='\r', flush=True)
+        for folder in self.folders:
+            print('Requesting: ', f'[{i}/{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
-            path = self.find_folder_path(folder['id'], folders)
+            path = self.find_folder_path(folder['id'], self.folders)
             if self.is_folder_to_add(path):
                 logging.debug('Found folder : ' + path)
                 presentations = self.mediasite.folder.get_folder_presentations(folder['id'])
@@ -108,9 +109,6 @@ class DataExtractor():
                 slides_infos['details'] = slides['SlideDetails'] if details else None
 
         return slides_infos
-
-    def get_all_folders(self):
-        return self.mediasite.folder.get_all_folders()
 
     def find_folder_path(self, folder_id, folders, path=''):
         """

@@ -48,7 +48,6 @@ if __name__ == '__main__':
             logging.info('data.json already found, not fetching catalog data')
     except Exception as e:
         logging.debug(e)
-        folders = extractor.get_all_folders()
+        data = extractor.order_presentations_by_folder()
         with open('data.json', 'w') as f:
-            data = extractor.order_presentations_by_folder(folders)
             json.dump(data, f)

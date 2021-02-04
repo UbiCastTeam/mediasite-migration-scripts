@@ -40,11 +40,10 @@ if __name__ == '__main__':
             data = json.load(f)
     except Exception as e:
         logging.debug(e)
-        logging.error('No data to analyse, or data is corrupted. Please run import data process:\n \
-                       $ make import_data')
-        run_import = input('Do you want to run import data right now ? y/N').lower()
+        logging.error('No data to analyse, or data is corrupted.')
+        run_import = input('Do you want to run import data ? y/N').lower()
         if run_import == 'y' or run_import == 'yes':
-            os.system("make import_data")
+            os.system("python3 bin/import_data.py")
 
     analyzer = DataAnalyzer(data)
 
@@ -93,14 +92,14 @@ if __name__ == '__main__':
         # Listing presentations that are not referenced in folders
         presentations_in_folders = analyzer.presentations
         presentations_not_in_folders = []
-        for presentation_1 in all_presentations:
+        for presentation_from_all in all_presentations:
             found = False
-            for presentation_2 in presentations_in_folders:
-                if presentation_1['id'] == presentation_2['id']:
+            for presentation_in_folder in presentations_in_folders:
+                if presentation_from_all['id'] == presentation_in_folder['id']:
                     found = True
                     break
             if not found:
-                presentations_not_in_folders.append(presentation_1)
+                presentations_not_in_folders.append(presentation_from_all)
 
         print(f'''All presentations found in Mediasite platform : {len(all_presentations)}
                 Presentations not accounted : {len(presentations_not_in_folders)}.''')
