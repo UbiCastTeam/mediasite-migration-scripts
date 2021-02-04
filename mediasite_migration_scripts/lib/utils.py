@@ -35,13 +35,11 @@ class MediasiteSetup():
     def set_logger(options):
         run_path = os.path.dirname(os.path.realpath(__file__))
 
-        # params
         current_datetime_string = '{dt.month}-{dt.day}-{dt.year}'.format(dt=datetime.now())
         logging_format = '%(asctime)s - %(levelname)s - %(message)s'
         logging_datefmt = '%m/%d/%Y - %I:%M:%S %p'
         formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
 
-        # level
         logger = logging.getLogger()
         if options.verbose:
             level = logging.DEBUG
@@ -51,11 +49,9 @@ class MediasiteSetup():
             level = logging.WARNING
         logger.setLevel(level)
 
-        # console
         console = logging.StreamHandler()
         console.setFormatter(formatter)
 
-        # log file
         logs_folder = f'{run_path}/logs/'
         os.makedirs(logs_folder, exist_ok=True)
         logfile_path = os.path.join(logs_folder, f'test_{current_datetime_string}.log')

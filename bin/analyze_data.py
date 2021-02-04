@@ -11,8 +11,6 @@ from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
 if __name__ == '__main__':
-    # --------------------------- Setup
-    # args
     def usage(message=''):
         return 'This script is used to extract metadata from mediasite platform'
 
@@ -36,15 +34,14 @@ if __name__ == '__main__':
     options = manage_opts()
     logger = MediasiteSetup.set_logger(options)
 
-    #--------------------------- Script
     try:
         data = []
         with open('data.json') as f:
             data = json.load(f)
     except Exception as e:
         logging.debug(e)
-        logging.error('No data to analyse, or data is corrupted.')
-        run_import = input('Do you want to run import data ? y/N').lower()
+        logging.info('\nNo data to analyse, or data is corrupted.')
+        run_import = input('No data to analyse.\nDo you want to run import data ? [y/N] ').lower()
         if run_import == 'y' or run_import == 'yes':
             os.system("python3 bin/import_data.py")
 
@@ -88,11 +85,9 @@ if __name__ == '__main__':
             logging.debug(e)
         mediasite = MediasiteSetup(config_data).mediasite
 
-        # Listing all presentations
         print('Listing all presentations...')
         all_presentations = mediasite.presentation.get_all_presentations()
 
-        # Listing presentations that are not referenced in folders
         presentations_in_folders = analyzer.presentations
         presentations_not_in_folders = []
         for presentation_from_all in all_presentations:

@@ -10,9 +10,6 @@ from mediasite_migration_scripts.data_extractor import DataExtractor
 from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
 if __name__ == '__main__':
-
-    # --------------------------- Setup
-    # args
     def usage(message=''):
         return 'This script is used to extract metadata from mediasite platform'
 
@@ -31,25 +28,24 @@ if __name__ == '__main__':
         return parser.parse_args()
 
     options = manage_opts()
+    logger = MediasiteSetup.set_logger(options)
 
-    #--------------------------- Script
     try:
         with open('config.json') as js:
             config_data = json.load(js)
     except Exception as e:
-        logging.debug(e)
+        logger.debug(e)
+        logger.info('No config file or file is corrupted.')
         config_data = None
 
-    extractor = DataExtractor(config_data)
-    logger = MediasiteSetup.set_logger(options)
-
-    # Listing folders with their presentations
     try:
         with open('data.json') as f:
             data = json.load(f)
-            logging.info('data.json already found, not fetching catalog data')
+            logger.info('data.json already found, not fetching catalog data')
     except Exception as e:
-        logging.debug(e)
+        logger.debug(e)
+        print("Connecting...")
+        extractor = DataExtractor(config_data)
         data = extractor.order_presentations_by_folder()
         with open('data.json', 'w') as f:
             json.dump(data, f)
