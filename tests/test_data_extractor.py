@@ -2,7 +2,7 @@ from unittest import TestCase
 import json
 import logging
 
-from data_analyzer import DataAnalyzer
+from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 
 class TestDataExtractor(TestCase):
     def __init__(self):

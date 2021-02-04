@@ -1,6 +1,6 @@
 import os
 import logging
-from lib.utils import MediasiteSetup
+from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
 
 class DataExtractor():

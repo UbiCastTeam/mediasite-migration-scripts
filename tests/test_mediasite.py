@@ -4,7 +4,7 @@ from decouple import config
 from unittest import TestCase
 import json
 
-from lib.utils import MediasiteSetup
+from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
 
 class MediaSiteTest(TestCase):

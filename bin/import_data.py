@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from argparse import RawTextHelpFormatter
 import argparse
-import os
 import json
 import logging
 
-from data_extractor import DataExtractor
-from lib.utils import MediasiteSetup
+from mediasite_migration_scripts.data_extractor import DataExtractor
+from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
 if __name__ == '__main__':
 
