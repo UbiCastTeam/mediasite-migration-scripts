@@ -13,3 +13,7 @@ WORKDIR /src
 COPY requirements-pip.txt /src
 
 RUN pip3 install -r requirements-pip.txt
+
+ENV PYTHONPATH "/src/mediasite_migration_scripts:${PYTHONPATH}"
+
+RUN ln -sfn "/src/mediasite_migration_scripts" "/usr/lib/python3/dist-packages/"

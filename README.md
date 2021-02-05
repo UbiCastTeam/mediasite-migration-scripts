@@ -9,9 +9,9 @@ Scripts to import video data from Mediasite to Ubicast Mediaserver
 
 ## Usage
 
-### Videos statistics
+### Setup
 
-For collecting statistics about the videos included in the  Mediasite platform (video type, available file format, ...):
+First of all, you need to set up the connection with the Mediasite API.
 
 - Clone the repository and submodules:
 
@@ -32,20 +32,67 @@ MEDIASITE_API_USER = Mediasite user name
 MEDIASITE_API_PASSWORD = Mediasite user password
 MEDIASITE_API_KEY = API key generated in the Mediasite backoffice at /api/Docs/ApiKeyRegistration.aspx
 ```
+#### Whitelisting
+If you need to include only some folders in your migration.
 
-- Run the script :
+- Create the config.json file
+
+`$ cp config.json.example config.json`
+
+- On config.json, put the folders name you want to include in ***whitelist***, e.g. :
 
 ```
-$ make stats
+{
+    "whitelist": ["Presentations", "Mediasite Users"]
+ }
+```
+
+### Running scripts
+#### Analyze data
+For collecting statistics about the videos included in the  Mediasite platform (video type, available file format, ...), and informations for migration.
+
+`$ make analyze_data`
+
+If it's the first time you run the script, it will require to collect data from Mediasite API.  
+```
+$ make analyze_data 
 docker build -t mediasite -f Dockerfile .
-Sending build context to Docker daemon    598kB
-Step 1/5 : FROM debian:10
- ---> c2c03a296d23
-Step 2/5 : RUN apt update && apt install -y         python3-coverage         python3-requests         make         flake8         python3-pip     && apt clean && rm -rf /var/lib/apt/lists/*
+Sending build context to Docker daemon  152.8MB
+Step 1/7 : FROM debian:10
+ ---> e7d08cddf791
+Step 2/7 : RUN apt update && apt install -y         python3-coverage         python3-requests         make         flake8         python3-pip     && apt clean && rm -rf /var/lib/apt/lists/*
  ---> Using cache
-...
-{'video/mp4': '91%', 'video/x-ms-wmv': '8%', 'video/x-mp4-fragmented': '1%'}
-Types of videos : {'mono': '11%', 'mono + slides': '88%', 'multiple': '1%'}
+ ...
+No data to analyse.
+Do you want to run import data ? [y/N] y
+Connecting...
+Requesting:  [10/595] -- 1.7 %
+
 ```
 
-Script will take a while (~ 5 minutes per 1000 media), and global stats will be printed on your terminal. Also, some of the collected metadata are stored in json files in the root folder (data.json mostly).
+Collecting data will take a while (~ 5 minutes per 1000 media), and global stats will be printed on your terminal. Collected data are stored in **data.json** in the root folder. If you keep the file, next time you run the script, collecting data will be skipped.
+
+```
+...
+Found 595 folders
+Number of presentations in folders: 2209
+229 folders have no presentation inside 103 user folders
+11% of videos without mp4 vs 90% with mp4
+There's 11% of videos with no slide, 88% with slides, and 2% are compositions of multiple videos
+Counting downloadable mp4s (among 1944 urls)
+1815 downloadable mp4s, status codes: {'200': 1815, '404': 129}
+```
+
+#### Import data only
+If you do not want to analyze your, but only get the raw data. 
+
+`$ make import_data`
+
+## Arguments
+You can pass arguments into the scripts, with the variable **ARGS**.
+
+```
+$ make analyze_data ARGS="--verbose"
+```
+
+ 
