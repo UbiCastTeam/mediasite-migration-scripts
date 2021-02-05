@@ -42,8 +42,6 @@ class DataExtractor():
                 presentations_folders.append({**folder,
                                               'path': path,
                                               'presentations': presentations})
-            if i > 10:
-                break
             i += 1
         return presentations_folders
 
