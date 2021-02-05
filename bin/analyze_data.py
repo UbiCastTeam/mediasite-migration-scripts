@@ -85,7 +85,7 @@ if __name__ == '__main__':
             logging.debug(e)
         mediasite = MediasiteSetup(config_data).mediasite
 
-        print('Listing all presentations...')
+        print('Listing all presentations created...')
         all_presentations = mediasite.presentation.get_all_presentations()
 
         presentations_in_folders = analyzer.presentations
@@ -100,4 +100,4 @@ if __name__ == '__main__':
                 presentations_not_in_folders.append(presentation_from_all)
 
         print(f'''All presentations found in Mediasite platform : {len(all_presentations)}
-                Presentations not accounted : {len(presentations_not_in_folders)}.''')
+                Presentations not accounted in folders: {len(presentations_not_in_folders)}.''')
