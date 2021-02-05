@@ -1,5 +1,4 @@
 import requests
-import sys
 
 
 class DataAnalyzer():
@@ -64,13 +63,16 @@ class DataAnalyzer():
         with requests.Session() as session:
             for index, url in enumerate(self.mp4_urls):
                 print(f'[{index + 1}]/[{len(self.mp4_urls)}]', end='\r')
-                check = session.head(url)
-                code = str(check.status_code)
-                if not status_codes.get(code):
-                    status_codes[code] = 0
-                status_codes[code] += 1
+                ok = False
+                # IIS returns 401 when trying head(), so let us just test the smallest GET possible
+                with session.get(url, stream=True) as r:
+                    code = str(r.status_code)
+                    if not status_codes.get(code):
+                        status_codes[code] = 0
+                    status_codes[code] += 1
+                    ok = r.ok
 
-                if check.ok:
+                if ok:
                     downloadable_mp4.append(url)
 
         return {'downloadable_mp4': downloadable_mp4, 'status_codes': status_codes}
