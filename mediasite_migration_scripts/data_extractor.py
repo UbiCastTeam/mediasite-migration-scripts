@@ -1,5 +1,7 @@
 import os
 import logging
+import xml.dom.minidom as xml
+
 from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
 
@@ -25,7 +27,10 @@ class DataExtractor():
         i = 0
         presentations_folders = []
         for folder in self.folders:
-            print('Requesting: ', f'[{i}/{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
+            if i < 1:
+                print('Connecting...', end='\r')
+            else:
+                print('Requesting: ', f'[{i}/{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
             path = self.find_folder_path(folder['id'], self.folders)
             if self.is_folder_to_add(path):
@@ -37,6 +42,8 @@ class DataExtractor():
                 presentations_folders.append({**folder,
                                               'path': path,
                                               'presentations': presentations})
+            if i > 10:
+                break
             i += 1
         return presentations_folders
 
@@ -68,10 +75,20 @@ class DataExtractor():
                     storage_url = '/'.join(splitted_url)
                 else:
                     storage_url = None
-
                 file_name = file['FileNameWithExtension']
                 video_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
-                file_infos = {'format': file['ContentMimeType'], 'url': video_url}
+
+                file_infos = {
+                    'url': video_url,
+                    'format': file['ContentMimeType'],
+                    'size_bytes': int(file['FileLength']),
+                    'duration_s': int(file['Length']) * 1000,
+                    'is_transcode_source': file['IsTranscodeSource'],
+                    'encoding_infos': {}
+                }
+                if file_infos['format'] == 'video/mp4':
+                    file_infos['encoding_infos'] = self.get_encoding_infos(file['ContentEncodingSettingsId'])
+
                 stream = file['StreamType']
                 in_list = False
                 for v in video_list:
@@ -82,6 +99,33 @@ class DataExtractor():
                     video_list.append({'stream_type': stream,
                                        'files': [file_infos]})
         return video_list
+
+    def get_encoding_infos(self, settings_id):
+        encoding_infos = {}
+        encoding_settings = self.mediasite.presentation.get_content_encoding_settings(settings_id)
+        if encoding_settings:
+            serialized_settings = encoding_settings['SerializedSettings']
+            settings_data = xml.parseString(serialized_settings).documentElement
+            # Tag 'Settings' is a XML string to be parsed again...
+            settings_node = settings_data.getElementsByTagName('Settings')[0]
+            settings = xml.parseString(settings_node.firstChild.nodeValue)
+
+            codecs_settings = settings.getElementsByTagName('StreamProfiles')[0]
+            audio_codec = str()
+            video_codec = str()
+            for element in codecs_settings.childNodes:
+                if element.getAttribute('i:type') == 'AudioEncoderProfile':
+                    audio_codec = element.getElementsByTagName('FourCC')[0].firstChild.nodeValue
+                elif element.getAttribute('i:type') == 'VideoEncoderProfile':
+                    video_codec = element.getElementsByTagName('FourCC')[0].firstChild.nodeValue
+
+            encoding_infos = {
+                'video_codec': video_codec,
+                'audio_codec': audio_codec,
+                'width': settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue,
+                'height': settings.getElementsByTagName('PresentationAspectX')[0].firstChild.nodeValue,
+            }
+        return encoding_infos
 
     def get_slides_infos(self, presentation, details=False):
         logging.debug(f"Gathering slides infos for presentation: {presentation['id']}")

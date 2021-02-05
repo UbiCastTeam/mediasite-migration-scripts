@@ -44,8 +44,9 @@ if __name__ == '__main__':
             logger.info('data.json already found, not fetching catalog data')
     except Exception as e:
         logger.debug(e)
-        print("Connecting...")
         extractor = DataExtractor(config_data)
         data = extractor.order_presentations_by_folder()
         with open('data.json', 'w') as f:
             json.dump(data, f)
+    finally:
+        print('--------- Import data succesfull -------------')
