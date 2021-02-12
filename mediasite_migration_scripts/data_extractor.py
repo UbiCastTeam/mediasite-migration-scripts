@@ -11,22 +11,33 @@ class DataExtractor():
     def __init__(self, config_file=None):
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
-        self.folders = self.mediasite.folder.get_all_folders()
+        self.folders = list()
+        self.catalogs = list()
+        self.presentations_folders = list()
+
+    def to_data(self):
+        return self.order_presentations_by_folder()
 
     def order_presentations_by_folder(self, parent_id=None):
         """
-        Create a list of all folders in association with their presentations
+        Create a list of all folders in association with their presentations and all his content
 
+        params :
+            parent_id : id of the top parent folder where parsing should begin
         returns:
             list ot items containing folder ID, parent folder ID, name, and
-                list of his presentations containing ID, title and owner
+                list of his presentations containing ID, title, owner and
+                    list of videos and list of slides with details
         """
         logging.info('Gathering and ordering all presentations / folders data ')
         if not parent_id:
             parent_id = self.mediasite.folder.root_folder_id
 
+        if not self.folders:
+            self.set_folders()
+
         i = 0
-        presentations_folders = []
+        self.presentations_folders = list()
         for folder in self.folders:
             if i < 1:
                 print('Connecting...', end='\r')
@@ -40,11 +51,12 @@ class DataExtractor():
                 for presentation in presentations:
                     presentation['videos'] = self.get_videos_infos(presentation)
                     presentation['slides'] = self.get_slides_infos(presentation)
-                presentations_folders.append({**folder,
-                                              'path': path,
-                                              'presentations': presentations})
+                self.presentations_folders.append({**folder,
+                                                   'catalogs': self.find_catalogs_with_linked_folder_id(folder['id']),
+                                                   'path': path,
+                                                   'presentations': presentations})
             i += 1
-        return presentations_folders
+        return self.presentations_folders
 
     def is_folder_to_add(self, path):
         if self.setup.config['mediasite_folders_whitelist']:
@@ -53,6 +65,20 @@ class DataExtractor():
                     return True
             return False
         return True
+
+    def find_catalogs_with_linked_folder_id(self, folder_id):
+        if not self.catalogs:
+            self.set_catalogs()
+
+        linked_catalogs = list()
+        for catalog in self.catalogs:
+            if catalog['LinkedFolderId'] == folder_id:
+                if catalog not in linked_catalogs:
+                    linked_catalogs.append({
+                        'id': catalog['Id'],
+                        'access_url': catalog['CatalogUrl']
+                    })
+        return linked_catalogs
 
     def get_videos_infos(self, presentation):
         logging.debug(f"Gathering video info for presentation : {presentation['id']}")
@@ -212,3 +238,15 @@ class DataExtractor():
                 path += '/' + folder['name']
                 return path
         return ''
+
+    def set_folders(self, folders=[]):
+        if folders:
+            self.folders = folders
+        else:
+            self.folders = self.mediasite.folder.get_all_folders()
+
+    def set_catalogs(self, catalogs=[]):
+        if catalogs:
+            self.catalogs = catalogs
+        else:
+            self.catalogs = self.mediasite.catalog.get_all_catalogs()

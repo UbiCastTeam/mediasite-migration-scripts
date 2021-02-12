@@ -44,8 +44,11 @@ if __name__ == '__main__':
     except Exception as e:
         logger.debug(e)
         extractor = DataExtractor(config_data)
-        data = extractor.order_presentations_by_folder()
+        data = extractor.to_data()
         with open('data.json', 'w') as f:
             json.dump(data, f)
+
+        with open('catalogs.json', 'w') as f:
+            json.dump(extractor.catalogs, f)
 
         print('--------- Import data successfull --------- ')
