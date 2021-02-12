@@ -153,10 +153,6 @@ class DataAnalyzer():
         for key, val in video_durations.items():
             print(f'{key}: {val}/{total_dur_with_info} ({int(100 * val / total_dur_with_info)}%)')
 
-        import json
-        with open('no_encoding_infos.json', 'w') as f:
-            json.dump(presentations_with_no_encoding_infos, f)
-
     @staticmethod
     def find_best_format(video):
         formats_priority = ['video/mp4', 'video/x-ms-wmv', 'video/x-mp4-fragmented']

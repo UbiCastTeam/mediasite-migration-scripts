@@ -109,6 +109,7 @@ class DataExtractor():
         return video_list
 
     def get_encoding_infos_from_api(self, settings_id):
+        logging.debug(f'Getting encoding infos with settings ID : {settings_id}')
         encoding_infos = {}
         encoding_settings = self.mediasite.presentation.get_content_encoding_settings(settings_id)
         if encoding_settings:
@@ -129,18 +130,27 @@ class DataExtractor():
                     elif element.getAttribute('i:type') == 'VideoEncoderProfile':
                         video_codec = element.getElementsByTagName('FourCC')[0].firstChild.nodeValue
 
+                width = int(settings.getElementsByTagName('PresentationAspectX')[0].firstChild.nodeValue)
+                height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
+                # sometimes resolution values given by the API are reversed, we reverse them again if so
+                if width < height:
+                    new_height = width
+                    width = height
+                    height = new_height
+
                 encoding_infos = {
                     'video_codec': video_codec,
                     'audio_codec': audio_codec,
-                    'width': settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue,
-                    'height': settings.getElementsByTagName('PresentationAspectX')[0].firstChild.nodeValue,
+                    'width': width,
+                    'height': height,
                 }
-            except Exception:
+            except Exception as e:
                 logging.debug(f'Failed to parse XML for video encoding settings for settings ID : {settings_id}')
+                logging.debug(e)
         return encoding_infos
 
     def parsing_encoding_infos(self, video_url):
-        logging.debug('Parsing with MediaInfo lib')
+        logging.debug(f'Parsing with MediaInfo lib for: {video_url}')
         encoding_infos = {}
         try:
             media_tracks = MediaInfo.parse(video_url, mediainfo_options={'Ssl_IgnoreSecurity': '1'}).tracks
