@@ -6,6 +6,7 @@ RUN apt update && apt install -y \
         make \
         flake8 \
         python3-pip \
+        libmediainfo-dev \
     && apt clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src

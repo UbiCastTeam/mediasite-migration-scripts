@@ -4,7 +4,6 @@
 from argparse import RawTextHelpFormatter
 import argparse
 import json
-import logging
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
 from mediasite_migration_scripts.lib.utils import MediasiteSetup
@@ -48,5 +47,5 @@ if __name__ == '__main__':
         data = extractor.order_presentations_by_folder()
         with open('data.json', 'w') as f:
             json.dump(data, f)
-    finally:
-        print('--------- Import data succesfull -------------')
+
+        print('--------- Import data successfull --------- ')
