@@ -21,7 +21,7 @@ class DataExtractor():
             list ot items containing folder ID, parent folder ID, name, and
                 list of his presentations containing ID, title and owner
         """
-        logging.info('Gathering and ordering all presentations infos ')
+        logging.info('Gathering and ordering all presentations / folders data ')
         if not parent_id:
             parent_id = self.mediasite.folder.root_folder_id
 
