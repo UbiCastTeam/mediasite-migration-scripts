@@ -44,7 +44,7 @@ if __name__ == '__main__':
     except Exception as e:
         logger.debug(e)
         extractor = DataExtractor(config_data)
-        data = extractor.to_data()
+        data = extractor.all_data
         with open('data.json', 'w') as f:
             json.dump(data, f)
 

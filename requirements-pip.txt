@@ -1,8 +1,11 @@
+# mediasite-client lib
 pandas
 python-dateutil
+pytz
+tzlocal
+
+# mediasite-migration-script 
 python-decouple
 mediainfo
 pymediainfo
-pytz
-tzlocal
 setuptools

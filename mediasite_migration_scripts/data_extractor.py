@@ -9,18 +9,16 @@ from mediasite_migration_scripts.lib.utils import MediasiteSetup
 class DataExtractor():
 
     def __init__(self, config_file=None):
+        print('Connecting...', end='\r')
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
-        self.folders = list()
-        self.catalogs = list()
-        self.presentations_folders = list()
+        self.folders = self.mediasite.folder.get_all_folders()
+        self.catalogs = self.mediasite.catalog.get_all_catalogs()
+        self.all_data = self.extract_mediasite_data()
 
-    def to_data(self):
-        return self.order_presentations_by_folder()
-
-    def order_presentations_by_folder(self, parent_id=None):
+    def extract_mediasite_data(self, parent_id=None):
         """
-        Create a list of all folders in association with their presentations and all his content
+        Collect all data from Mediasite platform ordered by folder
 
         params :
             parent_id : id of the top parent folder where parsing should begin
@@ -33,32 +31,31 @@ class DataExtractor():
         if not parent_id:
             parent_id = self.mediasite.folder.root_folder_id
 
-        if not self.folders:
-            self.set_folders()
-
         i = 0
-        self.presentations_folders = list()
+        presentations_folders = list()
         for folder in self.folders:
             if i < 1:
                 print('Connecting...', end='\r')
             else:
                 print('Requesting: ', f'[{i}/{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
-            path = self.find_folder_path(folder['id'], self.folders)
-            if self.is_folder_to_add(path):
+            path = self._find_folder_path(folder['id'], self.folders)
+            if self._is_folder_to_add(path):
                 logging.debug('Found folder : ' + path)
                 presentations = self.mediasite.folder.get_folder_presentations(folder['id'])
                 for presentation in presentations:
                     presentation['videos'] = self.get_videos_infos(presentation)
                     presentation['slides'] = self.get_slides_infos(presentation)
-                self.presentations_folders.append({**folder,
-                                                   'catalogs': self.find_catalogs_with_linked_folder_id(folder['id']),
-                                                   'path': path,
-                                                   'presentations': presentations})
+                presentations_folders.append({**folder,
+                                              'catalogs': self._find_catalogs_with_linked_folder_id(folder['id']),
+                                              'path': path,
+                                              'presentations': presentations})
+            if i > 100:
+                break
             i += 1
-        return self.presentations_folders
+        return presentations_folders
 
-    def is_folder_to_add(self, path):
+    def _is_folder_to_add(self, path):
         if self.setup.config['mediasite_folders_whitelist']:
             for fw in self.setup.config['mediasite_folders_whitelist']:
                 if path.find(fw):
@@ -66,10 +63,7 @@ class DataExtractor():
             return False
         return True
 
-    def find_catalogs_with_linked_folder_id(self, folder_id):
-        if not self.catalogs:
-            self.set_catalogs()
-
+    def _find_catalogs_with_linked_folder_id(self, folder_id):
         linked_catalogs = list()
         for catalog in self.catalogs:
             if catalog['LinkedFolderId'] == folder_id:
@@ -85,10 +79,10 @@ class DataExtractor():
 
         videos_infos = []
         video = self.mediasite.presentation.get_presentation_content(presentation['id'], 'OnDemandContent')
-        videos_infos = self.get_video_detail(video)
+        videos_infos = self._get_video_details(video)
         return videos_infos
 
-    def get_video_detail(self, video):
+    def _get_video_details(self, video):
         video_list = []
         if video:
             for file in video['value']:
@@ -112,12 +106,12 @@ class DataExtractor():
 
                 if file_infos['format'] == 'video/mp4':
                     if file.get('ContentEncodingSettingsId'):
-                        file_infos['encoding_infos'] = self.get_encoding_infos_from_api(file['ContentEncodingSettingsId'])
+                        file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
                     if not file_infos.get('encoding_infos'):
                         logging.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
                         if file_infos.get('url'):
-                            file_infos['encoding_infos'] = self.parsing_encoding_infos(file_infos['url'])
+                            file_infos['encoding_infos'] = self._parsing_encoding_infos(file_infos['url'])
                         elif 'LocalUrl' in content_server:
                             logging.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
                         else:
@@ -134,7 +128,7 @@ class DataExtractor():
                                        'files': [file_infos]})
         return video_list
 
-    def get_encoding_infos_from_api(self, settings_id):
+    def _get_encoding_infos_from_api(self, settings_id, url):
         logging.debug(f'Getting encoding infos with settings ID : {settings_id}')
         encoding_infos = {}
         encoding_settings = self.mediasite.presentation.get_content_encoding_settings(settings_id)
@@ -163,6 +157,7 @@ class DataExtractor():
                     new_height = width
                     width = height
                     height = new_height
+                    logging.info(url)
 
                 encoding_infos = {
                     'video_codec': video_codec,
@@ -175,7 +170,7 @@ class DataExtractor():
                 logging.debug(e)
         return encoding_infos
 
-    def parsing_encoding_infos(self, video_url):
+    def _parsing_encoding_infos(self, video_url):
         logging.debug(f'Parsing with MediaInfo lib for: {video_url}')
         encoding_infos = {}
         try:
@@ -221,7 +216,7 @@ class DataExtractor():
 
         return slides_infos
 
-    def find_folder_path(self, folder_id, folders, path=''):
+    def _find_folder_path(self, folder_id, folders, path=''):
         """
         Provide the folder's path delimited by '/'
         by parsing the folders list structure
@@ -234,19 +229,7 @@ class DataExtractor():
 
         for folder in folders:
             if folder['id'] == folder_id:
-                path += self.find_folder_path(folder['parent_id'], folders, path)
+                path += self._find_folder_path(folder['parent_id'], folders, path)
                 path += '/' + folder['name']
                 return path
         return ''
-
-    def set_folders(self, folders=[]):
-        if folders:
-            self.folders = folders
-        else:
-            self.folders = self.mediasite.folder.get_all_folders()
-
-    def set_catalogs(self, catalogs=[]):
-        if catalogs:
-            self.catalogs = catalogs
-        else:
-            self.catalogs = self.mediasite.catalog.get_all_catalogs()

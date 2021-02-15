@@ -6,12 +6,10 @@ from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 from mediasite_migration_scripts.data_extractor import DataExtractor
 
 class TestDataExtractor(TestCase):
-    folders_whitelist = []
-    analyzer = object()
-    extractor = object()
 
     def setUp(self):
         super(TestDataExtractor)
+        self.folders_whitelist = ['Presentations II', 'Mediasite Users']
         self.extractor = DataExtractor()
         try:
             data = []
