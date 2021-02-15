@@ -1,4 +1,5 @@
 import requests
+import logging
 
 
 class DataAnalyzer():
@@ -101,6 +102,56 @@ class DataAnalyzer():
             'exactly_one_presentation': exactly_one_presentation
         }
         return infos
+
+    def analyze_encoding_infos(self, data):
+        total_videos = 0
+        videos_with_encoding_info = 0
+        presentations_with_no_encoding_infos = list()
+        video_stats = dict()
+        video_durations = dict()
+        total_duration_h = 0
+        total_size_bytes = 0
+
+        for folder in data:
+            for presentation in folder['presentations']:
+                for video in presentation['videos']:
+                    got_encoding_stats = False
+                    for file in video['files']:
+                        total_videos += 1
+                        if file.get('encoding_infos'):
+                            try:
+                                format_str = '{video_codec} {audio_codec} {width}x{height}'.format(**file['encoding_infos'])
+                            except KeyError:
+                                logging.debug(f'Not all encoding infos for this file. Maybe the file is not a video: {file["url"]}')
+                                logging.debug(f'In presentation: {presentation["id"]}')
+                            if not video_stats.get(format_str):
+                                video_stats[format_str] = 0
+                            video_stats[format_str] += 1
+
+                            if not video_durations.get(format_str):
+                                video_durations[format_str] = 0
+                            video_durations[format_str] += int(file.get('duration_ms', 0) / (3600 * 1000))
+
+                            videos_with_encoding_info += 1
+                            got_encoding_stats = True
+                            break
+                    if not got_encoding_stats:
+                        presentations_with_no_encoding_infos.append(presentation)
+                    total_duration_h += int(file.get('duration_ms', 0) / (3600 * 1000))
+                    total_size_bytes += file.get('size_bytes', 0)
+
+        print(f'Found {videos_with_encoding_info}/{total_videos} {int(100 * videos_with_encoding_info / total_videos)}% of videos with encoding info')
+        print(f'Total duration: {int(total_duration_h)} h, total size: {int(total_size_bytes / 1000000000)} TB')
+
+        for key, val in video_stats.items():
+            print(f'{key}: {val}/{videos_with_encoding_info} ({int(100 * val / videos_with_encoding_info)}%)')
+
+        total_dur_with_info = 0
+        for key, val in video_durations.items():
+            total_dur_with_info += val
+
+        for key, val in video_durations.items():
+            print(f'{key}: {val}/{total_dur_with_info} ({int(100 * val / total_dur_with_info)}%)')
 
     @staticmethod
     def find_best_format(video):

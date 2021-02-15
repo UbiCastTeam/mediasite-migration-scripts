@@ -40,10 +40,27 @@ if __name__ == '__main__':
             data = json.load(f)
     except Exception as e:
         logging.debug(e)
-        logging.info('\nNo data to analyse, or data is corrupted.')
-        run_import = input('No data to analyse.\nDo you want to run import data ? [y/N] ').lower()
+        logging.info('No data to analyse, or data is corrupted.')
+        run_import = input('No data to analyse. Do you want to run import data ? [y/N] ').lower()
         if run_import == 'y' or run_import == 'yes':
-            os.system("python3 bin/import_data.py")
+            option = ''
+            for opt, boolean in options.__dict__.items():
+                if boolean:
+                    option = str(opt)
+                    break
+            args = f'--{option}' if option else ''
+            os.system(f'python3 bin/import_data.py {args}')
+        else:
+            print('--------- Aborted ---------')
+            exit()
+
+        try:
+            with open('data.json') as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.debug(e)
+            logger.error('Import failed')
+            exit()
 
     analyzer = DataAnalyzer(data)
 
@@ -76,6 +93,8 @@ if __name__ == '__main__':
     status_codes = mp4_analyse['status_codes']
     print(f'{len(downloadable_mp4)} downloadable mp4s, status codes: {status_codes}')
 
+    analyzer.analyze_encoding_infos(data)
+
     if options.doctor:
         config_data = {}
         try:
@@ -85,7 +104,7 @@ if __name__ == '__main__':
             logging.debug(e)
         mediasite = MediasiteSetup(config_data).mediasite
 
-        print('Listing all presentations...')
+        print('Listing all presentations created...')
         all_presentations = mediasite.presentation.get_all_presentations()
 
         presentations_in_folders = analyzer.presentations
@@ -100,4 +119,4 @@ if __name__ == '__main__':
                 presentations_not_in_folders.append(presentation_from_all)
 
         print(f'''All presentations found in Mediasite platform : {len(all_presentations)}
-                Presentations not accounted : {len(presentations_not_in_folders)}.''')
+                Presentations not accounted in folders: {len(presentations_not_in_folders)}.''')
