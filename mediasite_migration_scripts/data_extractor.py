@@ -109,7 +109,7 @@ class DataExtractor():
                     if not file_infos.get('encoding_infos'):
                         logging.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
                         if file_infos.get('url'):
-                            file_infos['encoding_infos'] = self._parsing_encoding_infos(file_infos['url'])
+                            file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
                         elif 'LocalUrl' in content_server:
                             logging.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
                         else:
@@ -126,7 +126,7 @@ class DataExtractor():
                                        'files': [file_infos]})
         return video_list
 
-    def _get_encoding_infos_from_api(self, settings_id, url):
+    def _get_encoding_infos_from_api(self, settings_id, video_url):
         logging.debug(f'Getting encoding infos with settings ID : {settings_id}')
         encoding_infos = {}
         encoding_settings = self.mediasite.presentation.get_content_encoding_settings(settings_id)
@@ -152,10 +152,8 @@ class DataExtractor():
                 height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
                 # sometimes resolution values given by the API are reversed, we reverse them again if so
                 if width < height:
-                    new_height = width
-                    width = height
-                    height = new_height
-                    logging.info(url)
+                    logging.debug('Resolution values given by the API may be reversed... switching to MediaInfo.')
+                    return self._parse_encoding_infos(video_url)
 
                 encoding_infos = {
                     'video_codec': video_codec,
@@ -168,7 +166,7 @@ class DataExtractor():
                 logging.debug(e)
         return encoding_infos
 
-    def _parsing_encoding_infos(self, video_url):
+    def _parse_encoding_infos(self, video_url):
         logging.debug(f'Parsing with MediaInfo lib for: {video_url}')
         encoding_infos = {}
         try:
