@@ -50,8 +50,6 @@ class DataExtractor():
                                               'catalogs': self._find_catalogs_with_linked_folder_id(folder['id']),
                                               'path': path,
                                               'presentations': presentations})
-            if i > 100:
-                break
             i += 1
         return presentations_folders
 

@@ -59,9 +59,10 @@ if __name__ == '__main__':
             exit()
 
     analyzer = DataAnalyzer(data)
-    line_sep_str = '-' * 50
 
+    line_sep_str = '-' * 50
     print(line_sep_str)
+
     print(f'Found {len(analyzer.folders)} folders')
     print(f'Number of presentations in folders: {len(analyzer.presentations)}')
 
