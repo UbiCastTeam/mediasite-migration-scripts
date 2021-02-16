@@ -138,6 +138,13 @@ class DataExtractor():
                 settings_node = settings_data.getElementsByTagName('Settings')[0]
                 settings = xml.parseString(settings_node.firstChild.nodeValue)
 
+                width = int(settings.getElementsByTagName('PresentationAspectX')[0].firstChild.nodeValue)
+                height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
+                # sometimes resolution values given by the API are reversed, we reverse them again if so
+                if width < height:
+                    logging.debug('Resolution values given by the API may be reversed... switching to MediaInfo.')
+                    return self._parse_encoding_infos(video_url)
+
                 codecs_settings = settings.getElementsByTagName('StreamProfiles')[0]
                 audio_codec = str()
                 video_codec = str()
@@ -147,13 +154,6 @@ class DataExtractor():
                         audio_codec = 'AAC' if audio_codec == 'AACL' else audio_codec
                     elif element.getAttribute('i:type') == 'VideoEncoderProfile':
                         video_codec = element.getElementsByTagName('FourCC')[0].firstChild.nodeValue
-
-                width = int(settings.getElementsByTagName('PresentationAspectX')[0].firstChild.nodeValue)
-                height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
-                # sometimes resolution values given by the API are reversed, we reverse them again if so
-                if width < height:
-                    logging.debug('Resolution values given by the API may be reversed... switching to MediaInfo.')
-                    return self._parse_encoding_infos(video_url)
 
                 encoding_infos = {
                     'video_codec': video_codec,
