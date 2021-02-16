@@ -4,60 +4,47 @@ import logging
 
 class DataAnalyzer():
     def __init__(self, data):
-        self.format_stats = {}
-        self.layout_stats = {}
         self.folders = data
-        self.presentations = self.order_videos_by_presentations(data)
-        self.mp4_urls = []
+        self.presentations = self._order_videos_by_presentations(data)
+        self.mp4_urls = self._set_mp4_urls()
 
-    def order_videos_by_presentations(self, data):
-        presentations = []
-        for folder in data:
-            for p in folder['presentations']:
-                presentations.append(p)
-        return presentations
+    def analyze_videos_infos(self):
+        format_stats = self._get_video_format_stats()
+        layout_stats = self._get_layout_stats()
 
-    def set_mp4_urls(self):
+        return format_stats, layout_stats
+
+    def _get_video_format_stats(self):
+        format_stats = {}
+        count = {}
+        for video in self.presentations:
+            video_format = DataAnalyzer.find_best_format(video)
+            if video_format in count:
+                count[video_format] += 1
+            else:
+                count[video_format] = 1
+
+        for v_format, v_count in count.items():
+            format_stats[v_format] = round((v_count / len(self.presentations)) * 100)
+
+        return format_stats
+
+    def _get_layout_stats(self):
+        layout_stats = {'mono': 0, 'mono + slides': 0, 'multiple': 0}
         for presentation in self.presentations:
-            if not DataAnalyzer.has_multiple_videos(presentation):
-                for file in presentation['videos'][0]['files']:
-                    if file['format'] == 'video/mp4':
-                        self.mp4_urls.append(file['url'])
-                        break
-        return self.mp4_urls
+            if self.has_multiple_videos(presentation):
+                layout_stats['multiple'] += 1
+            elif len(presentation['slides']) > 0:
+                layout_stats['mono + slides'] += 1
+            else:
+                layout_stats['mono'] += 1
+        for stat, count in layout_stats.items():
+            layout_stats[stat] = round((count / len(self.presentations) * 100))
 
-    def compute_videos_stats(self):
-        if not self.format_stats:
-            count = {}
-            for video in self.presentations:
-                video_format = DataAnalyzer.find_best_format(video)
-                if video_format in count:
-                    count[video_format] += 1
-                else:
-                    count[video_format] = 1
+        return layout_stats
 
-            for v_format, v_count in count.items():
-                self.format_stats[v_format] = round((v_count / len(self.presentations)) * 100)
-
-        return self.format_stats
-
-    def compute_layout_stats(self):
-        if not self.layout_stats:
-            self.layout_stats = {'mono': 0, 'mono + slides': 0, 'multiple': 0}
-            for presentation in self.presentations:
-                if self.has_multiple_videos(presentation):
-                    self.layout_stats['multiple'] += 1
-                elif len(presentation['slides']) > 0:
-                    self.layout_stats['mono + slides'] += 1
-                else:
-                    self.layout_stats['mono'] += 1
-            for stat, count in self.layout_stats.items():
-                self.layout_stats[stat] = round((count / len(self.presentations) * 100))
-
-        return self.layout_stats
-
-    def analyse_downloadable_mp4(self):
-        self.set_mp4_urls()
+    def count_downloadable_mp4s(self):
+        self._set_mp4_urls()
         downloadable_mp4 = list()
         status_codes = dict()
         print(f'Counting downloadable mp4s (among {len(self.mp4_urls)} urls)')
@@ -103,19 +90,20 @@ class DataAnalyzer():
         }
         return infos
 
-    def analyze_encoding_infos(self, data):
+    def analyze_encoding_infos(self):
+        encoding_infos = {}
+
         total_videos = 0
         videos_with_encoding_info = 0
-        presentations_with_no_encoding_infos = list()
+        videos_with_no_encoding_infos = list()
         video_stats = dict()
         video_durations = dict()
         total_duration_h = 0
         total_size_bytes = 0
-
-        for folder in data:
+        for folder in self.folders:
             for presentation in folder['presentations']:
                 for video in presentation['videos']:
-                    got_encoding_stats = False
+                    got_encoding_infos = False
                     for file in video['files']:
                         total_videos += 1
                         if file.get('encoding_infos'):
@@ -133,25 +121,40 @@ class DataAnalyzer():
                             video_durations[format_str] += int(file.get('duration_ms', 0) / (3600 * 1000))
 
                             videos_with_encoding_info += 1
-                            got_encoding_stats = True
+                            got_encoding_infos = True
                             break
-                    if not got_encoding_stats:
-                        presentations_with_no_encoding_infos.append(presentation)
+                    if not got_encoding_infos:
+                        videos_with_no_encoding_infos.append(presentation)
                     total_duration_h += int(file.get('duration_ms', 0) / (3600 * 1000))
                     total_size_bytes += file.get('size_bytes', 0)
 
-        print(f'Found {videos_with_encoding_info}/{total_videos} {int(100 * videos_with_encoding_info / total_videos)}% of videos with encoding info')
-        print(f'Total duration: {int(total_duration_h)} h, total size: {int(total_size_bytes / 1000000000)} TB')
+        encoding_infos = {
+            'total_duration_h': total_duration_h,
+            'total_size_bytes': total_size_bytes,
+            'videos_with_encoding_info': videos_with_encoding_info,
+            'videos_with_no_encoding_infos': videos_with_no_encoding_infos,
+            'total_videos': total_videos,
+            'video_stats': video_stats,
+            'video_durations': video_durations,
+        }
+        return encoding_infos
 
-        for key, val in video_stats.items():
-            print(f'{key}: {val}/{videos_with_encoding_info} ({int(100 * val / videos_with_encoding_info)}%)')
+    def _order_videos_by_presentations(self, data):
+        presentations = []
+        for folder in data:
+            for p in folder['presentations']:
+                presentations.append(p)
+        return presentations
 
-        total_dur_with_info = 0
-        for key, val in video_durations.items():
-            total_dur_with_info += val
-
-        for key, val in video_durations.items():
-            print(f'{key}: {val}/{total_dur_with_info} ({int(100 * val / total_dur_with_info)}%)')
+    def _set_mp4_urls(self):
+        mp4_urls = list()
+        for presentation in self.presentations:
+            if not DataAnalyzer.has_multiple_videos(presentation):
+                for file in presentation['videos'][0]['files']:
+                    if file['format'] == 'video/mp4':
+                        mp4_urls.append(file['url'])
+                        break
+        return mp4_urls
 
     @staticmethod
     def find_best_format(video):

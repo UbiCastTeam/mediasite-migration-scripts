@@ -6,6 +6,7 @@ import logging
 import argparse
 from argparse import RawTextHelpFormatter
 import os
+import sys
 
 from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 from mediasite_migration_scripts.lib.utils import MediasiteSetup
@@ -43,12 +44,7 @@ if __name__ == '__main__':
         logging.info('No data to analyse, or data is corrupted.')
         run_import = input('No data to analyse. Do you want to run import data ? [y/N] ').lower()
         if run_import == 'y' or run_import == 'yes':
-            option = ''
-            for opt, boolean in options.__dict__.items():
-                if boolean:
-                    option = str(opt)
-                    break
-            args = f'--{option}' if option else ''
+            args = str(*sys.argv[1:])
             os.system(f'python3 bin/import_data.py {args}')
         else:
             print('--------- Aborted ---------')
@@ -64,6 +60,9 @@ if __name__ == '__main__':
 
     analyzer = DataAnalyzer(data)
 
+    line_sep_str = '-' * 50
+    print(line_sep_str)
+
     print(f'Found {len(analyzer.folders)} folders')
     print(f'Number of presentations in folders: {len(analyzer.presentations)}')
 
@@ -72,7 +71,8 @@ if __name__ == '__main__':
     empty_user_folders = folders_infos['empty_user_folders']
     print(f'{len(empty_folders)} folders have no presentation inside {len(empty_user_folders)} user folders')
 
-    videos_format_stats = analyzer.compute_videos_stats()
+    videos_format_stats, videos_layout_stats = analyzer.analyze_videos_infos()
+
     with_mp4 = 0
     no_mp4 = 0
     for v_format, count in videos_format_stats.items():
@@ -82,18 +82,43 @@ if __name__ == '__main__':
             no_mp4 += count
     print(f'{no_mp4}% of videos without mp4 vs {with_mp4}% with mp4')
 
-    videos_layout_stats = analyzer.compute_layout_stats()
     no_slide = videos_layout_stats['mono']
     with_slides = videos_layout_stats['mono + slides']
     multiple = videos_layout_stats['multiple']
     print(f'There\'s {no_slide}% of videos with no slide, {with_slides}% with slides, and {multiple}% are compositions of multiple videos')
 
-    mp4_analyse = analyzer.analyse_downloadable_mp4()
-    downloadable_mp4 = mp4_analyse['downloadable_mp4']
-    status_codes = mp4_analyse['status_codes']
+    print(line_sep_str)
+
+    downloadable_mp4_count = analyzer.count_downloadable_mp4s()
+    downloadable_mp4 = downloadable_mp4_count['downloadable_mp4']
+    status_codes = downloadable_mp4_count['status_codes']
     print(f'{len(downloadable_mp4)} downloadable mp4s, status codes: {status_codes}')
 
-    analyzer.analyze_encoding_infos(data)
+    print(line_sep_str)
+
+    encoding_infos = analyzer.analyze_encoding_infos()
+    total_duration_h = encoding_infos['total_duration_h']
+    total_size_bytes = encoding_infos['total_size_bytes']
+    videos_with_encoding_info = encoding_infos['videos_with_encoding_info']
+    total_videos = encoding_infos['total_videos']
+    video_stats = encoding_infos['video_stats']
+    video_durations = encoding_infos['video_durations']
+
+    print(f'Found {videos_with_encoding_info}/{total_videos} ({int(100 * videos_with_encoding_info / total_videos)}%) videos with encoding info', end='\n\n')
+
+    print(f'Total duration: {int(total_duration_h)} h, total size: {int(total_size_bytes / 1000000000)} TB')
+    for key, val in video_stats.items():
+        print(f'{key}: {val}/{videos_with_encoding_info} TB ({int(100 * val / videos_with_encoding_info)}%)')
+
+    print('')
+
+    total_dur_with_info = 0
+    for key, val in video_durations.items():
+        total_dur_with_info += val
+
+    print(f'Total durations with encoding infos: {total_dur_with_info} h ')
+    for key, val in video_durations.items():
+        print(f'{key}: {val}h / {total_dur_with_info}h ({int(100 * val / total_dur_with_info)}%)')
 
     if options.doctor:
         config_data = {}
