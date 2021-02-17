@@ -43,12 +43,17 @@ if __name__ == '__main__':
             logger.info('data.json already found, not fetching catalog data')
     except Exception as e:
         logger.debug(e)
-        extractor = DataExtractor(config_data)
-        data = extractor.all_data
-        with open('data.json', 'w') as f:
-            json.dump(data, f)
+        try:
+            extractor = DataExtractor(config_data)
+            data = extractor.all_data
 
-        with open('catalogs.json', 'w') as f:
-            json.dump(extractor.catalogs, f)
+            with open('data.json', 'w') as f:
+                json.dump(data, f)
 
-        print('--------- Import data successfull --------- ')
+            with open('catalogs.json', 'w') as f:
+                json.dump(extractor.catalogs, f)
+
+            print('--------- Import data successfull --------- ')
+        except Exception:
+            logger.error('Import data failed !')
+            logger.debug(e)

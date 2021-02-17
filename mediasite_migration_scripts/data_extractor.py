@@ -140,7 +140,7 @@ class DataExtractor():
 
                 width = int(settings.getElementsByTagName('PresentationAspectX')[0].firstChild.nodeValue)
                 height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
-                # sometimes resolution values given by the API are reversed, we reverse them again if so
+                # sometimes resolution values given by the API are reversed, we use MediaInfo in that case
                 if width < height:
                     logging.debug('Resolution values given by the API may be reversed... switching to MediaInfo.')
                     return self._parse_encoding_infos(video_url)
