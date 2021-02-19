@@ -5,6 +5,7 @@ import logging
 class DataAnalyzer():
     def __init__(self, data):
         self.folders = data
+        self.catalogs = self._set_catalogs()
         self.presentations = self._order_videos_by_presentations(data)
         self.mp4_urls = self._set_mp4_urls()
 
@@ -155,6 +156,12 @@ class DataAnalyzer():
                         mp4_urls.append(file['url'])
                         break
         return mp4_urls
+
+    def _set_catalogs(self):
+        catalogs = list()
+        for folder in self.folders:
+            catalogs.extend(folder.get('catalogs'))
+        return catalogs
 
     @staticmethod
     def find_best_format(video):

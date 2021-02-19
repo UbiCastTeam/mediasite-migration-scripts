@@ -4,6 +4,7 @@
 from argparse import RawTextHelpFormatter
 import argparse
 import json
+import sys
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
 from mediasite_migration_scripts.lib.utils import MediasiteSetup
@@ -37,23 +38,24 @@ if __name__ == '__main__':
         logger.info('No config file or file is corrupted.')
         config_data = None
 
+    file = 'data_debug.json' if options.dryrun else 'data.json'
     try:
-        with open('data.json') as f:
+        with open(file) as f:
             data = json.load(f)
             logger.info('data.json already found, not fetching catalog data')
     except Exception as e:
         logger.debug(e)
         try:
-            extractor = DataExtractor(config_data)
+            extractor = DataExtractor(config_data, options.dryrun)
             data = extractor.all_data
 
-            with open('data.json', 'w') as f:
+            with open(file, 'w') as f:
                 json.dump(data, f)
 
             with open('catalogs.json', 'w') as f:
                 json.dump(extractor.catalogs, f)
 
             print('--------- Import data successfull --------- ')
-        except Exception:
+        except Exception as e:
             logger.error('Import data failed !')
             logger.debug(e)

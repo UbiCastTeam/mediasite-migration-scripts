@@ -8,8 +8,9 @@ from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
 class DataExtractor():
 
-    def __init__(self, config_file=None):
+    def __init__(self, config_file=None, debug=False):
         print('Connecting...', end='\r')
+        self.debug = debug
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
         self.folders = self.mediasite.folder.get_all_folders()
@@ -42,14 +43,17 @@ class DataExtractor():
             path = self._find_folder_path(folder['id'], self.folders)
             if self._is_folder_to_add(path):
                 logging.debug('Found folder : ' + path)
-                presentations = self.mediasite.folder.get_folder_presentations(folder['id'])
+                presentations = self.get_folder_presentations_infos(folder['id'])
                 for presentation in presentations:
+                    presentation['url'] = f'{self.setup.config.get("mediasite_base_url")}/Play/{presentation["id"]}'
                     presentation['videos'] = self.get_videos_infos(presentation)
-                    presentation['slides'] = self.get_slides_infos(presentation)
+                    presentation['slides'] = self.get_slides_infos(presentation, details=True)
                 presentations_folders.append({**folder,
-                                              'catalogs': self._find_catalogs_with_linked_folder_id(folder['id']),
+                                              'catalogs': self.get_folder_catalogs_infos(folder['id']),
                                               'path': path,
                                               'presentations': presentations})
+            if i > 50 and self.debug:
+                break
             i += 1
         return presentations_folders
 
@@ -61,16 +65,49 @@ class DataExtractor():
             return False
         return True
 
-    def _find_catalogs_with_linked_folder_id(self, folder_id):
-        linked_catalogs = list()
+    def get_folder_presentations_infos(self, folder_id):
+        folder_presentations = self.mediasite.folder.get_folder_presentations(folder_id)
+        presentations_infos = list()
+
+        for presentation in folder_presentations:
+            has_slides_details = False
+            for stream_type in presentation.get('Streams'):
+                if stream_type.get('StreamType') == 'Slide':
+                    has_slides_details = True
+                    break
+            infos = {
+                'id': presentation.get('Id'),
+                'title': presentation.get('Title'),
+                'has_slides_details': has_slides_details,
+                'creation_date': presentation.get('CreationDate'),
+                'presenter_username': '',
+                'presenter_display_name': presentation.get('PrimaryPresenter'),
+                'presenter_mail': '',
+                'owner_username': presentation.get('RootOwner'),
+                'owner_display_name': '',
+                'creator': presentation.get('Creator'),
+                'other_presenters': [],
+                'status': presentation.get('Status'),
+                'description': presentation.get('Description', ''),
+                'tags': presentation.get("TagList"),
+                'timed_events': [],
+                'url': ''
+            }
+            presentations_infos.append(infos)
+
+        return presentations_infos
+
+    def get_folder_catalogs_infos(self, folder_id):
+        folder_catalogs = list()
         for catalog in self.catalogs:
-            if catalog['LinkedFolderId'] == folder_id:
-                if catalog not in linked_catalogs:
-                    linked_catalogs.append({
-                        'id': catalog['Id'],
-                        'access_url': catalog['CatalogUrl']
-                    })
-        return linked_catalogs
+            if folder_id == catalog['LinkedFolderId']:
+                infos = {'id': catalog.get('Id'),
+                         'name': catalog.get('Name'),
+                         'description': catalog.get('Description'),
+                         'url': catalog.get('CatalogUrl'),
+                         'owner_username': catalog.get('Owner')}
+                folder_catalogs.append(infos)
+        return folder_catalogs
 
     def get_videos_infos(self, presentation):
         logging.debug(f"Gathering video info for presentation : {presentation['id']}")
@@ -83,7 +120,7 @@ class DataExtractor():
     def _get_video_details(self, video):
         video_list = []
         if video:
-            for file in video['value']:
+            for file in video:
                 content_server = self.mediasite.presentation.get_content_server(file['ContentServerId'])
                 if 'DistributionUrl' in content_server:
                     # popping odata query params, we just need the route
@@ -188,27 +225,33 @@ class DataExtractor():
     def get_slides_infos(self, presentation, details=False):
         logging.debug(f"Gathering slides infos for presentation: {presentation['id']}")
 
+        if details and presentation['has_slides_details']:
+            option = 'SlideDetailsContent'
+        else:
+            option = 'SlideContent'
+
         slides_infos = {}
-        option = 'SlideDetailsContent' if details else 'SlideContent'
-        slides_result = self.mediasite.presentation.get_presentation_content(presentation['id'], option)
-        if slides_result:
-            for slides in slides_result['value']:
-                content_server_id = slides['ContentServerId']
-                content_server = self.mediasite.presentation.get_content_server(content_server_id, slide=True)
-                content_server_url = content_server['Url']
-                presentation_id = slides['ParentResourceId']
+        slides = self.mediasite.presentation.get_presentation_content(presentation['id'], option)
+        # SlideDetailsContent returns a dict whereas SlideContent return a list ('value')
+        if type(slides) == list and len(slides) > 0:
+            slides = slides[0]
+        if slides:
+            content_server_id = slides['ContentServerId']
+            content_server = self.mediasite.presentation.get_content_server(content_server_id, slide=True)
+            content_server_url = content_server['Url']
+            presentation_id = slides['ParentResourceId']
 
-                slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
-                slides_urls = []
-                slides_files_names = slides['FileNameWithExtension']
-                for i in range(int(slides['Length'])):
-                    # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
-                    file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
-                    link = f'{slides_base_url}/{file_name}'
-                    slides_urls.append(link)
+            slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
+            slides_urls = []
+            slides_files_names = slides['FileNameWithExtension']
+            for i in range(int(slides['Length'])):
+                # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
+                file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
+                link = f'{slides_base_url}/{file_name}'
+                slides_urls.append(link)
 
-                slides_infos['urls'] = slides_urls
-                slides_infos['details'] = slides['SlideDetails'] if details else None
+            slides_infos['urls'] = slides_urls
+            slides_infos['details'] = slides.get('SlideDetails') if details else None
 
         return slides_infos
 
