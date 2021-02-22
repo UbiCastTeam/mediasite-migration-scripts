@@ -51,7 +51,7 @@ class DataAnalyzer():
         print(f'Counting downloadable mp4s (among {len(self.mp4_urls)} urls)')
         with requests.Session() as session:
             for index, url in enumerate(self.mp4_urls):
-                print(f'[{index + 1}]/[{len(self.mp4_urls)}]', end='\r')
+                print(f'[{index + 1}]/[{len(self.mp4_urls)}] -- {(index + 1 / len(self.mp4_urls)) * 100}', end='\r')
                 ok = False
                 # IIS returns 401 when trying head(), so let us just test the smallest GET possible
                 with session.get(url, stream=True) as r:

@@ -13,7 +13,7 @@ class DataExtractor():
         self.debug = debug
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
-        self.folders = self.mediasite.folder.get_all_folders()
+        self.folders = self.get_all_folders_infos()
         self.catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
 
@@ -24,9 +24,9 @@ class DataExtractor():
         params :
             parent_id : id of the top parent folder where parsing should begin
         returns:
-            list ot items containing folder ID, parent folder ID, name, and
-                list of his presentations containing ID, title, owner and
-                    list of videos and list of slides with details
+            list ot items containing folders' infos, and
+                list of items containing presentations' infos and
+                    list of items containing videos and slides metadata
         """
         logging.info('Gathering and ordering all presentations / folders data ')
         if not parent_id:
@@ -45,8 +45,16 @@ class DataExtractor():
                 logging.debug('Found folder : ' + path)
                 presentations = self.get_folder_presentations_infos(folder['id'])
                 for presentation in presentations:
-                    presentation['url'] = f'{self.setup.config.get("mediasite_base_url")}/Play/{presentation["id"]}'
-                    presentation['videos'] = self.get_videos_infos(presentation)
+                    presenter_infos = self.get_user_infos(display_name=presentation['presenter_display_name'])
+                    presentation['presenter_username'] = presenter_infos.get('user_name', '')
+                    presentation['presenter_mail'] = presenter_infos.get('mail', '')
+
+                    owner_infos = self.get_user_infos(username=presentation['owner_username'])
+                    presentation['owner_display_name'] = owner_infos.get('display_name', '')
+                    presentation['owner_mail'] = owner_infos.get('mail', '')
+
+                    presentation['all_presenters'] = self.get_presenters_infos(presentation['id'])
+                    presentation['videos'] = self.get_videos_infos(presentation['id'])
                     presentation['slides'] = self.get_slides_infos(presentation, details=True)
                 presentations_folders.append({**folder,
                                               'catalogs': self.get_folder_catalogs_infos(folder['id']),
@@ -65,6 +73,21 @@ class DataExtractor():
             return False
         return True
 
+    def get_all_folders_infos(self):
+        folders_infos = list()
+        folders = self.mediasite.folder.get_all_folders()
+        for folder in folders:
+            folder_info = {
+                'id': folder.get('Id'),
+                'parent_id': folder.get('ParentFolderId'),
+                'name': folder.get('Name'),
+                'owner_username': folder.get('Owner'),
+                'description': folder.get('Description')
+            }
+            folders_infos.append(folder_info)
+
+        return folders_infos
+
     def get_folder_presentations_infos(self, folder_id):
         folder_presentations = self.mediasite.folder.get_folder_presentations(folder_id)
         presentations_infos = list()
@@ -76,22 +99,22 @@ class DataExtractor():
                     has_slides_details = True
                     break
             infos = {
-                'id': presentation.get('Id'),
-                'title': presentation.get('Title'),
+                'id': presentation.get('Id', str()),
+                'title': presentation.get('Title', str()),
+                'creation_date': presentation.get('CreationDate', str()),
+                'presenter_username': str(),
+                'presenter_display_name': presentation.get('PrimaryPresenter', str()),
+                'presenter_mail': str(),
+                'owner_username': presentation.get('RootOwner', str()),
+                'owner_display_name': str(),
+                'creator': presentation.get('Creator', str()),
+                'all_presenters': [],
+                'published_status': presentation.get('Status') == 'Viewable',
                 'has_slides_details': has_slides_details,
-                'creation_date': presentation.get('CreationDate'),
-                'presenter_username': '',
-                'presenter_display_name': presentation.get('PrimaryPresenter'),
-                'presenter_mail': '',
-                'owner_username': presentation.get('RootOwner'),
-                'owner_display_name': '',
-                'creator': presentation.get('Creator'),
-                'other_presenters': [],
-                'status': presentation.get('Status'),
-                'description': presentation.get('Description', ''),
-                'tags': presentation.get("TagList"),
+                'description': presentation.get('Description', str()),
+                'tags': presentation.get('TagList', str()),
                 'timed_events': [],
-                'url': ''
+                'url': presentation.get('#Play').get('target', str())
             }
             presentations_infos.append(infos)
 
@@ -109,11 +132,37 @@ class DataExtractor():
                 folder_catalogs.append(infos)
         return folder_catalogs
 
-    def get_videos_infos(self, presentation):
-        logging.debug(f"Gathering video info for presentation : {presentation['id']}")
+    def get_user_infos(self, username=str(), display_name=str()):
+        user_infos = dict()
+        user = None
+        if username and not display_name:
+            user = self.mediasite.user.get_profile_by_username(username)
+        elif display_name and not username:
+            user = self.mediasite.user.get_profile_by_display_name(display_name)
+
+        if user:
+            user_infos = {
+                'username': user.get('UserName'),
+                'display_name': user.get('DisplayName'),
+                'mail': user.get('Email')
+            }
+
+        return user_infos
+
+    def get_presenters_infos(self, presentation_id):
+        presenters_infos = list()
+        presenters = self.mediasite.presentation.get_presenters(presentation_id)
+        if presenters:
+            for presenter in presenters:
+                presenters_infos.append({'display_name': presenter.get('DisplayName')})
+
+        return presenters_infos
+
+    def get_videos_infos(self, presentation_id):
+        logging.debug(f"Gathering video info for presentation : {presentation_id}")
 
         videos_infos = []
-        video = self.mediasite.presentation.get_presentation_content(presentation['id'], 'OnDemandContent')
+        video = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
         videos_infos = self._get_video_details(video)
         return videos_infos
 
@@ -121,7 +170,7 @@ class DataExtractor():
         video_list = []
         if video:
             for file in video:
-                content_server = self.mediasite.presentation.get_content_server(file['ContentServerId'])
+                content_server = self.mediasite.content.get_content_server(file['ContentServerId'])
                 if 'DistributionUrl' in content_server:
                     # popping odata query params, we just need the route
                     splitted_url = content_server['DistributionUrl'].split('/')
@@ -166,7 +215,7 @@ class DataExtractor():
     def _get_encoding_infos_from_api(self, settings_id, video_url):
         logging.debug(f'Getting encoding infos with settings ID : {settings_id}')
         encoding_infos = {}
-        encoding_settings = self.mediasite.presentation.get_content_encoding_settings(settings_id)
+        encoding_settings = self.mediasite.content.get_content_encoding_settings(settings_id)
         if encoding_settings:
             try:
                 serialized_settings = encoding_settings['SerializedSettings']
@@ -223,7 +272,8 @@ class DataExtractor():
         return encoding_infos
 
     def get_slides_infos(self, presentation, details=False):
-        logging.debug(f"Gathering slides infos for presentation: {presentation['id']}")
+        presentation_id = presentation['id']
+        logging.debug(f"Gathering slides infos for presentation: {presentation_id}")
 
         if details and presentation['has_slides_details']:
             option = 'SlideDetailsContent'
@@ -231,13 +281,13 @@ class DataExtractor():
             option = 'SlideContent'
 
         slides_infos = {}
-        slides = self.mediasite.presentation.get_presentation_content(presentation['id'], option)
-        # SlideDetailsContent returns a dict whereas SlideContent return a list ('value')
+        slides = self.mediasite.presentation.get_content(presentation_id, option)
+        # SlideDetailsContent returns a dict whereas SlideContent return a list (key 'value')
         if type(slides) == list and len(slides) > 0:
             slides = slides[0]
         if slides:
             content_server_id = slides['ContentServerId']
-            content_server = self.mediasite.presentation.get_content_server(content_server_id, slide=True)
+            content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
             content_server_url = content_server['Url']
             presentation_id = slides['ParentResourceId']
 
@@ -254,6 +304,12 @@ class DataExtractor():
             slides_infos['details'] = slides.get('SlideDetails') if details else None
 
         return slides_infos
+
+    def get_hostname(self):
+        api_url = self.setup.config.get("mediasite_base_url")
+        hostname = api_url.split('/').pop()
+        hostname = '/'.join(hostname)
+        return hostname
 
     def _find_folder_path(self, folder_id, folders, path=''):
         """
