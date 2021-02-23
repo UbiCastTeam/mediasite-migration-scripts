@@ -42,7 +42,7 @@ if __name__ == '__main__':
     try:
         with open(file) as f:
             data = json.load(f)
-            logger.info('data.json already found, not fetching catalog data')
+            logger.info(f'{file} already found, not fetching catalog data')
     except Exception as e:
         logger.debug(e)
         try:

@@ -9,10 +9,11 @@ from mediasite_migration_scripts.lib.utils import MediasiteSetup
 class DataExtractor():
 
     def __init__(self, config_file=None, debug=False):
-        print('Connecting...', end='\r')
+        print('Connecting...')
         self.debug = debug
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
+        self.presentations = list()
         self.folders = self.get_all_folders_infos()
         self.catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
@@ -36,42 +37,81 @@ class DataExtractor():
         presentations_folders = list()
         for folder in self.folders:
             if i < 1:
-                print('Connecting...', end='\r')
+                print('Getting presentations... (take a few minutes)')
             else:
-                print('Requesting: ', f'[{i}/{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
+                print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
             path = self._find_folder_path(folder['id'], self.folders)
             if self._is_folder_to_add(path):
                 logging.debug('Found folder : ' + path)
-                presentations = self.get_folder_presentations_infos(folder['id'])
-                for presentation in presentations:
-                    presenter_infos = self.get_user_infos(display_name=presentation['presenter_display_name'])
-                    presentation['presenter_username'] = presenter_infos.get('user_name', '')
-                    presentation['presenter_mail'] = presenter_infos.get('mail', '')
-
-                    owner_infos = self.get_user_infos(username=presentation['owner_username'])
-                    presentation['owner_display_name'] = owner_infos.get('display_name', '')
-                    presentation['owner_mail'] = owner_infos.get('mail', '')
-
-                    presentation['all_presenters'] = self.get_presenters_infos(presentation['id'])
-                    presentation['videos'] = self.get_videos_infos(presentation['id'])
-                    presentation['slides'] = self.get_slides_infos(presentation, details=True)
                 presentations_folders.append({**folder,
                                               'catalogs': self.get_folder_catalogs_infos(folder['id']),
                                               'path': path,
-                                              'presentations': presentations})
+                                              'presentations': self.get_presentations_infos(folder['id'])})
             if i > 50 and self.debug:
                 break
             i += 1
         return presentations_folders
 
+    def _find_folder_path(self, folder_id, folders, path=''):
+        for folder in folders:
+            if folder['id'] == folder_id:
+                path += self._find_folder_path(folder['parent_id'], folders, path)
+                path += '/' + folder['name']
+                return path
+        return ''
+
     def _is_folder_to_add(self, path):
-        if self.setup.config['mediasite_folders_whitelist']:
+        if self.setup.config.get('mediasite_folders_whitelist'):
             for fw in self.setup.config['mediasite_folders_whitelist']:
                 if path.find(fw):
                     return True
             return False
         return True
+
+    def get_presentations_infos(self, folder_id):
+        logging.debug(f'Gettings presentations infos for folder: {folder_id}')
+        presentations_infos = list()
+        # affecting presentations in constructor seems to provoke unexpected behaviours (append list in list instead of copying list)
+        self.presentations = self.mediasite.presentation.get_all_presentations() if not self.presentations else self.presentations
+
+        for presentation in self.presentations:
+            if presentation.get('ParentFolderId') == folder_id:
+                has_slides_details = False
+                for stream_type in presentation.get('Streams'):
+                    if stream_type.get('StreamType') == 'Slide':
+                        has_slides_details = True
+                        break
+
+                owner_infos = self.get_user_infos(username=presentation.get('RootOwner', ''))
+                presenter_display_name = presentation.get('PrimaryPresenter', '')
+                if presenter_display_name.startswith('Default Presenter'):
+                    presenter_display_name = None
+
+                infos = {
+                    'id': presentation.get('Id', ''),
+                    'title': presentation.get('Title', ''),
+                    'creation_date': presentation.get('CreationDate', ''),
+                    'presenter_display_name': presenter_display_name,
+                    'owner_username': presentation.get('RootOwner', ''),
+                    'owner_display_name': owner_infos.get('display_name', ''),
+                    'owner_mail': owner_infos.get('mail', ''),
+                    'creator': presentation.get('Creator', ''),
+                    'other_presenters': self.get_presenters_infos(presentation.get('Id')),
+                    'availability': self.mediasite.presentation.get_availability(presentation.get('Id')),
+                    'published_status': presentation.get('Status') == 'Viewable',
+                    'has_slides_details': has_slides_details,
+                    'description': presentation.get('Description', ''),
+                    'tags': presentation.get('TagList', ''),
+                    'timed_events': [],
+                    'url': presentation.get('#Play').get('target', ''),
+                }
+                infos['videos'] = self.get_videos_infos(presentation.get('Id'))
+                infos['slides'] = self.get_slides_infos(infos, details=True)
+
+                presentations_infos.append(infos)
+
+        return presentations_infos
 
     def get_all_folders_infos(self):
         folders_infos = list()
@@ -88,38 +128,6 @@ class DataExtractor():
 
         return folders_infos
 
-    def get_folder_presentations_infos(self, folder_id):
-        folder_presentations = self.mediasite.folder.get_folder_presentations(folder_id)
-        presentations_infos = list()
-
-        for presentation in folder_presentations:
-            has_slides_details = False
-            for stream_type in presentation.get('Streams'):
-                if stream_type.get('StreamType') == 'Slide':
-                    has_slides_details = True
-                    break
-            infos = {
-                'id': presentation.get('Id', str()),
-                'title': presentation.get('Title', str()),
-                'creation_date': presentation.get('CreationDate', str()),
-                'presenter_username': str(),
-                'presenter_display_name': presentation.get('PrimaryPresenter', str()),
-                'presenter_mail': str(),
-                'owner_username': presentation.get('RootOwner', str()),
-                'owner_display_name': str(),
-                'creator': presentation.get('Creator', str()),
-                'all_presenters': [],
-                'published_status': presentation.get('Status') == 'Viewable',
-                'has_slides_details': has_slides_details,
-                'description': presentation.get('Description', str()),
-                'tags': presentation.get('TagList', str()),
-                'timed_events': [],
-                'url': presentation.get('#Play').get('target', str())
-            }
-            presentations_infos.append(infos)
-
-        return presentations_infos
-
     def get_folder_catalogs_infos(self, folder_id):
         folder_catalogs = list()
         for catalog in self.catalogs:
@@ -132,17 +140,12 @@ class DataExtractor():
                 folder_catalogs.append(infos)
         return folder_catalogs
 
-    def get_user_infos(self, username=str(), display_name=str()):
+    def get_user_infos(self, username=str()):
         user_infos = dict()
-        user = None
-        if username and not display_name:
-            user = self.mediasite.user.get_profile_by_username(username)
-        elif display_name and not username:
-            user = self.mediasite.user.get_profile_by_display_name(display_name)
 
+        user = self.mediasite.user.get_profile_by_username(username)
         if user:
             user_infos = {
-                'username': user.get('UserName'),
                 'display_name': user.get('DisplayName'),
                 'mail': user.get('Email')
             }
@@ -154,7 +157,9 @@ class DataExtractor():
         presenters = self.mediasite.presentation.get_presenters(presentation_id)
         if presenters:
             for presenter in presenters:
-                presenters_infos.append({'display_name': presenter.get('DisplayName')})
+                presenter_name = presenter.get('DisplayName')
+                if not presenter_name.startswith('Default Presenter'):
+                    presenters_infos.append({'display_name': presenter_name})
 
         return presenters_infos
 
@@ -164,56 +169,57 @@ class DataExtractor():
         videos_infos = []
         video = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
         videos_infos = self._get_video_details(video)
+
         return videos_infos
 
     def _get_video_details(self, video):
         video_list = []
-        if video:
-            for file in video:
-                content_server = self.mediasite.content.get_content_server(file['ContentServerId'])
-                if 'DistributionUrl' in content_server:
-                    # popping odata query params, we just need the route
-                    splitted_url = content_server['DistributionUrl'].split('/')
-                    splitted_url.pop()
-                    storage_url = '/'.join(splitted_url)
-                file_name = file['FileNameWithExtension']
-                video_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
 
-                file_infos = {
-                    'url': video_url,
-                    'format': file['ContentMimeType'],
-                    'size_bytes': int(file['FileLength']),
-                    'duration_ms': int(file['Length']),
-                    'is_transcode_source': file['IsTranscodeSource'],
-                    'encoding_infos': {}
-                }
+        for file in video:
+            content_server = self.mediasite.content.get_content_server(file['ContentServerId'])
+            if 'DistributionUrl' in content_server:
+                # popping odata query params, we just need the route
+                splitted_url = content_server['DistributionUrl'].split('/')
+                splitted_url.pop()
+                storage_url = '/'.join(splitted_url)
+            file_name = file['FileNameWithExtension']
+            video_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
 
-                if file_infos['format'] == 'video/mp4':
-                    if file.get('ContentEncodingSettingsId'):
-                        file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
+            file_infos = {
+                'url': video_url,
+                'format': file['ContentMimeType'],
+                'size_bytes': int(file['FileLength']),
+                'duration_ms': int(file['Length']),
+                'is_transcode_source': file['IsTranscodeSource'],
+                'encoding_infos': {}
+            }
 
-                    if not file_infos.get('encoding_infos'):
-                        logging.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
-                        if file_infos.get('url'):
-                            file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
-                        elif 'LocalUrl' in content_server:
-                            logging.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
-                        else:
-                            logging.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
+            if file_infos['format'] == 'video/mp4':
+                if file.get('ContentEncodingSettingsId'):
+                    file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
-                stream = file['StreamType']
-                in_list = False
-                for v in video_list:
-                    if stream == v.get('stream_type'):
-                        in_list = True
-                        v['files'].append(file_infos)
-                if not in_list:
-                    video_list.append({'stream_type': stream,
-                                       'files': [file_infos]})
+                if not file_infos.get('encoding_infos'):
+                    logging.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
+                    if file_infos.get('url'):
+                        file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
+                    elif 'LocalUrl' in content_server:
+                        logging.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
+                    else:
+                        logging.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
+
+            stream = file['StreamType']
+            in_list = False
+            for v in video_list:
+                if stream == v.get('stream_type'):
+                    in_list = True
+                    v['files'].append(file_infos)
+            if not in_list:
+                video_list.append({'stream_type': stream,
+                                   'files': [file_infos]})
         return video_list
 
     def _get_encoding_infos_from_api(self, settings_id, video_url):
-        logging.debug(f'Getting encoding infos with settings ID : {settings_id}')
+        logging.debug(f'Getting encoding infos from api with settings id: {settings_id}')
         encoding_infos = {}
         encoding_settings = self.mediasite.content.get_content_encoding_settings(settings_id)
         if encoding_settings:
@@ -267,8 +273,9 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logging.warning(f'File is not a video: {video_url}')
         except Exception as e:
+            logging.debug(f'Video encoding infos could not be parsed for: {video_url}')
             logging.debug(e)
-            logging.warning(f'Video encoding infos could not be parsed for: {video_url}')
+
         return encoding_infos
 
     def get_slides_infos(self, presentation, details=False):
@@ -282,7 +289,7 @@ class DataExtractor():
 
         slides_infos = {}
         slides = self.mediasite.presentation.get_content(presentation_id, option)
-        # SlideDetailsContent returns a dict whereas SlideContent return a list (key 'value')
+        # SlideDetailsContent returns a dict whereas SlideContent return a list (key 'value' in JSON response)
         if type(slides) == list and len(slides) > 0:
             slides = slides[0]
         if slides:
@@ -310,21 +317,3 @@ class DataExtractor():
         hostname = api_url.split('/').pop()
         hostname = '/'.join(hostname)
         return hostname
-
-    def _find_folder_path(self, folder_id, folders, path=''):
-        """
-        Provide the folder's path delimited by '/'
-        by parsing the folders list structure
-
-        params:
-            folder_id: id of the folder for which we are looking for the path
-        returns:
-            string of the folder's path
-        """
-
-        for folder in folders:
-            if folder['id'] == folder_id:
-                path += self._find_folder_path(folder['parent_id'], folders, path)
-                path += '/' + folder['name']
-                return path
-        return ''
