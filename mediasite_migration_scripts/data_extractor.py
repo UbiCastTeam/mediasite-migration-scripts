@@ -42,7 +42,7 @@ class DataExtractor():
         presentations_folders = list()
         for folder in self.folders:
             if i == 0:
-                print(f'Requesting metadata... ({len(self.folders)}folders')
+                print(f'Requesting metadata... ({len(self.folders)} folders)')
             if i > 1:
                 print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
@@ -296,8 +296,14 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logging.warning(f'File is not a video: {video_url}')
         except Exception as e:
-            logging.debug(f'Video encoding infos could not be parsed for: {video_url}')
-            logging.debug(e)
+            r = requests.head(video_url)
+            if r.status_code == 404:
+                logging.warning(f'File not found: {video_url} {r.status_code}')
+            elif 400 < r.status_code < 500:
+                logging.warning(f'File request reject: {video_url} {r.status_code}')
+            else:
+                logging.warning(f'Video encoding infos could not be parsed: {video_url} {r.status_code}')
+                logging.debug(e)
 
         return encoding_infos
 
