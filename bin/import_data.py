@@ -57,5 +57,5 @@ if __name__ == '__main__':
 
             print('--------- Import data successfull --------- ')
         except Exception as e:
-            logger.error('Import data failed !')
+            print('Import data failed !')
             logger.debug(e)

@@ -13,7 +13,9 @@ class DataExtractor():
         self.debug = debug
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
-        self.presentations = list()
+
+        print('Getting presentations... (take a few minutes)')
+        self.presentations = self.mediasite.presentation.get_all_presentations()
         self.folders = self.get_all_folders_infos()
         self.catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
@@ -36,9 +38,7 @@ class DataExtractor():
         i = 0
         presentations_folders = list()
         for folder in self.folders:
-            if i < 1:
-                print('Getting presentations... (take a few minutes)')
-            else:
+            if i > 1:
                 print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
             path = self._find_folder_path(folder['id'], self.folders)
@@ -72,8 +72,6 @@ class DataExtractor():
     def get_presentations_infos(self, folder_id):
         logging.debug(f'Gettings presentations infos for folder: {folder_id}')
         presentations_infos = list()
-        # affecting presentations in constructor seems to provoke unexpected behaviours (append list in list instead of copying list)
-        self.presentations = self.mediasite.presentation.get_all_presentations() if not self.presentations else self.presentations
 
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
