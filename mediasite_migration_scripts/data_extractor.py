@@ -14,8 +14,7 @@ class DataExtractor():
         self.debug = debug
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
-        self.download_ckeck = False
-        self.download_protection = False
+        self.download_protection_enabled = None
 
         print('Getting presentations... (take a few minutes)')
         self.presentations = self.mediasite.presentation.get_all_presentations()
@@ -191,15 +190,18 @@ class DataExtractor():
             file_name = file['FileNameWithExtension']
             video_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
 
-            if not self.download_ckeck:
-                self.download_protection = self.is_download_protected(video_url)
-                self.download_ckeck = True
+            if self.download_protection_enabled is None:
+                self.download_protection_enabled = self.is_download_protected(video_url)
+                logging.info('Download protection seems enabled, will request playbackTickets from now on')
 
-            if self.download_protection:
+            if self.download_protection_enabled:
                 ticket = self.mediasite.content.get_authorization_ticket(presentation_id)
                 if ticket:
-                    playbackTicket = ticket.get('Id')
-                    video_url += f'?playbackTicket={playbackTicket}&AuthTicket={playbackTicket}'
+                    playbackTicket = ticket.get('TicketId')
+                    if not playbackTicket:
+                        logging.error(f'No valid playbackTicket in {ticket}')
+                    else:
+                        video_url += f'?playbackTicket={playbackTicket}&AuthTicket={playbackTicket}'
 
             file_infos = {
                 'url': video_url,
@@ -215,7 +217,7 @@ class DataExtractor():
                     file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
                 if not file_infos.get('encoding_infos'):
-                    logging.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
+                    logging.debug(f"No video encoding info found in the API for presentation: {file['ParentResourceId']}, will analyze file")
                     if file_infos.get('url'):
                         file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
                     elif 'LocalUrl' in content_server:
@@ -238,7 +240,7 @@ class DataExtractor():
         with requests.Session() as session:
             protected = True
             with session.get(url, stream=True) as r:
-                protected = not r.ok and 400 < r.status_code < 404
+                protected = 400 < r.status_code < 404
         return protected
 
     def _get_encoding_infos_from_api(self, settings_id, video_url):
