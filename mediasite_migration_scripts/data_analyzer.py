@@ -5,7 +5,8 @@ import logging
 class DataAnalyzer():
     def __init__(self, data):
         self.folders = data
-        self.presentations = self._order_videos_by_presentations(data)
+        self.catalogs = self._set_catalogs()
+        self.presentations = self._order_videos_by_presentations()
         self.mp4_urls = self._set_mp4_urls()
 
     def analyze_videos_infos(self):
@@ -50,7 +51,7 @@ class DataAnalyzer():
         print(f'Counting downloadable mp4s (among {len(self.mp4_urls)} urls)')
         with requests.Session() as session:
             for index, url in enumerate(self.mp4_urls):
-                print(f'[{index + 1}]/[{len(self.mp4_urls)}]', end='\r')
+                print(f'[{index + 1}]/[{len(self.mp4_urls)}] -- {int(100 * (index + 1) / len(self.mp4_urls))}%', end='\r')
                 ok = False
                 # IIS returns 401 when trying head(), so let us just test the smallest GET possible
                 with session.get(url, stream=True) as r:
@@ -139,9 +140,9 @@ class DataAnalyzer():
         }
         return encoding_infos
 
-    def _order_videos_by_presentations(self, data):
+    def _order_videos_by_presentations(self):
         presentations = []
-        for folder in data:
+        for folder in self.folders:
             for p in folder['presentations']:
                 presentations.append(p)
         return presentations
@@ -155,6 +156,12 @@ class DataAnalyzer():
                         mp4_urls.append(file['url'])
                         break
         return mp4_urls
+
+    def _set_catalogs(self):
+        catalogs = list()
+        for folder in self.folders:
+            catalogs.extend(folder.get('catalogs'))
+        return catalogs
 
     @staticmethod
     def find_best_format(video):

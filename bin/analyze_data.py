@@ -35,23 +35,24 @@ if __name__ == '__main__':
     options = manage_opts()
     logger = MediasiteSetup.set_logger(options)
 
+    file = 'data_debug.json' if options.dryrun else 'data.json'
     try:
         data = []
-        with open('data.json') as f:
+        with open(file) as f:
             data = json.load(f)
     except Exception as e:
         logging.debug(e)
         logging.info('No data to analyse, or data is corrupted.')
         run_import = input('No data to analyse. Do you want to run import data ? [y/N] ').lower()
         if run_import == 'y' or run_import == 'yes':
-            args = str(*sys.argv[1:])
+            args = ' '.join(sys.argv[1:])
             os.system(f'python3 bin/import_data.py {args}')
         else:
             print('--------- Aborted ---------')
             exit()
 
         try:
-            with open('data.json') as f:
+            with open(file) as f:
                 data = json.load(f)
         except Exception as e:
             logger.debug(e)
@@ -65,6 +66,14 @@ if __name__ == '__main__':
 
     print(f'Found {len(analyzer.folders)} folders')
     print(f'Number of presentations in folders: {len(analyzer.presentations)}')
+    print(f'Found {len(analyzer.catalogs)} catalogs linked to folders')
+
+    folder_in_catalogs = list()
+    for folder in analyzer.folders:
+        if len(folder['catalogs']) > 0:
+            folder_in_catalogs.append(folder)
+
+    print(f'Number of folders linked to catalogs: {len(folder_in_catalogs)}')
 
     folders_infos = analyzer.analyse_folders()
     empty_folders = folders_infos['empty_folders']
@@ -108,7 +117,7 @@ if __name__ == '__main__':
 
     print(f'Total duration: {int(total_duration_h)} h, total size: {int(total_size_bytes / 1000000000)} TB')
     for key, val in video_stats.items():
-        print(f'{key}: {val}/{videos_with_encoding_info} TB ({int(100 * val / videos_with_encoding_info)}%)')
+        print(f'{key}: {val}/{videos_with_encoding_info} ({int(100 * val / videos_with_encoding_info)}%)')
 
     print('')
 
