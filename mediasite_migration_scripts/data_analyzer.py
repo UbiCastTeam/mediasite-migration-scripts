@@ -6,8 +6,8 @@ class DataAnalyzer():
     def __init__(self, data):
         self.folders = data
         self.catalogs = self._set_catalogs()
-        self.presentations = self._order_videos_by_presentations()
-        self.mp4_urls = self._set_mp4_urls()
+        self.presentations = self._set_presentations()
+        self.mp4_urls = self.set_mp4_urls()
 
     def analyze_videos_infos(self):
         format_stats = self._get_video_format_stats()
@@ -45,7 +45,6 @@ class DataAnalyzer():
         return layout_stats
 
     def count_downloadable_mp4s(self):
-        self._set_mp4_urls()
         downloadable_mp4 = list()
         status_codes = dict()
         print(f'Counting downloadable mp4s (among {len(self.mp4_urls)} urls)')
@@ -291,14 +290,14 @@ class DataAnalyzer():
 
         return encoding_infos
 
-    def _order_videos_by_presentations(self):
+    def _set_presentations(self):
         presentations = []
         for folder in self.folders:
             for p in folder['presentations']:
                 presentations.append(p)
         return presentations
 
-    def _set_mp4_urls(self):
+    def set_mp4_urls(self):
         mp4_urls = list()
         for presentation in self.presentations:
             if not DataAnalyzer.has_multiple_videos(presentation):

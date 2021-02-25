@@ -18,3 +18,15 @@ analyze_data: build
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		python3 bin/analyze_data.py $(ARGS)
+
+import_media: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/import_media.py $(ARGS)
+
+tests: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 -m unittest tests/*.py $(ARGS)

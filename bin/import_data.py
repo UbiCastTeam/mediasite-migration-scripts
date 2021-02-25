@@ -4,10 +4,10 @@
 from argparse import RawTextHelpFormatter
 import argparse
 import json
-import sys
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
-from mediasite_migration_scripts.lib.utils import MediasiteSetup
+from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
+from mediasite_migration_scripts.lib import utils
 
 if __name__ == '__main__':
     def usage(message=''):
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         return parser.parse_args()
 
     options = manage_opts()
-    logger = MediasiteSetup.set_logger(options)
+    logger = utils.set_logger(options)
 
     try:
         with open('config.json') as js:

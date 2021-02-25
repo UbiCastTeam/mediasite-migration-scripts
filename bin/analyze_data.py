@@ -9,7 +9,8 @@ import os
 import sys
 
 from mediasite_migration_scripts.data_analyzer import DataAnalyzer
-from mediasite_migration_scripts.lib.utils import MediasiteSetup
+from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
+from mediasite_migration_scripts.lib import utils
 
 if __name__ == '__main__':
     def usage(message=''):
@@ -63,7 +64,7 @@ if __name__ == '__main__':
         return parser.parse_args()
 
     options = manage_opts()
-    logger = MediasiteSetup.set_logger(options)
+    logger = utils.set_logger(options)
 
     file = 'data_debug.json' if options.dryrun else 'data.json'
     try:

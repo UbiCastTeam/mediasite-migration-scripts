@@ -3,7 +3,7 @@ import logging
 import xml.dom.minidom as xml
 from pymediainfo import MediaInfo
 
-from mediasite_migration_scripts.lib.utils import MediasiteSetup
+from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
 
 
 class DataExtractor():
