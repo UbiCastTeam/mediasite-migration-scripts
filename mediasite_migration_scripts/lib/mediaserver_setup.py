@@ -3,7 +3,8 @@ from decouple import config
 
 
 class MediaServerSetup():
-    def __init__(self):
+    def __init__(self, log_level='INFO'):
+        self.log_level = log_level
         self.config = self.setup()
         self.ms_client = MediaServerClient(local_conf=self.config)
 
@@ -14,5 +15,6 @@ class MediaServerSetup():
                                    "https": ""},
                        "SERVER_URL": "https://beta.ubicast.net",
                        "UPLOAD_CHUNK_SIZE": 5242880,
-                       "VERIFY_SSL": False}
+                       "VERIFY_SSL": False,
+                       "LOG_LEVEL": self.log_level}
         return config_data

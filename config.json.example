@@ -1,3 +1,7 @@
 {
     "whitelist": []
+    "video_formats_alowed': {
+        "mp4": true,
+        "wmv": true,
+    }
 }

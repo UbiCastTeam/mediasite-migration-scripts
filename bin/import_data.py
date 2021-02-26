@@ -38,7 +38,7 @@ if __name__ == '__main__':
         logger.info('No config file or file is corrupted.')
         config_data = None
 
-    file = 'data_debug.json' if options.dryrun else 'data.json'
+    file = 'mediasite_data_debug.json' if options.dryrun else 'mediasite_data.json'
     try:
         with open(file) as f:
             data = json.load(f)

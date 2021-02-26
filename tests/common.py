@@ -1,12 +1,10 @@
-import logging
-import os
 import json
 
 from mediasite_migration_scripts.lib import utils
 
-
 def set_logger(options, run_path):
     return utils.set_logger(options, run_path)
+
 
 def make_test_data():
 

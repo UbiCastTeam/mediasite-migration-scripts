@@ -15,7 +15,7 @@ class DataExtractor():
         self.mediasite = self.setup.mediasite
 
         print('Getting presentations... (take a few minutes)')
-        self.presentations = self.mediasite.presentation.get_all_presentations()
+        self.presentations = self.mediasite.presentation.get_all_presentations(debug=debug)
         self.folders = self.get_all_folders_infos()
         self.catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
@@ -37,6 +37,7 @@ class DataExtractor():
 
         i = 0
         presentations_folders = list()
+        catalogs_list = list()
         for folder in self.folders:
             if i > 1:
                 print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
@@ -44,13 +45,18 @@ class DataExtractor():
             path = self._find_folder_path(folder['id'], self.folders)
             if self._is_folder_to_add(path):
                 logging.debug('Found folder : ' + path)
+                catalogs = self.get_folder_catalogs_infos(folder['id'])
                 presentations_folders.append({**folder,
-                                              'catalogs': self.get_folder_catalogs_infos(folder['id']),
+                                              'catalogs': catalogs,
                                               'path': path,
                                               'presentations': self.get_presentations_infos(folder['id'])})
+                if catalogs:
+                    for c in catalogs:
+                        catalogs_list.append(c)
             if i > 50 and self.debug:
                 break
             i += 1
+        self.catalogs = catalogs_list
         return presentations_folders
 
     def _find_folder_path(self, folder_id, folders, path=''):
@@ -70,6 +76,7 @@ class DataExtractor():
         return True
 
     def get_presentations_infos(self, folder_id):
+        logging.debug('-' * 50)
         logging.debug(f'Gettings presentations infos for folder: {folder_id}')
         presentations_infos = list()
 
