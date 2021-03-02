@@ -2,6 +2,7 @@ import os
 import logging
 import xml.dom.minidom as xml
 from pymediainfo import MediaInfo
+import requests
 
 from mediasite_migration_scripts.lib.utils import MediasiteSetup
 
@@ -13,6 +14,7 @@ class DataExtractor():
         self.debug = debug
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
+        self.download_protection_enabled = None
 
         print('Getting presentations... (take a few minutes)')
         self.presentations = self.mediasite.presentation.get_all_presentations()
@@ -38,11 +40,14 @@ class DataExtractor():
         i = 0
         presentations_folders = list()
         for folder in self.folders:
+            if i == 0:
+                print(f'Requesting metadata... ({len(self.folders)} folders)')
             if i > 1:
                 print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
             path = self._find_folder_path(folder['id'], self.folders)
             if self._is_folder_to_add(path):
+                logging.debug('-' * 50)
                 logging.debug('Found folder : ' + path)
                 presentations_folders.append({**folder,
                                               'catalogs': self.get_folder_catalogs_infos(folder['id']),
@@ -75,6 +80,8 @@ class DataExtractor():
 
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
+                logging.debug('-' * 50)
+                logging.debug(f'Getting infos for presentation: {presentation.get("Id")}')
                 has_slides_details = False
                 for stream_type in presentation.get('Streams'):
                     if stream_type.get('StreamType') == 'Slide':
@@ -162,15 +169,15 @@ class DataExtractor():
         return presenters_infos
 
     def get_videos_infos(self, presentation_id):
-        logging.debug(f"Gathering video info for presentation : {presentation_id}")
+        logging.debug(f"Gathering videos infos for presentation : {presentation_id}")
 
         videos_infos = []
         video = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
-        videos_infos = self._get_video_details(video)
+        videos_infos = self._get_video_details(video, presentation_id)
 
         return videos_infos
 
-    def _get_video_details(self, video):
+    def _get_video_details(self, video, presentation_id):
         video_list = []
 
         for file in video:
@@ -182,6 +189,19 @@ class DataExtractor():
                 storage_url = '/'.join(splitted_url)
             file_name = file['FileNameWithExtension']
             video_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
+
+            if self.download_protection_enabled is None:
+                self.download_protection_enabled = self.is_download_protected(video_url)
+                logging.info('Download protection seems enabled, will request playbackTickets from now on')
+
+            if self.download_protection_enabled:
+                ticket = self.mediasite.content.get_authorization_ticket(presentation_id)
+                if ticket:
+                    playbackTicket = ticket.get('TicketId')
+                    if not playbackTicket:
+                        logging.error(f'No valid playbackTicket in {ticket}')
+                    else:
+                        video_url += f'?playbackTicket={playbackTicket}&site={self.get_hostname()}'
 
             file_infos = {
                 'url': video_url,
@@ -197,7 +217,7 @@ class DataExtractor():
                     file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
                 if not file_infos.get('encoding_infos'):
-                    logging.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
+                    logging.debug(f"No video encoding info found in the API for presentation: {file['ParentResourceId']}, will analyze file")
                     if file_infos.get('url'):
                         file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
                     elif 'LocalUrl' in content_server:
@@ -215,6 +235,13 @@ class DataExtractor():
                 video_list.append({'stream_type': stream,
                                    'files': [file_infos]})
         return video_list
+
+    def is_download_protected(self, url):
+        with requests.Session() as session:
+            protected = True
+            with session.get(url, stream=True) as r:
+                protected = 400 < r.status_code < 404
+        return protected
 
     def _get_encoding_infos_from_api(self, settings_id, video_url):
         logging.debug(f'Getting encoding infos from api with settings id: {settings_id}')
@@ -271,8 +298,14 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logging.warning(f'File is not a video: {video_url}')
         except Exception as e:
-            logging.debug(f'Video encoding infos could not be parsed for: {video_url}')
-            logging.debug(e)
+            r = requests.head(video_url)
+            if r.status_code == 404:
+                logging.warning(f'File not found: {video_url} {r.status_code}')
+            elif 400 < r.status_code < 500:
+                logging.warning(f'File request reject: {video_url} {r.status_code}')
+            else:
+                logging.warning(f'Video encoding infos could not be parsed: {video_url} {r.status_code}')
+                logging.debug(e)
 
         return encoding_infos
 
@@ -312,6 +345,4 @@ class DataExtractor():
 
     def get_hostname(self):
         api_url = self.setup.config.get("mediasite_base_url")
-        hostname = api_url.split('/').pop()
-        hostname = '/'.join(hostname)
-        return hostname
+        return requests.compat.urlparse(api_url).netloc
