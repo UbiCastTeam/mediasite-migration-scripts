@@ -201,7 +201,7 @@ class DataExtractor():
                     if not playbackTicket:
                         logging.error(f'No valid playbackTicket in {ticket}')
                     else:
-                        video_url += f'?playbackTicket={playbackTicket}&AuthTicket={playbackTicket}'
+                        video_url += f'?playbackTicket={playbackTicket}&site={self.get_hostname()}'
 
             file_infos = {
                 'url': video_url,
@@ -345,6 +345,4 @@ class DataExtractor():
 
     def get_hostname(self):
         api_url = self.setup.config.get("mediasite_base_url")
-        hostname = api_url.split('/').pop()
-        hostname = '/'.join(hostname)
-        return hostname
+        return requests.compat.urlparse(api_url).netloc
