@@ -44,6 +44,7 @@ class DataExtractor():
 
             path = self._find_folder_path(folder['id'], self.folders)
             if self._is_folder_to_add(path):
+                logging.debug('-' * 50)
                 logging.debug('Found folder : ' + path)
                 catalogs = self.get_folder_catalogs_infos(folder['id'])
                 presentations_folders.append({**folder,
@@ -76,12 +77,12 @@ class DataExtractor():
         return True
 
     def get_presentations_infos(self, folder_id):
-        logging.debug('-' * 50)
         logging.debug(f'Gettings presentations infos for folder: {folder_id}')
         presentations_infos = list()
 
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
+                logging.debug('-' * 50)
                 has_slides_details = False
                 for stream_type in presentation.get('Streams'):
                     if stream_type.get('StreamType') == 'Slide':

@@ -5,7 +5,7 @@ from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
 
 
 class MediaServerImportManager():
-    def __init__(self, data, catalogs, formats_allowed=dict(), log_level='INFO'):
+    def __init__(self, data, catalogs, formats_allowed=dict(), log_level='WARNING'):
         self.mediasite_data = data
         self.catalogs = catalogs
         self.presentations = self._set_presentations()
