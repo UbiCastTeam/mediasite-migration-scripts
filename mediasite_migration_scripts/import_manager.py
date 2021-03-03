@@ -46,7 +46,9 @@ class MediaServerImportManager():
                     break
             if in_catalog:
                 for presentation in folder['presentations']:
-                    presenters = presentation["presenter_display_name"]
+                    presenters = str()
+                    if presentation.get("presenter_display_name"):
+                        presenters = presentation['presenter_display_name']
                     # presenters += '\n' + ', '.join(presentation['other_presenters']) if presentation['other_presenters'] else ''
                     description = '' if presentation['description'] is None else presentation['description']
                     description += presenters
