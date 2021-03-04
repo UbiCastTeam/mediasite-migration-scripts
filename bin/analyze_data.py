@@ -64,9 +64,9 @@ if __name__ == '__main__':
         return parser.parse_args()
 
     options = manage_opts()
-    logger = utils.set_logger(options)
+    logger = utils.set_logger(options=options)
 
-    file = 'data_debug.json' if options.dryrun else 'data.json'
+    file = 'mediasite_data_debug.json' if options.dryrun else 'mediasite_data.json'
     try:
         data = []
         with open(file) as f:
