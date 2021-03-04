@@ -305,6 +305,7 @@ class DataExtractor():
                 link = f'{slides_base_url}/{file_name}'
                 slides_urls.append(link)
 
+            slides_infos['stream_type'] = slides.get('StreamType')
             slides_infos['urls'] = slides_urls
             slides_infos['details'] = slides.get('SlideDetails') if details else None
 
