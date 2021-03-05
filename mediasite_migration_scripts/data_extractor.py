@@ -101,7 +101,7 @@ class DataExtractor():
                     'presenter_display_name': presenter_display_name,
                     'owner_username': presentation.get('RootOwner', ''),
                     'owner_display_name': owner_infos.get('display_name', ''),
-                    'owner_mail': owner_infos.get('mail', ''),
+                    'owner_mail': owner_infos.get('mail', '').lower(),
                     'creator': presentation.get('Creator', ''),
                     'other_presenters': self.get_presenters_infos(presentation.get('Id')),
                     'availability': self.mediasite.presentation.get_availability(presentation.get('Id')),

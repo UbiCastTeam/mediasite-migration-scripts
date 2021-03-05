@@ -5,6 +5,7 @@ import json
 from argparse import RawTextHelpFormatter
 import os
 import sys
+import logging
 
 from import_manager import MediaServerImportManager
 from mediasite_migration_scripts.lib import utils
@@ -24,12 +25,23 @@ if __name__ == '__main__':
         parser.add_argument('-d', '--dry-run', action='store_true',
                             dest='dryrun', default=False,
                             help='not really import medias.')
+        parser.add_argument('-f', '--max-folders', dest='max_folders', default=None,
+                            help='specify maximum of folders to parse for metadata.')
+        parser.add_argument('--max-videos', dest='max_videos', default=None,
+                            help='specify maximum of videos for upload.')
+        parser.add_argument('-u', '--upload', action='store_true',
+                            dest='upload', default=False,
+                            help='upload medias.')
+        parser.add_argument('-r', '--remove-all', action='store_true',
+                            dest='remove_all', default=False,
+                            help='remove all uploaded medias.')
 
         return parser.parse_args()
 
     options = manage_opts()
-    logger = utils.set_logger(options=options)
+    utils.set_logger(options=options)
     log_level = 'DEBUG' if options.verbose else 'WARNING'
+    logger = logging.getLogger(__name__)
 
     mediasite_file = 'mediasite_data_debug.json' if options.dryrun else 'mediasite_data.json'
     if not os.path.exists(mediasite_file):
@@ -51,8 +63,8 @@ if __name__ == '__main__':
         exit()
 
     print('Mapping data for MediaServer...')
-    import_manager = MediaServerImportManager(mediasite_data, log_level=log_level)
-    import_manager.upload_videos()
+    import_manager = MediaServerImportManager(mediasite_data, log_level)
+
     mediaserver_data = import_manager.mediaserver_data
     mediaserver_file = 'mediaserver_data_debug.json' if options.dryrun else 'mediaserver_data.json'
     try:
@@ -61,3 +73,11 @@ if __name__ == '__main__':
     except Exception as e:
         print('Failed to save Mediaserver metadata')
         logger.debug(e)
+
+    if options.upload:
+        print('Uploading videos...')
+        import_manager.upload_medias(int(options.max_videos))
+    elif options.remove_all:
+        print('Removing all videos uploaded...')
+        len_removed = import_manager.delete_uploaded_medias()
+        print(f'\nRemoved {len_removed} medias')

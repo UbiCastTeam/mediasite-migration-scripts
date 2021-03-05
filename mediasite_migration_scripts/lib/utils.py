@@ -41,8 +41,6 @@ class ColoredFormatter(logging.Formatter):
             record.levelname = levelname_color
         return logging.Formatter.format(self, record)
 
-
-
 def parse_mediasite_date(date_str):
     #2010-05-26T07:16:57Z
     if '.' in date_str:
@@ -65,25 +63,25 @@ def set_logger(options=None, run_path=None):
     formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
 
-    logger = logging.getLogger(run_path)
+    root_logger = logging.getLogger('root')
     level = logging.WARNING
     if options is not None:
         if options.verbose:
             level = logging.DEBUG
         elif options.info:
             level = logging.INFO
-    logger.setLevel(level)
+    root_logger.setLevel(level)
 
     console = logging.StreamHandler()
     console.setFormatter(colored_formatter)
 
-    logs_folder = f'{run_path}/logs/'
+    logs_folder = 'logs/'
     os.makedirs(logs_folder, exist_ok=True)
     logfile_path = os.path.join(logs_folder, f'test_{current_datetime_string}.log')
     logfile = logging.FileHandler(logfile_path)
     logfile.setFormatter(formatter)
 
-    logger.addHandler(logfile)
-    logger.addHandler(console)
+    root_logger.addHandler(logfile)
+    root_logger.addHandler(console)
 
-    return logger
+    return root_logger
