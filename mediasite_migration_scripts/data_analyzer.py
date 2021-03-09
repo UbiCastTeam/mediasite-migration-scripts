@@ -1,5 +1,4 @@
 import requests
-import logging
 
 
 class DataAnalyzer():
@@ -91,53 +90,151 @@ class DataAnalyzer():
         }
         return infos
 
+    def get_preferred_file(self, files):
+        for format_name in ['video/mp4', 'video/x-ms-wmv']:
+            for f in files:
+                if f.get('format') == format_name:
+                    return f
+
+    def get_best_video_file(self, files):
+        video_file = {}
+        max_width = 0
+
+        preferred_file = self.get_preferred_file(files)
+        if preferred_file:
+            info = preferred_file.get('encoding_infos', {})
+            width = int(info.get('width', 0))
+            if width >= max_width:
+                video_file = preferred_file
+        return video_file
+
+    def get_video_format_str(self, encoding_infos=None):
+        format_str = 'unknown'
+        if encoding_infos:
+            if not encoding_infos.get('video_codec'):
+                format_str = encoding_infos['audio_codec']
+            else:
+                encoding_infos.setdefault('audio_codec', 'NOAUDIO')
+                format_str = '{video_codec} {audio_codec} {width}x{height}'.format(**encoding_infos)
+        return format_str
+
     def analyze_encoding_infos(self):
         encoding_infos = {}
 
-        total_videos = 0
-        videos_with_encoding_info = 0
-        videos_with_no_encoding_infos = list()
+        GB = 1000 * 1000 * 1000
+
+        total_video_count = 0
         video_stats = dict()
-        video_durations = dict()
+
+        unimportable_videos = set()
+        unsupported_videos = set()
+        empty_videos = set()
+        composite_videos = set()
+
+        audio_only = set()
+        audio_slides = set()
+        video_slides = set()
+
+        stat_template = {
+            'count': 0,
+            'duration_hours': 0,
+            'size_gbytes': 0,
+        }
+
         total_duration_h = 0
-        total_size_bytes = 0
+        total_size_gb = 0
         for folder in self.folders:
             for presentation in folder['presentations']:
-                for video in presentation['videos']:
-                    got_encoding_infos = False
-                    for file in video['files']:
-                        total_videos += 1
-                        if file.get('encoding_infos'):
-                            try:
-                                format_str = '{video_codec} {audio_codec} {width}x{height}'.format(**file['encoding_infos'])
-                            except KeyError:
-                                logging.debug(f'Not all encoding infos for this file. Maybe the file is not a video: {file["url"]}')
-                                logging.debug(f'In presentation: {presentation["id"]}')
-                            if not video_stats.get(format_str):
-                                video_stats[format_str] = 0
-                            video_stats[format_str] += 1
+                total_video_count += 1
 
-                            if not video_durations.get(format_str):
-                                video_durations[format_str] = 0
-                            video_durations[format_str] += int(file.get('duration_ms', 0) / (3600 * 1000))
+                format_str = ''
+                dur_h = size_gb = 0
 
-                            videos_with_encoding_info += 1
-                            got_encoding_infos = True
-                            break
-                    if not got_encoding_infos:
-                        videos_with_no_encoding_infos.append(presentation)
-                    total_duration_h += int(file.get('duration_ms', 0) / (3600 * 1000))
-                    total_size_bytes += file.get('size_bytes', 0)
+                videos = presentation['videos']
+                pres_id = presentation['id']
+
+                has_slides = False
+                if presentation.get('slides'):
+                    has_slides = True
+
+                if len(videos) > 0:
+                    dur_h = videos[0]['files'][0].get('duration_ms', 0) / (3600 * 1000)
+                    if dur_h == 0:
+                        empty_videos.add(pres_id)
+                        unimportable_videos.add(pres_id)
+                    else:
+                        if len(videos) == 1:
+                            video = presentation['videos'][0]
+                            video_file = self.get_best_video_file(video['files'])
+                            encoding_infos = video_file.get('encoding_infos')
+                            format_str = self.get_video_format_str(encoding_infos)
+                            if format_str == 'AAC':
+                                if has_slides:
+                                    format_str = 'AAC with slides'
+                                    audio_slides.add(pres_id)
+                                else:
+                                    audio_only.add(pres_id)
+                            elif format_str != 'unknown':
+                                size_gb = video_file.get('size_bytes', 0) / GB
+                                if has_slides:
+                                    video_slides.add(pres_id)
+                        elif len(videos) == 2:
+                            composite_videos.add(pres_id)
+                            composite_info = {
+                                'width': 0,
+                                'height': 0,
+                                'video_codec': 'H264',
+                                'audio_codec': 'AAC',
+                            }
+                            for v in videos:
+                                encoding_infos = self.get_best_video_file(v['files']).get('encoding_infos')
+                                # skip audio-only resources
+                                if encoding_infos and encoding_infos.get('video_codec'):
+                                    composite_info['width'] += encoding_infos['width']
+                                    composite_info['height'] = max(composite_info['height'], encoding_infos['height'])
+                            format_str = self.get_video_format_str(composite_info) + ' (composite)'
+                            # predict rough composite size
+                            # bpp: 2.5 bits per pixel
+                            pixelcount = composite_info['width'] * composite_info['height']
+                            bitrate_bps = pixelcount * 2.5
+                            bitrate_bytes_persec = bitrate_bps / 8
+                            size_gb = dur_h * 3600 * bitrate_bytes_persec / GB
+
+                    if video_stats.get(format_str) is None:
+                        video_stats[format_str] = dict(stat_template)
+
+                    video_stats[format_str]['count'] += 1
+                    video_stats[format_str]['duration_hours'] += dur_h
+                    video_stats[format_str]['size_gbytes'] += size_gb
+
+                    total_duration_h += dur_h
+                    total_size_gb += size_gb
+
+                    if format_str == 'unknown':
+                        unsupported_videos.add(pres_id)
+                        unimportable_videos.add(pres_id)
 
         encoding_infos = {
-            'total_duration_h': total_duration_h,
-            'total_size_bytes': total_size_bytes,
-            'videos_with_encoding_info': videos_with_encoding_info,
-            'videos_with_no_encoding_infos': videos_with_no_encoding_infos,
-            'total_videos': total_videos,
+            'total_video_count': total_video_count,
+            'total_importable': total_video_count - len(unimportable_videos),
+            'total_unimportable': len(unimportable_videos),
+            'total_duration_h': int(total_duration_h),
+            'total_size_tb': int(total_size_gb / 1000),
+            'composite_videos': len(composite_videos),
+            'audio_slides': len(audio_slides),
+            'video_slides': len(video_slides),
+            'audio_only': len(audio_only),
+            'empty_videos': len(empty_videos),
+            'unsupported_videos': len(unsupported_videos),
+            'unimportable_videos': len(unimportable_videos),
             'video_stats': video_stats,
-            'video_durations': video_durations,
         }
+
+        #print(composite_videos)
+        #print(empty_videos)
+        #print(audio_only)
+        #print(unsupported_videos)
+
         return encoding_infos
 
     def _order_videos_by_presentations(self):
@@ -151,9 +248,9 @@ class DataAnalyzer():
         mp4_urls = list()
         for presentation in self.presentations:
             if not DataAnalyzer.has_multiple_videos(presentation):
-                for file in presentation['videos'][0]['files']:
-                    if file['format'] == 'video/mp4':
-                        mp4_urls.append(file['url'])
+                for video_file in presentation['videos'][0]['files']:
+                    if video_file['format'] == 'video/mp4':
+                        mp4_urls.append(video_file['url'])
                         break
         return mp4_urls
 

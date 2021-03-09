@@ -26,6 +26,9 @@ if __name__ == '__main__':
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=False,
                             help='print all status messages to stdout.')
+        parser.add_argument('-c', '--check-resources', action='store_true',
+                            dest='check_resources', default=False,
+                            help='check if every video resource can be downloaded or not (slow).')
         parser.add_argument('-d', '--dry-run', action='store_true',
                             dest='dryrun', default=False,
                             help='not really import medias.')
@@ -98,36 +101,31 @@ if __name__ == '__main__':
 
     print(line_sep_str)
 
-    downloadable_mp4_count = analyzer.count_downloadable_mp4s()
-    downloadable_mp4 = downloadable_mp4_count['downloadable_mp4']
-    status_codes = downloadable_mp4_count['status_codes']
-    print(f'{len(downloadable_mp4)} downloadable mp4s, status codes: {status_codes}')
+    if options.check_resources:
+        downloadable_mp4_count = analyzer.count_downloadable_mp4s()
+        downloadable_mp4 = downloadable_mp4_count['downloadable_mp4']
+        status_codes = downloadable_mp4_count['status_codes']
+        print(f'{len(downloadable_mp4)} downloadable mp4s, status codes: {status_codes}')
 
-    print(line_sep_str)
+        print(line_sep_str)
 
     encoding_infos = analyzer.analyze_encoding_infos()
-    total_duration_h = encoding_infos['total_duration_h']
-    total_size_bytes = encoding_infos['total_size_bytes']
-    videos_with_encoding_info = encoding_infos['videos_with_encoding_info']
-    total_videos = encoding_infos['total_videos']
     video_stats = encoding_infos['video_stats']
-    video_durations = encoding_infos['video_durations']
 
-    print(f'Found {videos_with_encoding_info}/{total_videos} ({int(100 * videos_with_encoding_info / total_videos)}%) videos with encoding info', end='\n\n')
+    print('format\tduration_hours\tcount\tsize_gbytes')
+    for key, val in encoding_infos['video_stats'].items():
+        stats = '{duration_hours}\t{count}\t{size_gbytes}'.format(**val)
+        print(f'{key}\t{stats.replace(".", ",")}')
 
-    print(f'Total duration: {int(total_duration_h)} h, total size: {int(total_size_bytes / 1000000000)} TB')
-    for key, val in video_stats.items():
-        print(f'{key}: {val}/{videos_with_encoding_info} ({int(100 * val / videos_with_encoding_info)}%)')
+    def get_percent(x, total):
+        return int(100 * x / total)
+
+    print()
+    print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_tb} TB)'.format(**encoding_infos))
+    print('{video_slides} video + slides, {composite_videos} composite videos, {audio_slides} audio + slides, {audio_only} audio-only'.format(**encoding_infos))
+    print('{total_unimportable} unimportable videos: {empty_videos} empty videos, {unsupported_videos} unconvertible videos'.format(**encoding_infos))
 
     print('')
-
-    total_dur_with_info = 0
-    for key, val in video_durations.items():
-        total_dur_with_info += val
-
-    print(f'Total durations with encoding infos: {total_dur_with_info} h ')
-    for key, val in video_durations.items():
-        print(f'{key}: {val}h / {total_dur_with_info}h ({int(100 * val / total_dur_with_info)}%)')
 
     if options.doctor:
         config_data = {}
