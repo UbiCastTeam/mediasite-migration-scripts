@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     print()
     print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_tb} TB)'.format(**encoding_infos))
-    print('{video_slides} video + slides, {composite_videos} composite videos, {audio_slides} audio + slides, {audio_only} audio-only'.format(**encoding_infos))
+    print('{video_slides} video + slides, {composite_with_slides} composite with slides, {composite_videos} composite videos, {video_only} video only, {audio_slides} audio + slides, {audio_only} audio-only'.format(**encoding_infos))
     print('{total_unimportable} unimportable videos: {empty_videos} empty videos, {unsupported_videos} unconvertible videos'.format(**encoding_infos))
 
     print('')

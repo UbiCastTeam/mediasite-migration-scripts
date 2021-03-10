@@ -130,7 +130,9 @@ class DataAnalyzer():
         unsupported_videos = set()
         empty_videos = set()
         composite_videos = set()
+        composite_with_slides = set()
 
+        video_only = set()
         audio_only = set()
         audio_slides = set()
         video_slides = set()
@@ -155,7 +157,8 @@ class DataAnalyzer():
 
                 has_slides = False
                 if presentation.get('slides'):
-                    has_slides = True
+                    if len(presentation['slides'].get('urls')) > 0:
+                        has_slides = True
 
                 if len(videos) > 0:
                     dur_h = videos[0]['files'][0].get('duration_ms', 0) / (3600 * 1000)
@@ -163,7 +166,7 @@ class DataAnalyzer():
                         empty_videos.add(pres_id)
                         unimportable_videos.add(pres_id)
                     else:
-                        if len(videos) == 1:
+                        if len(videos) == 1 or (len(videos) == 2 and has_slides):
                             video = presentation['videos'][0]
                             video_file = self.get_best_video_file(video['files'])
                             encoding_infos = video_file.get('encoding_infos')
@@ -176,8 +179,13 @@ class DataAnalyzer():
                                     audio_only.add(pres_id)
                             elif format_str != 'unknown':
                                 size_gb = video_file.get('size_bytes', 0) / GB
-                                if has_slides:
-                                    video_slides.add(pres_id)
+                                if len(videos) == 1:
+                                    if has_slides:
+                                        video_slides.add(pres_id)
+                                    else:
+                                        video_only.add(pres_id)
+                                else:
+                                    composite_with_slides.add(pres_id)
                         elif len(videos) == 2:
                             composite_videos.add(pres_id)
                             composite_info = {
@@ -220,9 +228,11 @@ class DataAnalyzer():
             'total_unimportable': len(unimportable_videos),
             'total_duration_h': int(total_duration_h),
             'total_size_tb': int(total_size_gb / 1000),
+            'video_slides': len(video_slides),
+            'composite_with_slides': len(composite_with_slides),
             'composite_videos': len(composite_videos),
             'audio_slides': len(audio_slides),
-            'video_slides': len(video_slides),
+            'video_only': len(video_only),
             'audio_only': len(audio_only),
             'empty_videos': len(empty_videos),
             'unsupported_videos': len(unsupported_videos),
@@ -230,10 +240,21 @@ class DataAnalyzer():
             'video_stats': video_stats,
         }
 
-        #print(composite_videos)
-        #print(empty_videos)
-        #print(audio_only)
-        #print(unsupported_videos)
+        #with open('unsupported.txt', 'w') as f:
+        #    for v in unsupported_videos:
+        #        f.write(v + '\n')
+
+        '''
+        def get_item(fset):
+            return next(iter(fset))
+
+        print(get_item(video_slides))
+        print(get_item(composite_with_slides))
+        print(get_item(composite_videos))
+        print(get_item(audio_slides))
+        print(get_item(video_only))
+        print(get_item(audio_only))
+        '''
 
         return encoding_infos
 
