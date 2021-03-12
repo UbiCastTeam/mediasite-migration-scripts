@@ -24,6 +24,8 @@ if __name__ == '__main__':
         parser.add_argument('-d', '--dry-run', action='store_true',
                             dest='dryrun', default=False,
                             help='not really import medias.')
+        parser.add_argument('-f', '--max-folders', dest='max_folders', default=None,
+                            help='specify maximum of folders to parse for metadata.')
 
         return parser.parse_args()
 
@@ -38,7 +40,7 @@ if __name__ == '__main__':
         logger.info('No config file or file is corrupted.')
         config_data = None
 
-    file = 'mediasite_data_debug.json' if options.dryrun else 'mediasite_data.json'
+    file = 'mediasite_data.json'
     try:
         with open(file) as f:
             data = json.load(f)
@@ -46,7 +48,7 @@ if __name__ == '__main__':
     except Exception as e:
         logger.debug(e)
         try:
-            extractor = DataExtractor(config_data, options.dryrun)
+            extractor = DataExtractor(config_data, int(options.max_folders))
             data = extractor.all_data
 
             with open(file, 'w') as f:

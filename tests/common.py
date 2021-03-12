@@ -1,7 +1,8 @@
 import json
 import os
 import random
-
+import argparse
+from argparse import RawTextHelpFormatter
 from mediasite_migration_scripts.lib import utils
 
 MEDIASITE_DATA_FILE = 'tests/mediasite_data_test.json'
@@ -61,8 +62,5 @@ def set_test_data():
             i += 1
             if i >= 2:
                 break
-
-        with open(file, 'w') as f:
-            json.dump(new_data, f)
 
     return new_data

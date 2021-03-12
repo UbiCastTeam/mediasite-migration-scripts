@@ -8,14 +8,14 @@ from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
 
 class DataExtractor():
 
-    def __init__(self, config_file=None, debug=False):
+    def __init__(self, config_file=None, max_folders=None):
         print('Connecting...')
-        self.debug = debug
+        self.max_folders = max_folders
         self.setup = MediasiteSetup(config_file)
         self.mediasite = self.setup.mediasite
 
         print('Getting presentations... (take a few minutes)')
-        self.presentations = self.mediasite.presentation.get_all_presentations(debug=debug)
+        self.presentations = self.mediasite.presentation.get_all_presentations()
         self.folders = self.get_all_folders_infos()
         self.catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
@@ -38,7 +38,7 @@ class DataExtractor():
         i = 0
         presentations_folders = list()
         catalogs_list = list()
-        for folder in self.folders:
+        for i, folder in enumerate(self.folders):
             if i > 1:
                 print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
 
@@ -54,9 +54,8 @@ class DataExtractor():
                 if catalogs:
                     for c in catalogs:
                         catalogs_list.append(c)
-            if i > 50 and self.debug:
+            if self.max_folders and i > self.max_folders:
                 break
-            i += 1
         self.catalogs = catalogs_list
         return presentations_folders
 
@@ -121,7 +120,7 @@ class DataExtractor():
 
     def get_all_folders_infos(self):
         folders_infos = list()
-        folders = self.mediasite.folder.get_all_folders()
+        folders = self.mediasite.folder.get_all_folders(self.max_folders)
         for folder in folders:
             folder_info = {
                 'id': folder.get('Id'),
@@ -200,7 +199,7 @@ class DataExtractor():
                 'encoding_infos': {}
             }
 
-            if file_infos['format'] == 'video/mp4':
+            if file_infos['format'] == 'video/mp4' or file_infos['format'] == 'video/x-ms-wmv':
                 if file.get('ContentEncodingSettingsId'):
                     file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
@@ -260,7 +259,7 @@ class DataExtractor():
                     'height': height,
                 }
             except Exception as e:
-                logging.debug(f'Failed to parse XML for video encoding settings for settings ID : {settings_id}')
+                logging.debug(f'XML could not be parsed for video encoding settings for settings ID : {settings_id}')
                 logging.debug(e)
         return encoding_infos
 

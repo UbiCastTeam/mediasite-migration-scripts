@@ -7,12 +7,12 @@ import os
 import sys
 import logging
 
-from import_manager import MediaServerImportManager
+from mediatransfer import MediaTransfer
 from mediasite_migration_scripts.lib import utils
 
 if __name__ == '__main__':
     def usage(message=''):
-        return 'This script is used to extract metadata from mediasite platform'
+        return 'This script is used to import media from mediasite to mediaserver'
 
     def manage_opts():
         parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
@@ -32,8 +32,11 @@ if __name__ == '__main__':
         parser.add_argument('-u', '--upload', action='store_true',
                             dest='upload', default=False,
                             help='upload medias.')
-        parser.add_argument('-r', '--remove-all', action='store_true',
-                            dest='remove_all', default=False,
+        parser.add_argument('-rm', '--remove-medias', action='store_true',
+                            dest='remove_medias', default=False,
+                            help='remove all uploaded medias.')
+        parser.add_argument('-rc', '--remove-channels', action='store_true',
+                            dest='remove_channels', default=False,
                             help='remove all uploaded medias.')
 
         return parser.parse_args()
@@ -43,7 +46,7 @@ if __name__ == '__main__':
     log_level = 'DEBUG' if options.verbose else 'WARNING'
     logger = logging.getLogger(__name__)
 
-    mediasite_file = 'mediasite_data_debug.json' if options.dryrun else 'mediasite_data.json'
+    mediasite_file = 'mediasite_data.json'
     if not os.path.exists(mediasite_file):
         run_import = input('No metadata file. You need to import Mediasite metadata first.\nDo you want to run import ? [y/N] ')
         run_import = run_import.lower()
@@ -59,25 +62,46 @@ if __name__ == '__main__':
             mediasite_data = json.load(f)
     except Exception as e:
         logger.debug(e)
-        print('Import failed')
+        print('Importing data failed')
         exit()
 
-    print('Mapping data for MediaServer...')
-    import_manager = MediaServerImportManager(mediasite_data, log_level)
-
-    mediaserver_data = import_manager.mediaserver_data
-    mediaserver_file = 'mediaserver_data_debug.json' if options.dryrun else 'mediaserver_data.json'
-    try:
-        with open(mediaserver_file, 'w') as f:
-            json.dump(mediaserver_data, f)
-    except Exception as e:
-        print('Failed to save Mediaserver metadata')
-        logger.debug(e)
+    mediatransfer = MediaTransfer(mediasite_data, log_level)
+    mediaserver_data = mediatransfer.mediaserver_data
+    mediaserver_file = 'mediaserver_data.json'
 
     if options.upload:
         print('Uploading videos...')
-        import_manager.upload_medias(int(options.max_videos))
-    elif options.remove_all:
+        max_videos = int(options.max_videos) if options.max_videos else None
+        mediatransfer.upload_medias(max_videos)
+        try:
+            with open(mediaserver_file, 'w') as f:
+                json.dump(mediaserver_data, f)
+        except Exception as e:
+            print('Failed to save Mediaserver metadata')
+            logger.debug(e)
+
+    elif options.remove_medias:
         print('Removing all videos uploaded...')
-        len_removed = import_manager.delete_uploaded_medias()
-        print(f'\nRemoved {len_removed} medias')
+        nb_medias_removed = int()
+        try:
+            with open(mediaserver_file) as f:
+                mediatransfer.mediaserver_data = json.load(f)
+        except Exception as e:
+            logger.error('No mediaserver metadata file found. Maybe no upload have been made ?')
+            logger.debug(e)
+            exit()
+        medias_removed = mediatransfer.remove_uploaded_medias()
+        print(f'\nRemoved {nb_medias_removed} medias')
+
+    elif options.remove_channels:
+        print('Removing all channels created...')
+        nb_channels_removed = int()
+        mediaserver_file = 'tests/mediaserver_data_test.json'
+        try:
+            with open(mediaserver_file) as f:
+                mediatransfer.mediaserver_data = json.load(f)
+        except Exception as e:
+            logger.error('No mediaserver metadata file found. Maybe no upload have been made ?')
+            logger.debug(e)
+            exit()
+        nb_channel_removed = mediatransfer.remove_channels_created()

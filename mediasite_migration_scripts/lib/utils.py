@@ -24,7 +24,7 @@ COLORS = {
     'WARNING': YELLOW,
     'INFO': WHITE,
     'DEBUG': BLUE,
-    'CRITICAL': YELLOW,
+    'CRITICAL': RED,
     'ERROR': RED
 }
 
@@ -65,11 +65,12 @@ def set_logger(options=None, run_path=None):
 
     root_logger = logging.getLogger('root')
     level = logging.WARNING
-    if options is not None:
+    if options:
         if options.verbose:
             level = logging.DEBUG
         elif options.info:
             level = logging.INFO
+
     root_logger.setLevel(level)
 
     console = logging.StreamHandler()
