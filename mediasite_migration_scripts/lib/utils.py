@@ -11,6 +11,20 @@ from argparse import RawTextHelpFormatter
 from assets.mediasite import controller as mediasite_controller
 
 
+def parse_mediasite_date(date_str):
+    #2010-05-26T07:16:57Z
+    if '.' in date_str:
+        # some media have msec included
+        #2016-12-07T13:07:27.58Z
+        date_str = date_str.split('.')[0] + 'Z'
+    return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+
+
+def get_age_days(date_str):
+    days = (datetime.now() - parse_mediasite_date(date_str)).days
+    return days
+
+
 class MediasiteSetup():
     def __init__(self, config_data=None):
         extra_data = config_data if config_data else {}

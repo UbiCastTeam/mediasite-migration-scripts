@@ -133,11 +133,12 @@ if __name__ == '__main__':
     encoding_infos = analyzer.analyze_encoding_infos(options.dump)
     video_stats = encoding_infos['video_stats']
 
-    text = 'Format\tDuration_hours\tCount\tSize_gbytes\n'
+    text = 'Format\tFormat pixels per frame\tDuration_hours\tCount\tSize_gbytes\tCreated this year\n'
     for key, val in encoding_infos['video_stats'].items():
-        stats = '{duration_hours}\t{count}\t{size_gbytes}'.format(**val)
+        stats = '{pixels}\t{duration_hours}\t{count}\t{size_gbytes}\t{less_than_one_year_old}'.format(**val)
         text += f'{key}\t{stats.replace(".", ",")}\n'
 
+    print()
     print(text)
     if options.dump:
         with open('presentations_format_list.txt', 'w') as f:

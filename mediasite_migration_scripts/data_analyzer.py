@@ -1,4 +1,5 @@
 import requests
+from mediasite_migration_scripts.lib.utils import get_age_days
 
 
 class DataAnalyzer():
@@ -141,6 +142,8 @@ class DataAnalyzer():
             'count': 0,
             'duration_hours': 0,
             'size_gbytes': 0,
+            'less_than_one_year_old': 0,
+            'pixels': 0,
         }
 
         total_duration_h = 0
@@ -154,6 +157,7 @@ class DataAnalyzer():
 
                 videos = presentation['videos']
                 pres_id = presentation['id']
+                age_days = get_age_days(presentation['creation_date'])
 
                 has_slides = False
                 if presentation.get('slides'):
@@ -210,10 +214,14 @@ class DataAnalyzer():
 
                     if video_stats.get(format_str) is None:
                         video_stats[format_str] = dict(stat_template)
+                        if encoding_infos:
+                            video_stats[format_str]['pixels'] = encoding_infos.get('width', 0) * encoding_infos.get('height', 0)
 
                     video_stats[format_str]['count'] += 1
                     video_stats[format_str]['duration_hours'] += dur_h
                     video_stats[format_str]['size_gbytes'] += size_gb
+                    if age_days < 365:
+                        video_stats[format_str]['less_than_one_year_old'] += 1
 
                     total_duration_h += dur_h
                     total_size_gb += size_gb
