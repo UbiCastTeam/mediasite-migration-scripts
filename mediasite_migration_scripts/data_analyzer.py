@@ -118,7 +118,7 @@ class DataAnalyzer():
                 format_str = '{video_codec} {audio_codec} {width}x{height}'.format(**encoding_infos)
         return format_str
 
-    def analyze_encoding_infos(self):
+    def analyze_encoding_infos(self, dump=False):
         encoding_infos = {}
 
         GB = 1000 * 1000 * 1000
@@ -240,21 +240,26 @@ class DataAnalyzer():
             'video_stats': video_stats,
         }
 
-        #with open('unsupported.txt', 'w') as f:
-        #    for v in unsupported_videos:
-        #        f.write(v + '\n')
+        def get_var(my_var):
+            my_var_name = [ k for k,v in locals().iteritems() if v == my_var][0]
+            return my_var_name
 
-        '''
-        def get_item(fset):
-            return next(iter(fset))
-
-        print(get_item(video_slides))
-        print(get_item(composite_with_slides))
-        print(get_item(composite_videos))
-        print(get_item(audio_slides))
-        print(get_item(video_only))
-        print(get_item(audio_only))
-        '''
+        if dump:
+            videotypes = [
+                'unsupported_videos',
+                'composite_with_slides',
+                'composite_videos',
+                'empty_videos',
+                'video_only',
+                'audio_only',
+                'video_slides',
+                'audio_slides',
+            ]
+            for videolist in videotypes:
+                fname = 'presentations_' + videolist + '.txt'
+                print(f'Dumping {fname}')
+                with open(fname, 'w') as f:
+                    f.write('\n'.join(locals()[videolist]))
 
         return encoding_infos
 

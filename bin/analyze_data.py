@@ -17,21 +17,42 @@ if __name__ == '__main__':
 
     def manage_opts():
         parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
-        parser.add_argument('-i', '--info', action='store_true',
-                            dest='info', default=False,
-                            help='print more status messages to stdout.')
-        parser.add_argument('-D', '--doctor', action='store_true',
-                            dest='doctor', default=False,
-                            help='check what presentations have not been acounted')
-        parser.add_argument('-v', '--verbose', action='store_true',
-                            dest='verbose', default=False,
-                            help='print all status messages to stdout.')
-        parser.add_argument('-c', '--check-resources', action='store_true',
-                            dest='check_resources', default=False,
-                            help='check if every video resource can be downloaded or not (slow).')
-        parser.add_argument('-d', '--dry-run', action='store_true',
-                            dest='dryrun', default=False,
-                            help='not really import medias.')
+        parser.add_argument(
+            '-i', '--info',
+            action='store_true',
+            default=False,
+            help='print more status messages to stdout.',
+        )
+        parser.add_argument(
+            '-D', '--doctor',
+            action='store_true',
+            default=False,
+            help='check what presentations have not been acounted',
+        )
+        parser.add_argument(
+            '-v', '--verbose',
+            action='store_true',
+            default=False,
+            help='print all status messages to stdout.',
+        )
+        parser.add_argument('-c', '--check-resources',
+                action='store_true',
+                default=False,
+                help='check if every video resource can be downloaded or not (slow).',
+            )
+        parser.add_argument(
+            '--dump',
+            action='store_true',
+            default=False,
+            help='store reports and presentation ids into separate files (e.g. presentations_composite_videos.txt)'
+        )
+        parser.add_argument(
+            '-d', '--dry-run',
+            action='store_true',
+            dest='dryrun',
+            default=False,
+            help='not really import medias.'
+        )
 
         return parser.parse_args()
 
@@ -109,13 +130,18 @@ if __name__ == '__main__':
 
         print(line_sep_str)
 
-    encoding_infos = analyzer.analyze_encoding_infos()
+    encoding_infos = analyzer.analyze_encoding_infos(options.dump)
     video_stats = encoding_infos['video_stats']
 
-    print('format\tduration_hours\tcount\tsize_gbytes')
+    text = 'Format\tDuration_hours\tCount\tSize_gbytes\n'
     for key, val in encoding_infos['video_stats'].items():
         stats = '{duration_hours}\t{count}\t{size_gbytes}'.format(**val)
-        print(f'{key}\t{stats.replace(".", ",")}')
+        text += f'{key}\t{stats.replace(".", ",")}\n'
+
+    print(text)
+    if options.dump:
+        with open('presentations_format_list.txt', 'w') as f:
+            f.write(text)
 
     def get_percent(x, total):
         return int(100 * x / total)
