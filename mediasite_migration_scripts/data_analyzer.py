@@ -94,7 +94,7 @@ class DataAnalyzer():
     def get_preferred_file(self, files):
         for format_name in ['video/mp4', 'video/x-ms-wmv']:
             for f in files:
-                if f.get('format') == format_name:
+                if f.get('format') == format_name and f.get('size_bytes') != 0:
                     return f
 
     def get_best_video_file(self, files):
