@@ -3,7 +3,7 @@ from decouple import config
 
 
 class MediaServerSetup():
-    def __init__(self, log_level='INFO'):
+    def __init__(self, log_level='WARNING'):
         self.log_level = log_level
         self.config = self.setup()
         self.ms_client = MediaServerClient(local_conf=self.config, setup_logging=False)

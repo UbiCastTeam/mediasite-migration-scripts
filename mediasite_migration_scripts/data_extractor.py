@@ -70,7 +70,7 @@ class DataExtractor():
     def _is_folder_to_add(self, path):
         if self.setup.config.get('mediasite_folders_whitelist'):
             for fw in self.setup.config['mediasite_folders_whitelist']:
-                if path.find(fw):
+                if fw in path:
                     return True
             return False
         return True

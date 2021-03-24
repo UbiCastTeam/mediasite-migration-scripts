@@ -24,7 +24,7 @@ if __name__ == '__main__':
         parser.add_argument('-d', '--dry-run', action='store_true',
                             dest='dryrun', default=False,
                             help='not really import medias.')
-        parser.add_argument('-f', '--max-folders', dest='max_folders', default=None,
+        parser.add_argument('-f', '--max-folders', dest='max_folders', default=0,
                             help='specify maximum of folders to parse for metadata.')
 
         return parser.parse_args()

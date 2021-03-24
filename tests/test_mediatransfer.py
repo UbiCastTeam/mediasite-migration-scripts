@@ -2,31 +2,49 @@ from unittest import TestCase
 import random
 import json
 import logging
+import sys
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
+from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
 import tests.common as common
+
+
+test_channel = common.create_test_channel()
+logger = logging.getLogger(__name__)
+
 
 def setUpModule():
     print('-> ', __name__)
 
 
-logger = logging.getLogger(__name__)
+def tearDownModule():
+    # body = {'oid': test_channel.get('oid'), 'delete_resources': True, 'delete_content': True}
+    # ms_client = MediaServerSetup().ms_client
+    # # ms_client.api('channels/delete', method='post', data=body)
+    # ms_client.session.close()
+    pass
 
 
 class FakeOptions:
     verbose = True
 
 class TestMediaTransfer(TestCase):
+
     def setUp(self):
         super(TestMediaTransfer)
         self.mediasite_data = common.set_test_data()
         self.mediatransfer = MediaTransfer(self.mediasite_data, 'WARNING')
+        self.mediatransfer.root_channel = self.mediatransfer.get_channel(oid=test_channel.get('oid'))
         self.ms_client = self.mediatransfer.ms_client
         self.mediaserver_data = self.mediatransfer.mediaserver_data
-        common.set_logger(option=FakeOptions())
+
+        fake_opt = FakeOptions()
+        fake_opt.verbose = sys.argv[-1] == '-v' or sys.argv[-1] == '--verbose'
+        common.set_logger(option=fake_opt)
 
     def tearDown(self):
         self.ms_client.session.close()
+
         try:
             with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
                 json.dump(self.mediaserver_data, f)
@@ -48,15 +66,17 @@ class TestMediaTransfer(TestCase):
     def test_to_mediaserver_keys(self):
         folder_index = random.randrange(len(self.mediasite_data))
         i = 0
-        while not self.mediasite_data[folder_index].get('presentations') or i < 100:
+        while not self.mediasite_data[folder_index].get('presentations') and i < 100:
             folder_index = random.randint(0, len(self.mediasite_data) - 1)
             i += 1
+
         try:
             presentation_example = self.mediasite_data[folder_index].get('presentations')[0]
         except IndexError:
             logger.error('Can not found presentations')
         except Exception as e:
             logger.error(e)
+
         mediaserver_data = self.mediatransfer.to_mediaserver_keys()
         try:
             with open('tests/mediaserver_data_test.json', 'w') as f:
@@ -93,10 +113,10 @@ class TestMediaTransfer(TestCase):
         self.mediatransfer.upload_medias()
         for m in medias_examples:
             data = m['data']
-            result = self.ms_client.api('medias/get', method='get', params={'title': data['title'], 'full': 'yes'})
+            result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key']
+            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type']
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))
@@ -110,68 +130,40 @@ class TestMediaTransfer(TestCase):
                     elif key in keys_to_skip:
                         continue
                     else:
+                        logger.error(f'[{key}] not equal')
                         raise
-        self.mediatransfer.remove_uploaded_medias()
-
-    def test_remove_uploaded_medias(self):
-        uploaded = self.mediatransfer.upload_medias()
-        removed = self.mediatransfer.remove_uploaded_medias()
-
-        self.assertEqual(uploaded, removed)
-        for media in self.mediaserver_data:
-            result = self.ms_client.api('medias/get', method='get', params={'oid': media['ref']['media_oid']}, ignore_404=True)
-            self.assertIsNone(result)
 
     def test_create_channel(self):
-        # to add examples, only in path_examples
         paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
-        channels_examples = ''.join(paths_examples).split('/')[1:]
+        channels_examples_titles = ''.join(paths_examples).split('/')[1:]
         channels_created_oids = list()
+
         for p in paths_examples:
             channels_created_oids.extend(self.mediatransfer.create_channel(p))
-        self.assertEqual(len(channels_created_oids), len(channels_examples))
+        self.assertEqual(len(channels_created_oids), len(channels_examples_titles))
 
-        ms_channels = list()
-        for c in channels_examples:
-            result = self.ms_client.api('channels/get', method='get', params={'title': c}, ignore_404=True)
-            if result:
-                ms_channels.append(result.get('info'))
-            else:
-                logger.error(f'Channel {c} not found')
+        for oid in channels_created_oids:
+            result = self.ms_client.api('channels/get', method='get', params={'oid': oid}, ignore_404=True)
             self.assertIsNotNone(result)
+            if result:
+                self.assertIn(result.get('info').get('title'), channels_examples_titles)
+            else:
+                logger.error(f'Channel {oid} not found')
 
         longest_tree = paths_examples[-1].split('/')[1:]
         parent_oid = channels_created_oids[-len(longest_tree)]
         ms_tree = self.ms_client.api('channels/tree', method='get', params={'parent_oid': parent_oid})
+        # we pop the parent channel
         longest_tree.pop(0)
         for c_example in longest_tree:
             found = False
             for index, c_created in enumerate(ms_tree.get('channels')):
                 if c_example == c_created.get('title'):
                     found = True
-                    c_index = index
+                    c_found_index = index
                     break
             self.assertTrue(found)
-            ms_tree = ms_tree.get('channels')[c_index]
+            ms_tree = ms_tree.get('channels')[c_found_index]
 
-        for oid in channels_created_oids:
-            channel = self.ms_client.api('channels/get', method='get', params={'oid': oid}, ignore_404=True)
-            if channel:
-                self.assertIn(channel.get('info').get('title'), channels_examples)
-                data = {'oid': oid, 'delete_content': 'yes', 'delete_resources': 'yes'}
-                logger.debug(f'Deleting channel {oid}')
-                self.ms_client.api('channels/delete', method='post', data=data, ignore_404=True)
-
-    # def test_remove_channels_created(self):
-    #     paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb']
-    #     channels_oids = list()
-
-    #     for p in paths_examples:
-    #         channels_oids.append(self.mediatransfer.create_channel(p))
-    #     self.mediatransfer.mediaserver_data = [{'data': {}, 'ref': {'channel_oid': c}} for c in channels_oids]
-    #     result = self.mediatransfer.remove_channels_created()
-    #     self.assertEqual(len(paths_examples), result)
-
-    #     for media in self.mediatransfer.mediaserver_data:
-    #         result = self.ms_client.api('channels/get', method='get', params={'oid': media['ref']['channel_oid']}, ignore_404=True)
-    #         self.assertIsNone(result)
+    def test_migrate_slides(self):
+        pass

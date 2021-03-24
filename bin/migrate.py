@@ -25,19 +25,16 @@ if __name__ == '__main__':
         parser.add_argument('-d', '--dry-run', action='store_true',
                             dest='dryrun', default=False,
                             help='not really import medias.')
-        parser.add_argument('-f', '--max-folders', dest='max_folders', default=None,
+        parser.add_argument('-f', '--max-folders', dest='max_folders', default=0,
                             help='specify maximum of folders to parse for metadata.')
-        parser.add_argument('--max-videos', dest='max_videos', default=None,
+        parser.add_argument('--max-videos', dest='max_videos', default=0,
                             help='specify maximum of videos for upload.')
-        parser.add_argument('-u', '--upload', action='store_true',
-                            dest='upload', default=False,
-                            help='upload medias.')
         parser.add_argument('-rm', '--remove-medias', action='store_true',
                             dest='remove_medias', default=False,
                             help='remove all uploaded medias.')
-        parser.add_argument('-rc', '--remove-channels', action='store_true',
-                            dest='remove_channels', default=False,
-                            help='remove all uploaded medias.')
+        parser.add_argument('-rc', '--remove-channel',
+                            dest='remove_channel', default=None,
+                            help='remove all uploaded channels.')
 
         return parser.parse_args()
 
@@ -66,42 +63,42 @@ if __name__ == '__main__':
         exit()
 
     mediatransfer = MediaTransfer(mediasite_data, log_level)
-    mediaserver_data = mediatransfer.mediaserver_data
     mediaserver_file = 'mediaserver_data.json'
 
-    if options.upload:
+    if options.remove_medias:
+        run = input('You\'re about to remove all uploaded medias. Are you sure ? [y/N] ')
+        if run == 'y' or run == 'yes':
+            print('Removing all videos uploaded...')
+            nb_medias_removed = int()
+            try:
+                with open(mediaserver_file) as f:
+                    mediatransfer.mediaserver_data = json.load(f)
+            except Exception as e:
+                logger.error('No mediaserver metadata file found. Maybe no upload have been made ?')
+                logger.debug(e)
+                exit()
+            nb_medias_removed = mediatransfer.remove_uploaded_medias()
+            print(f'\nRemoved {nb_medias_removed} medias')
+
+    elif options.remove_channel:
+        run = input(f'You\'re about to remove channel: {options.remove_channel}. Are you sure ? [y/N] ')
+        if run == 'y' or run == 'yes':
+            print('Removing channel...')
+            nb_channel_removed = int()
+            nb_channel_removed = mediatransfer.remove_channel(options.remove_channel)
+            print(f'{nb_channel_removed} removed')
+
+    else:
         print('Uploading videos...')
         max_videos = int(options.max_videos) if options.max_videos else None
-        mediatransfer.upload_medias(max_videos)
+        nb_uploaded_medias = mediatransfer.upload_medias(max_videos)
+        print(f'Uploaded {nb_uploaded_medias} medias')
+
+        mediaserver_data = mediatransfer.mediaserver_data
         try:
             with open(mediaserver_file, 'w') as f:
                 json.dump(mediaserver_data, f)
         except Exception as e:
-            print('Failed to save Mediaserver metadata')
+            print('Failed to save Mediaserver mapping')
             logger.debug(e)
 
-    elif options.remove_medias:
-        print('Removing all videos uploaded...')
-        nb_medias_removed = int()
-        try:
-            with open(mediaserver_file) as f:
-                mediatransfer.mediaserver_data = json.load(f)
-        except Exception as e:
-            logger.error('No mediaserver metadata file found. Maybe no upload have been made ?')
-            logger.debug(e)
-            exit()
-        medias_removed = mediatransfer.remove_uploaded_medias()
-        print(f'\nRemoved {nb_medias_removed} medias')
-
-    elif options.remove_channels:
-        print('Removing all channels created...')
-        nb_channels_removed = int()
-        mediaserver_file = 'tests/mediaserver_data_test.json'
-        try:
-            with open(mediaserver_file) as f:
-                mediatransfer.mediaserver_data = json.load(f)
-        except Exception as e:
-            logger.error('No mediaserver metadata file found. Maybe no upload have been made ?')
-            logger.debug(e)
-            exit()
-        nb_channel_removed = mediatransfer.remove_channels_created()

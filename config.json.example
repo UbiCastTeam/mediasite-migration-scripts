@@ -1,7 +1,8 @@
 {
     "whitelist": []
     "video_formats_alowed': {
-        "mp4": true,
-        "wmv": true,
-    }
+	"video/mp4": true,
+        "video/x-ms-wmv": false
+    },
+    "mediaserver_parent_channel": ""
 }

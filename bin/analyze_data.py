@@ -66,7 +66,7 @@ if __name__ == '__main__':
     options = manage_opts()
     logger = utils.set_logger(options=options)
 
-    file = 'mediasite_data_debug.json' if options.dryrun else 'mediasite_data.json'
+    file = 'mediasite_data.json'
     try:
         data = []
         with open(file) as f:

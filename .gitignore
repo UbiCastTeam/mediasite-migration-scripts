@@ -127,10 +127,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# MediaServer client
+# MediaTransfer client
 *.json
 tests/content/
 config.json.backup
+mediasite_migration_scripts/files/
 
 # VS Code
 .vscode

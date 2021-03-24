@@ -2,9 +2,10 @@ import os
 import logging
 from datetime import datetime
 
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+RED, GREEN, YELLOW, BLUE, WHITE, LIGHT_RED = [1, 2, 3, 4, 67, 61]
 
-#The background is set with 40 plus the number of the color, and the foreground with 30
+# The background is set with 40 plus the number of the color, and the foreground with 30
+#  31 Red 32 Green 33 Yellow 34 Blue 91 Light Red 97 White
 
 #These are the sequences need to get colored ouput
 RESET_SEQ = "\033[0m"
@@ -24,8 +25,8 @@ COLORS = {
     'WARNING': YELLOW,
     'INFO': WHITE,
     'DEBUG': BLUE,
+    'ERROR': LIGHT_RED,
     'CRITICAL': RED,
-    'ERROR': RED
 }
 
 
