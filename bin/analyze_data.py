@@ -18,28 +18,33 @@ if __name__ == '__main__':
     def manage_opts():
         parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
         parser.add_argument(
-            '-i', '--info',
+            '-i',
+            '--info',
             action='store_true',
             default=False,
             help='print more status messages to stdout.',
         )
         parser.add_argument(
-            '-D', '--doctor',
+            '-D',
+            '--doctor',
             action='store_true',
             default=False,
             help='check what presentations have not been acounted',
         )
         parser.add_argument(
-            '-v', '--verbose',
+            '-v',
+            '--verbose',
             action='store_true',
             default=False,
             help='print all status messages to stdout.',
         )
-        parser.add_argument('-c', '--check-resources',
-                action='store_true',
-                default=False,
-                help='check if every video resource can be downloaded or not (slow).',
-            )
+        parser.add_argument(
+            '-c',
+            '--check-resources',
+            action='store_true',
+            default=False,
+            help='check if every video resource can be downloaded or not (slow).',
+        )
         parser.add_argument(
             '--dump',
             action='store_true',
@@ -47,7 +52,8 @@ if __name__ == '__main__':
             help='store reports and presentation ids into separate files (e.g. presentations_composite_videos.txt)'
         )
         parser.add_argument(
-            '-d', '--dry-run',
+            '-d',
+            '--dry-run',
             action='store_true',
             dest='dryrun',
             default=False,
@@ -149,10 +155,9 @@ if __name__ == '__main__':
 
     print()
     print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_tb} TB)'.format(**encoding_infos))
-    print('{video_slides} video + slides, {composite_with_slides} composite with slides, {composite_videos} composite videos, {video_only} video only, {audio_slides} audio + slides, {audio_only} audio-only'.format(**encoding_infos))
-    print('{total_unimportable} unimportable videos: {empty_videos} empty videos, {unsupported_videos} unconvertible videos'.format(**encoding_infos))
-
-    print('')
+    print()
+    print(encoding_infos['video_types_stats'])
+    print()
 
     if options.doctor:
         config_data = {}
