@@ -1,6 +1,8 @@
 import requests
 import logging
 from mediasite_migration_scripts.utils.common import get_age_days
+import json
+from copy import copy
 
 logger = logging.getLogger(__name__)
 
@@ -265,10 +267,17 @@ class DataAnalyzer():
             'empty_videos',
         ]
 
+        # generate a test library with one sample of each type
+        test_data = []
+
         types_table_string = 'Type\tCount\tSample\n'
         for videotype in videotypes:
             data = locals()[videotype]
-            types_table_string += f'{videotype}\t{len(data)}\t{data[0] if len(data) else "N/A"}\n'
+            sample_pres_id = data[0] if len(data) else None
+            # clone it so that we can anonymize it
+            sample_folder = self.copy_folder_by_presentation_id(sample_pres_id, new_name=videotype)
+            test_data.append(sample_folder)
+            types_table_string += f'{videotype}\t{len(data)}\t{sample_pres_id}\n'
 
         encoding_infos = {
             'total_video_count': total_video_count,
@@ -290,6 +299,11 @@ class DataAnalyzer():
                 logger.info(f'Dumping {fname}')
                 with open(fname, 'w') as f:
                     f.write('\n'.join(locals()[videolist]))
+
+            fname = 'samples.json'
+            with open(fname, 'w') as f:
+                logger.info(f'Creating sample test data into {fname}')
+                json.dump(test_data, f, indent=2, sort_keys=True)
 
         return encoding_infos
 
@@ -319,6 +333,64 @@ class DataAnalyzer():
         if whitelist:
             logger.info(f'Skipped {len(skipped_folders)} folders and {len(skipped_presentations)} presentations not matching the path whitelist')
         return folders
+
+    def copy_folder_by_presentation_id(self, pres_id, new_name=None):
+        for folder in self.folders:
+            for presentation in folder['presentations']:
+                if presentation['id'] == pres_id:
+                    folder_copy = self.anonymize_data(folder)
+                    presentation_copy = self.anonymize_data(presentation)
+                    folder_copy['presentations'] = [presentation_copy]
+                    if new_name is not None:
+                        presentation_copy['name'] = new_name + ' sample (name)'
+                        presentation_copy['title'] = new_name + ' sample (title)'
+                    return folder_copy
+
+    def anonymize_data(self, data):
+        anon_data = copy(data)
+        fields = [
+            'description',
+            'id',
+            'name',
+            'owner_username',
+            'parent_id',
+            'path',
+            'creator',
+            'title',
+            'display_name',
+            'owner_display_name',
+            'owner_mail',
+            'presenter_display_name',
+            'OcrText',
+            'url'
+        ]
+        if isinstance(anon_data, dict):
+            for key, val in anon_data.items():
+                new_val = None
+                if isinstance(val, dict):
+                    new_val = self.anonymize_data(val)
+                elif isinstance(val, list):
+                    new_val = [self.anonymize_data(i) for i in val]
+                else:
+                    if key in fields:
+                        if 'url' in key:
+                            new_val = f'https://anon.com/{key}'
+                        elif 'mail' in key:
+                            new_val = 'john.doe@server.com'
+                        else:
+                            new_val = f'anonymized {key}'
+                if new_val is not None:
+                    anon_data[key] = new_val
+        elif isinstance(anon_data, list):
+            for i in anon_data:
+                i = self.anonymize_data(i)
+        elif isinstance(anon_data, str):
+            if 'http' and '://' in anon_data:
+                anon_data = 'https://anon.com/fake'
+            else:
+                anon_data = 'anon text'
+
+        return anon_data
 
     def _set_presentations(self):
         presentations = []
