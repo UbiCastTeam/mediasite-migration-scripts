@@ -23,7 +23,7 @@ def set_test_data():
             new_data = json.load(f)
     else:
         data = list()
-        with open('mediasite_data_debug.json') as f:
+        with open('mediasite_data.json') as f:
             data = json.load(f)
 
         i = 0

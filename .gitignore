@@ -129,6 +129,7 @@ dmypy.json
 
 # MediaTransfer client
 *.json
+!mediasite_data.json
 tests/content/
 config.json.backup
 mediasite_migration_scripts/files/
