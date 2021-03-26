@@ -1,0 +1,10 @@
+language: python
+services:
+  - docker
+git:
+  submodules: false
+jobs:
+  include:
+    - stage: "Code validation"                # naming the Tests stage
+      name: "Lint"            # names the first Tests stage job
+      script: make lint
