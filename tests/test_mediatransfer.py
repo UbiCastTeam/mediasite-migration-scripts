@@ -3,6 +3,7 @@ import random
 import json
 import logging
 import sys
+import os
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
 from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
@@ -18,12 +19,10 @@ def setUpModule():
 
 
 def tearDownModule():
-    # body = {'oid': test_channel.get('oid'), 'delete_resources': True, 'delete_content': True}
-    # ms_client = MediaServerSetup().ms_client
-    # ms_client.api('channels/delete', method='post', data=body)
-    # ms_client.session.close()
-    pass
-
+    body = {'oid': test_channel.get('oid'), 'delete_resources': True, 'delete_content': True}
+    ms_client = MediaServerSetup().ms_client
+    ms_client.api('channels/delete', method='post', data=body)
+    ms_client.session.close()
 
 class FakeOptions:
     verbose = True
@@ -42,9 +41,14 @@ class TestMediaTransfer(TestCase):
         fake_opt.verbose = sys.argv[-1] == '-v' or sys.argv[-1] == '--verbose'
         common.set_logger(option=fake_opt)
 
+        self.config = {}
+        file = 'config.json'
+        if os.path.exists(file):
+            with open(file) as f:
+                self.config = json.load(f)
+
     def tearDown(self):
         self.ms_client.session.close()
-
         try:
             with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
                 json.dump(self.mediaserver_data, f)
@@ -84,29 +88,31 @@ class TestMediaTransfer(TestCase):
         except Exception as e:
             logger.error(e)
 
-        self.assertGreater(len(self.mediaserver_data), 0)
-
         found = False
         mediaserver_media = dict()
         for media in mediaserver_data:
-            if media['data']['title'] == presentation_example['title']:
+            if presentation_example['title'] == media['data']['title'] :
                 found = True
                 mediaserver_media = media['data']
                 break
+        for folder in self.config.get('whitelist'):
+            if folder not in self.mediasite_data[folder_index]['path']:
+                found = True
         self.assertTrue(found)
 
-        self.assertEqual(mediaserver_media['title'], presentation_example['title'])
-        self.assertEqual(mediaserver_media['creation'], presentation_example['creation_date'])
-        self.assertEqual(mediaserver_media['speaker_id'], presentation_example['owner_username'])
-        self.assertEqual(mediaserver_media['speaker_name'], presentation_example['owner_display_name'])
-        self.assertEqual(mediaserver_media['speaker_name'], presentation_example['owner_display_name'])
-        self.assertEqual(mediaserver_media['speaker_email'], presentation_example['owner_mail'])
-        self.assertEqual(mediaserver_media['validated'], 'yes' if presentation_example['published_status'] else 'no')
-        self.assertEqual(mediaserver_media['keywords'], ','.join(presentation_example['tags']))
-        self.assertEqual(mediaserver_media['slug'], 'mediasite-' + presentation_example['id'])
+        if mediaserver_media:
+            self.assertEqual(mediaserver_media['title'], presentation_example['title'])
+            self.assertEqual(mediaserver_media['creation'], presentation_example['creation_date'])
+            self.assertEqual(mediaserver_media['speaker_id'], presentation_example['owner_username'])
+            self.assertEqual(mediaserver_media['speaker_name'], presentation_example['owner_display_name'])
+            self.assertEqual(mediaserver_media['speaker_name'], presentation_example['owner_display_name'])
+            self.assertEqual(mediaserver_media['speaker_email'], presentation_example['owner_mail'])
+            self.assertEqual(mediaserver_media['validated'], 'yes' if presentation_example['published_status'] else 'no')
+            self.assertEqual(mediaserver_media['keywords'], ','.join(presentation_example['tags']))
+            self.assertEqual(mediaserver_media['slug'], 'mediasite-' + presentation_example['id'])
 
-        self.assertIsNotNone(mediaserver_media['file_url'])
-        self.assertEqual(json.loads(mediaserver_media['external_data']), presentation_example)
+            self.assertIsNotNone(mediaserver_media['file_url'])
+            self.assertEqual(json.loads(mediaserver_media['external_data']), presentation_example)
 
     def test_upload_medias(self):
         medias_examples = self.mediaserver_data

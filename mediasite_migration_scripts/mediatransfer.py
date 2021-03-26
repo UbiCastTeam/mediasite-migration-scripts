@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class MediaTransfer():
 
     def __init__(self, mediasite_data=dict(), ms_log_level='WARNING'):
-        self.mediasite_data = self._set_mediasite_data(mediasite_data)
+        self.mediasite_data = mediasite_data
         self.catalogs = self._set_catalogs()
         self.presentations = self._set_presentations()
         self.formats_allowed = self._set_formats_allowed()
@@ -58,7 +58,10 @@ class MediaTransfer():
             print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
 
         print('')
-        self.dl_session.close()
+
+        self.ms_client.session.close()
+        if self.dl_session is not None:
+            self.dl_session.close()
 
         return nb_medias_uploaded
 
