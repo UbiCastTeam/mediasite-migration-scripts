@@ -26,6 +26,7 @@ def tearDownModule():
 
 class FakeOptions:
     verbose = True
+    info = False
 
 class TestMediaTransfer(TestCase):
 
@@ -39,7 +40,7 @@ class TestMediaTransfer(TestCase):
 
         fake_opt = FakeOptions()
         fake_opt.verbose = sys.argv[-1] == '-v' or sys.argv[-1] == '--verbose'
-        common.set_logger(option=fake_opt)
+        common.set_logger(options=fake_opt)
 
         self.config = {}
         file = 'config.json'
