@@ -3,23 +3,24 @@ import json
 import os
 from decouple import config
 import requests
+import shutil
 
 from mediasite_migration_scripts.lib import utils
-from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
-
+from mediasite_migration_scripts.data_extractor import DataExtractor
 
 logger = logging.getLogger(__name__)
 
 
 class MediaTransfer():
 
-    def __init__(self, mediasite_data={}, ms_log_level='WARNING'):
-        self.mediasite_data = mediasite_data
+    def __init__(self, mediasite_data=dict(), ms_log_level='WARNING'):
+        self.mediasite_data = self._set_mediasite_data(mediasite_data)
         self.catalogs = self._set_catalogs()
         self.presentations = self._set_presentations()
         self.formats_allowed = self._set_formats_allowed()
         self.auth = (config('MEDIASITE_API_USER'), config('MEDIASITE_API_PASSWORD'))
+        self.extractor = DataExtractor()
         self.dl_session = None
 
         self.ms_setup = MediaServerSetup(log_level=ms_log_level)
@@ -41,7 +42,7 @@ class MediaTransfer():
             channel_oid = self.create_channel(channel_path)[-1]
             if not channel_oid:
                 del media['data']['channel']
-                channel_oid, media['data']['channel'] = self.root_channel
+                channel_oid = media['data']['channel'] = self.root_channel
 
             result = self.ms_client.api('medias/add', method='post', data=media['data'])
             if result.get('success'):
@@ -53,9 +54,12 @@ class MediaTransfer():
                 nb_medias_uploaded += 1
             else:
                 logger.error(f'Failed to upload media: {media["title"]}')
-
+            print(' ' * 50, end='\r')
             print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
+
         print('')
+        self.dl_session.close()
+
         return nb_medias_uploaded
 
     def remove_uploaded_medias(self):
@@ -150,7 +154,7 @@ class MediaTransfer():
         i = 1
         while channel.get('success') and i < len(tree):
             channel = self._create_channel(channels_oids[i - 1], tree[i])
-            logger.debug(f'Channel created with oid: {channel.get("oid")}')
+            logger.debug(f'Channel oid: {channel.get("oid")}')
             channels_oids.append(channel.get('oid'))
             i += 1
         if i < len(tree):
@@ -209,8 +213,8 @@ class MediaTransfer():
 
         if media_slides:
             if media_slides['stream_type'] == 'Slide' and media_slides['details']:
-                m_dir = f"mediasite_migration_scripts/files/{media_oid}/slides"
-                os.makedirs(m_dir, exist_ok=True)
+                slides_dir = f"mediasite_migration_scripts/files/{media_oid}/slides"
+                os.makedirs(slides_dir, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
             else:
                 slides_in_video = True
@@ -218,6 +222,7 @@ class MediaTransfer():
 
         if not slides_in_video and nb_slides > 0:
             logger.debug(f"{nb_slides_downloaded} slides downloaded and {nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
+            shutil.rmtree(slides_dir)
 
         return nb_slides_uploaded, nb_slides
 
@@ -245,16 +250,14 @@ class MediaTransfer():
                 'time': media_slides_details[i].get('TimeMilliseconds'),
                 'title': media_slides_details[i].get('Title'),
                 'content': media_slides_details[i].get('Content'),
-                'type': 22
+                'type': 5
             }
 
             with open(path, 'rb') as file:
                 result = self.ms_client.api('annotations/post/', method='post', data=details, files={'attachment': file})
-            slide_up_ok = True if result.get('annotation') else False
-            if slide_up_ok:
+            slide_up_ok = result.get('annotation')
+            if slide_up_ok is not None:
                 nb_slides_uploaded += 1
-
-        self.dl_session.close()
 
         return nb_slides_downloaded, nb_slides_uploaded, nb_slides
 
@@ -280,43 +283,47 @@ class MediaTransfer():
         if hasattr(self, 'mediaserver_data'):
             mediaserver_data = self.mediaserver_data
         else:
-            logger.debug('No data file found for Mediaserver mapping. Generating mapping.')
+            logger.debug('No Mediaserver mapping. Generating mapping.')
             for folder in self.mediasite_data:
-                for presentation in folder['presentations']:
-                    presenter = f"Primary presenter: {presentation['presenter_display_name']}" if presentation.get("presenter_display_name") else ''
-                    other_presenters = '\nOther presenters:' if presentation.get('other_presenters') else ''
-                    for other_p in presentation['other_presenters']:
-                        if not other_p == presenter:
-                            other_presenters += f", {other_p['display_name']}"
-                    description_text = '' if presentation['description'] is None else f"\n{presentation['description']}"
-                    description = f'{presenter}{other_presenters}{description_text}'
+                if self.extractor.is_folder_to_add(folder.get('path')):
+                    for presentation in folder['presentations']:
+                        presenters = str()
+                        for p in presentation.get('other_presenters'):
+                            presenters += p.get('display_name', '')
 
-                    v_type, slides_source = self._find_video_type(presentation)
-                    v_url = self._find_file_to_upload(presentation, slides_source)
-                    if v_url:
-                        data = {
-                            'title': presentation.get('title'),
-                            'channel': folder.get('name'),
-                            'creation': presentation.get('creation_date'),
-                            'speaker_id': presentation.get('owner_username'),
-                            'speaker_name': presentation.get('owner_display_name'),
-                            'speaker_email': presentation.get('owner_mail').lower(),
-                            'validated': 'yes' if presentation.get('published_status') else 'no',
-                            'description': description,
-                            'keywords': ','.join(presentation.get('tags')),
-                            'slug': 'mediasite-' + presentation.get('id'),
-                            'file_url': v_url,
-                            'external_data': json.dumps(presentation),
-                            'transcode': 'no',
-                            'origin': 'mediatransfer',
-                            'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
-                            'slides': presentation.get('slides'),
-                            'video_type': v_type
-                        }
-                        mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})
-                    else:
-                        logger.debug(f"No valid url for presentation {presentation.get('id')}")
-                        continue
+                        description_text = presentation.get('description', '')
+                        description_text = description_text if description_text else ''
+                        presenters = f'Presenters: {presenters}\n' if presenters else ''
+                        description = f'{presenters}{description_text}'
+
+                        v_type, slides_source = self._find_video_type(presentation)
+                        v_url = self._find_file_to_upload(presentation, slides_source)
+
+                        if v_url:
+                            data = {
+                                'title': presentation.get('title'),
+                                'channel': folder.get('name'),
+                                'creation': presentation.get('creation_date'),
+                                'speaker_id': presentation.get('owner_username'),
+                                'speaker_name': presentation.get('owner_display_name'),
+                                'speaker_email': presentation.get('owner_mail').lower(),
+                                'validated': 'yes' if presentation.get('published_status') else 'no',
+                                'description': description,
+                                'keywords': ','.join(presentation.get('tags')),
+                                'slug': 'mediasite-' + presentation.get('id'),
+                                'file_url': v_url,
+                                'external_data': json.dumps(presentation, indent=2, sort_keys=True),
+                                'transcode': 'no',
+                                'origin': 'mediatransfer',
+                                'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
+                                'layout': 'webinar' if v_type == 'computer_slides' else 'video',
+                                'slides': presentation.get('slides'),
+                                'video_type': v_type
+                            }
+                            mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})
+                        else:
+                            logger.debug(f"No valid url for presentation {presentation.get('id')}")
+                            continue
         return mediaserver_data
 
     def _find_video_type(self, presentation):
@@ -342,7 +349,7 @@ class MediaTransfer():
                     video_files = v.get('files')
                     break
 
-        video_url = None
+        video_url = str()
         for v in video_files:
             if v.get('format') == 'video/mp4':
                 video_url = v['url']

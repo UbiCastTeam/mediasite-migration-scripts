@@ -2,23 +2,37 @@ import os
 import logging
 import xml.dom.minidom as xml
 from pymediainfo import MediaInfo
+import json
 
 from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
+
+logger = logging.getLogger(__name__)
 
 
 class DataExtractor():
 
-    def __init__(self, config_file=None, max_folders=None):
+    def __init__(self, max_folders=None):
         print('Connecting...')
-        self.max_folders = max_folders
-        self.setup = MediasiteSetup(config_file)
+        self.config = self._get_config()
+        self.setup = MediasiteSetup(self.config)
         self.mediasite = self.setup.mediasite
+        self.max_folders = max_folders
 
         print('Getting presentations... (take a few minutes)')
-        self.presentations = self.mediasite.presentation.get_all_presentations()
+        self.presentations = None
         self.folders = self.get_all_folders_infos()
         self.catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
+
+    def _get_config(self):
+        try:
+            with open('config.json') as js:
+                config = json.load(js)
+        except Exception as e:
+            logger.debug(e)
+            logger.debug('No config file or file is corrupted.')
+            config = None
+        return config
 
     def extract_mediasite_data(self, parent_id=None):
         """
@@ -31,32 +45,45 @@ class DataExtractor():
                 list of items containing presentations' infos and
                     list of items containing videos and slides metadata
         """
-        logging.info('Gathering and ordering all presentations / folders data ')
-        if not parent_id:
+        logger.info('Gathering and ordering all presentations / folders data ')
+
+        presentations_folders = list()
+
+        if parent_id is None:
             parent_id = self.mediasite.folder.root_folder_id
 
-        i = 0
-        presentations_folders = list()
-        catalogs_list = list()
-        for i, folder in enumerate(self.folders):
-            if i > 1:
-                print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
+        if os.path.exists('mediasite_data.json'):
+            try:
+                with open('mediasite_data.json') as f:
+                    presentations_folders = json.load(f)
 
-            path = self._find_folder_path(folder['id'], self.folders)
-            if self._is_folder_to_add(path):
-                logging.debug('-' * 50)
-                logging.debug('Found folder : ' + path)
-                catalogs = self.get_folder_catalogs_infos(folder['id'])
-                presentations_folders.append({**folder,
-                                              'catalogs': catalogs,
-                                              'path': path,
-                                              'presentations': self.get_presentations_infos(folder['id'])})
-                if catalogs:
-                    for c in catalogs:
-                        catalogs_list.append(c)
-            if self.max_folders and i > self.max_folders:
-                break
-        self.catalogs = catalogs_list
+                for folder in presentations_folders:
+                    self.catalogs.extend(folder.get('catalogs'))
+            except Exception as e:
+                logger.warning('Failed to extract mediasite data from file. Collecting from API.')
+                logger.debug(e)
+        else:
+            if self.presentations is None:
+                self.presentations = self.mediasite.presentation.get_all_presentations()
+
+            for i, folder in enumerate(self.folders):
+                if i > 1:
+                    print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
+
+                path = self._find_folder_path(folder['id'], self.folders)
+                if self.is_folder_to_add(path):
+                    logger.debug('-' * 50)
+                    logger.debug('Found folder : ' + path)
+                    catalogs = self.get_folder_catalogs_infos(folder['id'])
+                    presentations_folders.append({**folder,
+                                                  'catalogs': catalogs,
+                                                  'path': path,
+                                                  'presentations': self.get_presentations_infos(folder['id'])})
+                    if catalogs:
+                        self.catalogs.extend(catalogs)
+                if self.max_folders and i > self.max_folders:
+                    break
+
         return presentations_folders
 
     def _find_folder_path(self, folder_id, folders, path=''):
@@ -67,7 +94,7 @@ class DataExtractor():
                 return path
         return ''
 
-    def _is_folder_to_add(self, path):
+    def is_folder_to_add(self, path):
         if self.setup.config.get('mediasite_folders_whitelist'):
             for fw in self.setup.config['mediasite_folders_whitelist']:
                 if fw in path:
@@ -76,12 +103,12 @@ class DataExtractor():
         return True
 
     def get_presentations_infos(self, folder_id):
-        logging.debug(f'Gettings presentations infos for folder: {folder_id}')
+        logger.debug(f'Gettings presentations infos for folder: {folder_id}')
         presentations_infos = list()
 
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
-                logging.debug('-' * 50)
+                logger.debug('-' * 50)
                 has_slides_details = False
                 for stream_type in presentation.get('Streams'):
                     if stream_type.get('StreamType') == 'Slide':
@@ -169,7 +196,7 @@ class DataExtractor():
         return presenters_infos
 
     def get_videos_infos(self, presentation_id):
-        logging.debug(f"Gathering video info for presentation : {presentation_id}")
+        logger.debug(f"Gathering video info for presentation : {presentation_id}")
 
         videos_infos = []
         video = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
@@ -204,13 +231,13 @@ class DataExtractor():
                     file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
                 if not file_infos.get('encoding_infos'):
-                    logging.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
+                    logger.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
                     if file_infos.get('url'):
                         file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
                     elif 'LocalUrl' in content_server:
-                        logging.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
+                        logger.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
                     else:
-                        logging.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
+                        logger.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
 
             stream = file['StreamType']
             in_list = False
@@ -224,7 +251,7 @@ class DataExtractor():
         return video_list
 
     def _get_encoding_infos_from_api(self, settings_id, video_url):
-        logging.debug(f'Getting encoding infos from api with settings id: {settings_id}')
+        logger.debug(f'Getting encoding infos from api with settings id: {settings_id}')
         encoding_infos = {}
         encoding_settings = self.mediasite.content.get_content_encoding_settings(settings_id)
         if encoding_settings:
@@ -239,7 +266,7 @@ class DataExtractor():
                 height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
                 # sometimes resolution values given by the API are reversed, we use MediaInfo in that case
                 if width < height:
-                    logging.debug('Resolution values given by the API may be reversed... switching to MediaInfo.')
+                    logger.debug('Resolution values given by the API may be reversed... switching to MediaInfo.')
                     return self._parse_encoding_infos(video_url)
 
                 codecs_settings = settings.getElementsByTagName('StreamProfiles')[0]
@@ -259,12 +286,12 @@ class DataExtractor():
                     'height': height,
                 }
             except Exception as e:
-                logging.debug(f'XML could not be parsed for video encoding settings for settings ID : {settings_id}')
-                logging.debug(e)
+                logger.debug(f'XML could not be parsed for video encoding settings for settings ID : {settings_id}')
+                logger.debug(e)
         return encoding_infos
 
     def _parse_encoding_infos(self, video_url):
-        logging.debug(f'Parsing with MediaInfo lib for: {video_url}')
+        logger.debug(f'Parsing with MediaInfo lib for: {video_url}')
         encoding_infos = {}
         try:
             media_tracks = MediaInfo.parse(video_url, mediainfo_options={'Ssl_IgnoreSecurity': '1'}).tracks
@@ -276,16 +303,16 @@ class DataExtractor():
                 elif track.track_type == 'Audio':
                     encoding_infos['audio_codec'] = track.format
             if not encoding_infos.get('video_codec'):
-                logging.warning(f'File is not a video: {video_url}')
+                logger.warning(f'File is not a video: {video_url}')
         except Exception as e:
-            logging.debug(f'Video encoding infos could not be parsed for: {video_url}')
-            logging.debug(e)
+            logger.debug(f'Video encoding infos could not be parsed for: {video_url}')
+            logger.debug(e)
 
         return encoding_infos
 
     def get_slides_infos(self, presentation, details=False):
         presentation_id = presentation['id']
-        logging.debug(f"Gathering slides infos for presentation: {presentation_id}")
+        logger.debug(f"Gathering slides infos for presentation: {presentation_id}")
 
         if details and presentation['has_slides_details']:
             option = 'SlideDetailsContent'

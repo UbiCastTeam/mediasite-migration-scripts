@@ -13,7 +13,7 @@ class MediaServerSetup():
                        "CLIENT_ID": "mediasite-migration-client",
                        "PROXIES": {"http": "",
                                    "https": ""},
-                       "SERVER_URL": "https://beta.ubicast.net",
+                       "SERVER_URL": config('MEDIASERVER_URL'),
                        "UPLOAD_CHUNK_SIZE": 5242880,
                        "VERIFY_SSL": False,
                        "LOG_LEVEL": self.log_level}

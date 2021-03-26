@@ -32,14 +32,6 @@ if __name__ == '__main__':
     options = manage_opts()
     logger = utils.set_logger(options)
 
-    try:
-        with open('config.json') as js:
-            config_data = json.load(js)
-    except Exception as e:
-        logger.debug(e)
-        logger.info('No config file or file is corrupted.')
-        config_data = None
-
     file = 'mediasite_data.json'
     try:
         with open(file) as f:
@@ -48,7 +40,7 @@ if __name__ == '__main__':
     except Exception as e:
         logger.debug(e)
         try:
-            extractor = DataExtractor(config_data, int(options.max_folders))
+            extractor = DataExtractor(int(options.max_folders))
             data = extractor.all_data
 
             with open(file, 'w') as f:

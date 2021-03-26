@@ -20,7 +20,7 @@ def setUpModule():
 def tearDownModule():
     # body = {'oid': test_channel.get('oid'), 'delete_resources': True, 'delete_content': True}
     # ms_client = MediaServerSetup().ms_client
-    # # ms_client.api('channels/delete', method='post', data=body)
+    # ms_client.api('channels/delete', method='post', data=body)
     # ms_client.session.close()
     pass
 

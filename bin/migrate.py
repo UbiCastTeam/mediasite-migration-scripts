@@ -43,6 +43,9 @@ if __name__ == '__main__':
     log_level = 'DEBUG' if options.verbose else 'WARNING'
     logger = logging.getLogger(__name__)
 
+    logger.info('----- START SCRIPT -------')
+    logger.debug(f'Starting {__file__}')
+
     mediasite_file = 'mediasite_data.json'
     if not os.path.exists(mediasite_file):
         run_import = input('No metadata file. You need to import Mediasite metadata first.\nDo you want to run import ? [y/N] ')
@@ -92,13 +95,16 @@ if __name__ == '__main__':
         print('Uploading videos...')
         max_videos = int(options.max_videos) if options.max_videos else None
         nb_uploaded_medias = mediatransfer.upload_medias(max_videos)
-        print(f'Uploaded {nb_uploaded_medias} medias')
+        print('--------- Upload successful ---------')
+        print(f' \nUploaded {nb_uploaded_medias} medias')
 
         mediaserver_data = mediatransfer.mediaserver_data
         try:
             with open(mediaserver_file, 'w') as f:
                 json.dump(mediaserver_data, f)
+            print('Mediaserver data is in mediaserver_data.json.')
         except Exception as e:
             print('Failed to save Mediaserver mapping')
             logger.debug(e)
 
+    logger.info('----- END SCRIPT -------\n')
