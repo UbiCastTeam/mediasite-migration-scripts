@@ -48,3 +48,12 @@ tests_e2e_mdtr: build
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		python3 -m unittest tests/e2e/e2e_mediatransfer.py $(ARGS)
+
+merge_build:
+	docker build -t mediasite-merge -f Dockerfile.merge .
+
+merge_shell:
+	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge /bin/bash
+
+merge_run:
+	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge /src/bin/merge.py $(ARGS)
