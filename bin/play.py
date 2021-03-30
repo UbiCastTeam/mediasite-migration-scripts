@@ -5,10 +5,14 @@ import os
 import sys
 
 
-def get_video_url(presentation):
-    for f in presentation['videos'][0]['files']:
-        if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
-            return f['url']
+def get_video_urls(presentation):
+    urls = list()
+    for video in presentation['videos']:
+        for f in video['files']:
+            if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
+                urls.append(f['url'])
+                break
+    return urls
 
 
 if __name__ == '__main__':
@@ -58,9 +62,12 @@ if __name__ == '__main__':
     print(f'Found {len(presentations)} presentations')
     if presentations:
         for presentation in presentations:
-            video_url = get_video_url(presentation)
-            print(f'Playing {presentation["id"]} url: {video_url}')
-            returncode = os.system(f'mpv {video_url}')
+            print(f'Playing {presentation["id"]}')
+            video_urls = get_video_urls(presentation)
+            cmd = 'gst-launch-1.0'
+            for url in video_urls:
+                cmd += f' playbin uri={url}'
+            returncode = os.system(cmd)
             if returncode != 0:
                 sys.exit()
     else:
