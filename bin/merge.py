@@ -3,6 +3,7 @@ import time
 import sys
 import signal
 import gi
+import json
 import logging
 from pathlib import Path
 import argparse
@@ -36,11 +37,42 @@ class Merger:
         self.mainloop = mainloop
         self.options = options
 
+    def get_layout_preset(self, layers_data):
+        layout_preset = {
+            'composition_area': {
+                'w': self.options.width,
+                'h': self.options.height,
+            },
+            'layers': layers_data,
+        }
+        return layout_preset
+
+    def get_layout_layer(self, label, x, y, w, h, index, orig_w, orig_h, change_detection=False, autocam_enabled=False):
+        return {
+            'label': label,
+            'id': index,
+            'source': {
+                'type': 'video',
+                'roi': {
+                    'x': x,
+                    'y': y,
+                    'w': w,
+                    'h': h
+                },
+                'native_resolution': {
+                    'w': orig_w,
+                    'h': orig_h,
+                },
+                'change_detection_enabled': change_detection,
+                'autocam_enabled': autocam_enabled,
+            }
+        }
+
     def convert(self, media_folder):
         folder = Path(media_folder)
         self.output_file = output_file = folder / 'composite.mp4'
-        videomixer_width = 2560
-        videomixer_height = 1440
+        videomixer_width = self.options.width
+        videomixer_height = self.options.height
         framerate = 0
 
         self.duration_s = 0
@@ -57,6 +89,7 @@ class Merger:
 
         reduction_factor = videomixer_width / total_native_width
 
+        layers_data = list()
         pipeline_desc = ''
         index = 0
         has_audio = False
@@ -77,6 +110,18 @@ class Merger:
                 'width': adjusted_width,
                 'height': adjusted_heigth,
             }
+            layers_data.append(self.get_layout_layer(
+                video_name.split('.mp4')[0],
+                x_offset,
+                y,
+                adjusted_width,
+                adjusted_heigth,
+                index + 1,
+                videomixer_width,
+                videomixer_height,
+                video_name == 'Slides.mp4',
+                False,
+            ))
             compositor_options += '{pad}::xpos={x} {pad}::ypos={y} {pad}::width={width} {pad}::height={height} '.format(**pad_data)
             pipeline_desc += f' filesrc location={video_info["path"]} ! qtdemux name=demux_{index} ! queue name=qh264dec_{index} ! avdec_h264 ! vmix. '
             if video_name != 'Slides.mp4' and not has_audio:
@@ -101,6 +146,12 @@ class Merger:
         bus.connect("message::eos", self._on_eos)
         bus.connect('message::error', self._on_error)
         bus.connect("message", self._on_message)
+
+        layout_preset = self.get_layout_preset(layers_data)
+        layout_file = folder / 'mediaserver_layout.json'
+        with open(layout_file, 'w') as f:
+            print(f'Wrote {layout_file}')
+            json.dump(layout_preset, f, sort_keys=True, indent=4)
 
         GLib.idle_add(self.pipeline.set_state, Gst.State.PLAYING)
         self.start_time = time.time()
@@ -181,6 +232,20 @@ if __name__ == '__main__':
         'folder',
         type=str,
         help='Folder name in which to look for media (single media)',
+    )
+
+    parser.add_argument(
+        '--width',
+        type=int,
+        help='Rendering width',
+        default=2560,
+    )
+
+    parser.add_argument(
+        '--height',
+        type=int,
+        help='Rendering height',
+        default=1440,
     )
 
     args = parser.parse_args()
