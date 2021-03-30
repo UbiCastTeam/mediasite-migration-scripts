@@ -87,19 +87,24 @@ if __name__ == '__main__':
     if presentations:
         for presentation in presentations:
             pres_id = presentation["id"]
+            root = Path(args.download_folder) / pres_id
             video_urls = get_video_urls(presentation)
             if video_urls:
                 if not args.download:
                     print(f'Playing {pres_id}')
                     cmd = 'gst-launch-1.0'
-                    for url in video_urls.values():
-                        cmd += f' playbin uri={url}'
+                    if root.is_dir():
+                        print(f'Found existing folder {root}, playing from local folder')
+                        for v in root.glob('*.mp4'):
+                            cmd += f' playbin uri=file://{v.resolve()}'
+                    else:
+                        for url in video_urls.values():
+                            cmd += f' playbin uri={url}'
                     returncode = os.system(cmd)
                     if returncode != 0:
                         sys.exit()
                 else:
                     print(f'Downloading {pres_id}')
-                    root = Path(args.download_folder) / pres_id
                     root.mkdir(parents=True, exist_ok=True)
                     with requests.Session() as session:
                         with open(root / 'mediasite_metadata.json', 'w') as f:
