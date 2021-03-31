@@ -161,6 +161,8 @@ class Merger:
     def _on_error(self, bus, message):
         error, debug = message.parse_error()
         logging.error(f"{error}: {debug}")
+        self.pipeline.set_state(Gst.State.NULL)
+        self.abort()
 
     def _on_eos(self, bus, message):
         took = time.time() - self.start_time
@@ -169,9 +171,10 @@ class Merger:
         self.mainloop.quit()
 
     def abort(self):
-        logging.info(f'User interrupted, aborting and removing {self.output_file.name}')
+        logging.info(f'Aborting and removing {self.output_file.name}')
         self.output_file.unlink()
         self.mainloop.quit()
+        sys.exit(1)
 
     def _on_message(self, bus, message):
         t = message.type
