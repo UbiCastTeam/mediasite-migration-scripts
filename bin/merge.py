@@ -87,7 +87,9 @@ class Merger:
                 self.duration_s = max(self.duration_s, info['duration_s'])
                 input_videos[video.name] = info
 
-        reduction_factor = videomixer_width / total_native_width
+        reduction_factor = 1
+        if total_native_width > videomixer_width:
+            reduction_factor = videomixer_width / total_native_width
 
         layers_data = list()
         pipeline_desc = ''
