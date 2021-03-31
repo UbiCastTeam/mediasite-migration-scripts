@@ -96,7 +96,8 @@ if __name__ == '__main__':
                     if root.is_dir():
                         print(f'Found existing folder {root}, playing from local folder')
                         for v in root.glob('*.mp4'):
-                            cmd += f' playbin uri=file://{v.resolve()}'
+                            if v.name != 'composite.mp4':
+                                cmd += f' playbin uri=file://{v.resolve()}'
                     else:
                         for url in video_urls.values():
                             cmd += f' playbin uri={url}'
