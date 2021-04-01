@@ -43,7 +43,7 @@ if __name__ == '__main__':
     log_level = 'DEBUG' if options.verbose else 'WARNING'
     logger = logging.getLogger(__name__)
 
-    logger.info('----- START SCRIPT -------')
+    logger.info('----- START SCRIPT' + 50 * '-')
     logger.debug(f'Starting {__file__}')
 
     mediasite_file = 'mediasite_data.json'
@@ -102,9 +102,8 @@ if __name__ == '__main__':
         try:
             with open(mediaserver_file, 'w') as f:
                 json.dump(mediaserver_data, f)
-            print('Mediaserver data is in mediaserver_data.json.')
         except Exception as e:
             print('Failed to save Mediaserver mapping')
             logger.debug(e)
 
-    logger.info('----- END SCRIPT -------\n')
+    logger.info('----- END SCRIPT ' + 50 * '-' + '\n')

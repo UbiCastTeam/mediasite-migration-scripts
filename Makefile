@@ -36,3 +36,9 @@ tests: build
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		python3 -m unittest tests/*.py $(ARGS)
+
+e2e_tests: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 -m unittest tests/e2e/*.py $(ARGS)

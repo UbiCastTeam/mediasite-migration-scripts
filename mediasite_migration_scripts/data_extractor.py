@@ -21,7 +21,8 @@ class DataExtractor():
         print('Getting presentations... (take a few minutes)')
         self.presentations = None
         self.folders = self.get_all_folders_infos()
-        self.catalogs = self.mediasite.catalog.get_all_catalogs()
+        self.catalogs = list()
+        self.all_catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
 
     def _get_config(self):
@@ -162,8 +163,8 @@ class DataExtractor():
 
     def get_folder_catalogs_infos(self, folder_id):
         folder_catalogs = list()
-        for catalog in self.catalogs:
-            if folder_id == catalog['LinkedFolderId']:
+        for catalog in self.all_catalogs:
+            if folder_id == catalog.get('LinkedFolderId'):
                 infos = {'id': catalog.get('Id'),
                          'name': catalog.get('Name'),
                          'description': catalog.get('Description'),
@@ -303,7 +304,7 @@ class DataExtractor():
                 elif track.track_type == 'Audio':
                     encoding_infos['audio_codec'] = track.format
             if not encoding_infos.get('video_codec'):
-                logger.warning(f'File is not a video: {video_url}')
+                logger.debug(f'File is not a video: {video_url}')
         except Exception as e:
             logger.debug(f'Video encoding infos could not be parsed for: {video_url}')
             logger.debug(e)

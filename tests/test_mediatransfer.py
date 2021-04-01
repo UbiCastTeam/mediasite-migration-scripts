@@ -34,7 +34,6 @@ class TestMediaTransfer(TestCase):
         super(TestMediaTransfer)
         self.mediasite_data = common.set_test_data()
         self.mediatransfer = MediaTransfer(self.mediasite_data, 'WARNING')
-        self.mediatransfer.root_channel = self.mediatransfer.get_channel(oid=test_channel.get('oid'))
         self.ms_client = self.mediatransfer.ms_client
         self.mediaserver_data = self.mediatransfer.mediaserver_data
 
@@ -64,9 +63,11 @@ class TestMediaTransfer(TestCase):
             self.assertIn(p, presentations)
 
     def test_set_catalogs(self):
-        test_catalog = self.mediasite_data[0]['catalogs'][0]
+        len_catalogs = 0
+        for folder in self.mediasite_data:
+            len_catalogs += len(folder.get('catalogs', []))
         catalogs = self.mediatransfer._set_catalogs()
-        self.assertIn(test_catalog, catalogs)
+        self.assertEqual(len_catalogs, len(catalogs))
 
     def test_to_mediaserver_keys(self):
         folder_index = random.randrange(len(self.mediasite_data))
@@ -96,9 +97,6 @@ class TestMediaTransfer(TestCase):
                 found = True
                 mediaserver_media = media['data']
                 break
-        for folder in self.config.get('whitelist'):
-            if folder not in self.mediasite_data[folder_index]['path']:
-                found = True
         self.assertTrue(found)
 
         if mediaserver_media:
@@ -114,63 +112,3 @@ class TestMediaTransfer(TestCase):
 
             self.assertIsNotNone(mediaserver_media['file_url'])
             self.assertEqual(json.loads(mediaserver_media['external_data']), presentation_example)
-
-    def test_upload_medias(self):
-        medias_examples = self.mediaserver_data
-        self.mediatransfer.upload_medias()
-        for m in medias_examples:
-            data = m['data']
-            result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
-            self.assertTrue(result.get("success"))
-            m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type']
-            for key in data.keys():
-                try:
-                    self.assertEqual(data[key], m_uploaded.get(key))
-                except AssertionError:
-                    if key == 'channel':
-                        self.assertEqual(data[key], m_uploaded.get('parent_title'))
-                    elif key == 'speaker_name':
-                        self.assertEqual(data[key], m_uploaded.get('speaker'))
-                    elif key == 'validated':
-                        self.assertTrue(m_uploaded.get(key)) if data[key] == 'yes' else self.assertFalse(m_uploaded.get(key))
-                    elif key in keys_to_skip:
-                        continue
-                    else:
-                        logger.error(f'[{key}] not equal')
-                        raise
-
-    def test_create_channel(self):
-        paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
-        channels_examples_titles = ''.join(paths_examples).split('/')[1:]
-        channels_created_oids = list()
-
-        for p in paths_examples:
-            channels_created_oids.extend(self.mediatransfer.create_channel(p))
-        self.assertEqual(len(channels_created_oids), len(channels_examples_titles))
-
-        for oid in channels_created_oids:
-            result = self.ms_client.api('channels/get', method='get', params={'oid': oid}, ignore_404=True)
-            self.assertIsNotNone(result)
-            if result:
-                self.assertIn(result.get('info').get('title'), channels_examples_titles)
-            else:
-                logger.error(f'Channel {oid} not found')
-
-        longest_tree = paths_examples[-1].split('/')[1:]
-        parent_oid = channels_created_oids[-len(longest_tree)]
-        ms_tree = self.ms_client.api('channels/tree', method='get', params={'parent_oid': parent_oid})
-        # we pop the parent channel
-        longest_tree.pop(0)
-        for c_example in longest_tree:
-            found = False
-            for index, c_created in enumerate(ms_tree.get('channels')):
-                if c_example == c_created.get('title'):
-                    found = True
-                    c_found_index = index
-                    break
-            self.assertTrue(found)
-            ms_tree = ms_tree.get('channels')[c_found_index]
-
-    def test_migrate_slides(self):
-        pass

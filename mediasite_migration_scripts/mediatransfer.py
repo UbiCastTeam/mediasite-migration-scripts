@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, mediasite_data=dict(), ms_log_level='WARNING'):
+    def __init__(self, mediasite_data=dict(), ms_log_level='WARNING', test=None, root_channel=None):
         self.mediasite_data = mediasite_data
         self.catalogs = self._set_catalogs()
         self.presentations = self._set_presentations()
@@ -22,11 +22,16 @@ class MediaTransfer():
         self.auth = (config('MEDIASITE_API_USER'), config('MEDIASITE_API_PASSWORD'))
         self.extractor = DataExtractor()
         self.dl_session = None
+        self.test = test
 
         self.ms_setup = MediaServerSetup(log_level=ms_log_level)
         self.ms_client = self.ms_setup.ms_client
-        self.root_channel = self.get_root_channel()
+        if root_channel:
+            self.root_channel = root_channel
+        else:
+            self.root_channel = self.get_root_channel()
         self.channels_created = list()
+        self.slide_annot_type = None
 
         self.mediaserver_data = self.to_mediaserver_keys()
 
@@ -64,57 +69,6 @@ class MediaTransfer():
             self.dl_session.close()
 
         return nb_medias_uploaded
-
-    def remove_uploaded_medias(self):
-        logger.debug('Deleting medias uploaded')
-
-        medias = self.mediaserver_data
-        nb_medias_removed = 0
-        for i, m in enumerate(medias):
-            nb_medias_removed += self.remove_media(m)
-            print(f'Removing: [{i}/ {len(medias)}] -- {int(100 * (i/len(medias)))}%', end='\r')
-        print('')
-        return nb_medias_removed
-
-    def remove_media(self, media=dict()):
-        delete_completed = False
-        nb_medias_removed = 0
-
-        oid = media.get('ref', {}).get('oid')
-        if oid:
-            result = self.ms_client.api('medias/delete',
-                                        method='post',
-                                        data={'oid': oid, 'delete_metadata': True, 'delete_resources': True},
-                                        ignore_404=True)
-            if result:
-                if result.get('success'):
-                    logger.debug(f'Media {oid} removed.')
-                    delete_completed = True
-                    nb_medias_removed += 1
-                else:
-                    logger.error(f'Failed to delete media: {oid} / Error: {result.get("error")}')
-            elif not result:
-                logger.warning(f'Media not found in Mediaserver for removal with oid: {oid}. Searching with title.')
-            else:
-                logger.error(f'Something gone wrong when trying remove media {oid}')
-
-        if not delete_completed:
-            title = media['data']['title']
-            media = self.ms_client.api('medias/get', method='get', params={'title': title}, ignore_404=True)
-            while media and media.get('success'):
-                oid = media.get('info').get('oid')
-                result = self.ms_client.api('medias/delete',
-                                            method='post',
-                                            data={'oid': oid, 'delete_metadata': True, 'delete_resources': True},
-                                            ignore_404=True)
-                if result:
-                    logger.debug(f'Media {oid} removed.')
-                    nb_medias_removed += 1
-                media = self.ms_client.api('medias/get', method='get', params={'title': title}, ignore_404=True)
-            if media and not media.get('success'):
-                logger.error(f'Failed to delete media: {oid} / Error: {result.get("error")}')
-
-        return nb_medias_removed
 
     def get_root_channel(self):
         oid = str()
@@ -189,25 +143,6 @@ class MediaTransfer():
 
         return channel
 
-    def remove_channel(self, channel_title=None, channel_oid=None):
-        ok = False
-        if not channel_oid and not channel_title:
-            logger.error('Request to remove channel but no channel provided (title or oid)')
-        elif not channel_oid and channel_title:
-            result = self.ms_client.api('channels/get', method='get', params={'title': channel_title}, ignore_404=True)
-            if result:
-                channel_oid = result.get('info', {}).get('oid')
-            else:
-                logger.error('Channel not found for removing')
-
-        if channel_oid:
-            result = self.ms_client.api('channels/delete', method='post', data={'oid': channel_oid, 'delete_content': 'yes', 'delete_resources': 'yes'})
-            ok = result.get('success')
-        else:
-            logger.error(f'Something gone wrong when removing channel. Title: {channel_title} / oid: {channel_oid}')
-
-        return ok
-
     def migrate_slides(self, media):
         media_oid = media['ref']['media_oid']
         media_slides = media['data']['slides']
@@ -242,20 +177,24 @@ class MediaTransfer():
 
         logger.debug(f'Migrating slides for medias: {media_oid}')
         for i, url in enumerate(media_slides['urls']):
-            slide_dl_ok, path = self._download_slide(media_oid, url)
-            if slide_dl_ok:
-                nb_slides_downloaded += 1
+            if self.test:
+                path = url
             else:
-                logger.error(f'Failed to download slide {i + 1} for media {media_oid}')
+                slide_dl_ok, path = self._download_slide(media_oid, url)
+                if slide_dl_ok:
+                    nb_slides_downloaded += 1
+                else:
+                    logger.error(f'Failed to download slide {i + 1} for media {media_oid}')
 
+            if self.slide_annot_type is None:
+                self.slide_annot_type = self._get_annotation_type_id(media_oid)
             details = {
                 'oid': media_oid,
                 'time': media_slides_details[i].get('TimeMilliseconds'),
                 'title': media_slides_details[i].get('Title'),
                 'content': media_slides_details[i].get('Content'),
-                'type': 5
+                'type': self.slide_annot_type
             }
-
             with open(path, 'rb') as file:
                 result = self.ms_client.api('annotations/post/', method='post', data=details, files={'attachment': file})
             slide_up_ok = result.get('annotation')
@@ -278,6 +217,17 @@ class MediaTransfer():
                     f.write(r.content)
                 ok = True
         return ok, path
+
+    def _get_annotation_type_id(self, oid):
+        annotation_type = int()
+
+        result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': oid})
+        if result.get('success'):
+            for a in result.get('types'):
+                if a.get('label') == 'Slide':
+                    annotation_type = a.get('id')
+
+        return annotation_type
 
     def to_mediaserver_keys(self):
         logger.debug('Matching Mediasite data to MediaServer keys mapping.')
@@ -314,7 +264,6 @@ class MediaTransfer():
                                 'description': description,
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
-                                'file_url': v_url,
                                 'external_data': json.dumps(presentation, indent=2, sort_keys=True),
                                 'transcode': 'no',
                                 'origin': 'mediatransfer',
@@ -323,6 +272,12 @@ class MediaTransfer():
                                 'slides': presentation.get('slides'),
                                 'video_type': v_type
                             }
+
+                            if self.test:
+                                data['file'] = v_url
+                            else:
+                                data['file_url'] = v_url
+
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})
                         else:
                             logger.debug(f"No valid url for presentation {presentation.get('id')}")
@@ -334,7 +289,14 @@ class MediaTransfer():
         slides_source = None
         if presentation.get('slides'):
             if presentation.get('slides').get('details'):
-                video_type = 'video_slides_details'
+                if len(presentation.get('videos')) > 1:
+                    video_type = composite_slides
+                else:
+                    video_type = 'audio_slides'
+                    for f in presentation.get('videos')[0].get('files'):
+                        if f.get('encoding_infos').get('video_codec'):
+                            video_type = 'video_slides'
+                            break
             elif presentation.get('slides').get('stream_type').startswith('Video'):
                 slides_source = presentation.get('slides').get('stream_type')
                 video_type = 'computer_slides'
