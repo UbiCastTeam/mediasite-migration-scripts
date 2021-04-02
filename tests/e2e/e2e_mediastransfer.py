@@ -18,11 +18,11 @@ def setUpModule():
     print('-> ', __name__)
 
 
-# def tearDownModule():
-#     body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
-#     ms_client = MediaServerSetup().ms_client
-#     ms_client.api('channels/delete', method='post', data=body)
-#     ms_client.session.close()
+def tearDownModule():
+    body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
+    ms_client = MediaServerSetup().ms_client
+    ms_client.api('channels/delete', method='post', data=body)
+    ms_client.session.close()
 
 
 class FakeOptions:
