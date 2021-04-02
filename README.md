@@ -32,19 +32,24 @@ MEDIASITE_API_USER = Mediasite user name
 MEDIASITE_API_PASSWORD = Mediasite user password
 MEDIASITE_API_KEY = API key generated in the Mediasite backoffice at /api/Docs/ApiKeyRegistration.aspx
 ```
-#### Whitelisting
-If you need to include only some folders in your migration.
+#### Config
+Some parameters can be provided for migration.
 
 - Create the config.json file
 
 `$ cp config.json.example config.json`
 
-- On config.json, put the folders name you want to include in ***whitelist***, e.g. :
+- On config.json, put the parameters e.g. :
 
 ```
 {
-    "whitelist": ["Presentations", "Mediasite Users"]
- }
+    "whitelist": ["Migratietest_2021mrt16"], # folders you want to migrate from Mediasite
+    "videos_formats_allowed": {   # video formats allowed
+        "video/mp4": true,
+        "video/x-ms-wmv": false
+    },
+    "mediaserver_parent_channel": "c1261953feb82i5nhpis" # the Mediaserve root channel of all the content you migrate from Mediasite
+}
 ```
 
 ### Running scripts
