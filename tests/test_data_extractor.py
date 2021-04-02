@@ -5,6 +5,7 @@ import logging
 from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 from mediasite_migration_scripts.data_extractor import DataExtractor
 
+
 class TestDataExtractor(TestCase):
 
     def setUp(self):

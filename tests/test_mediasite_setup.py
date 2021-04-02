@@ -1,6 +1,4 @@
-import os
 import logging
-from decouple import config
 from unittest import TestCase
 import json
 
