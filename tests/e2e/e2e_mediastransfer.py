@@ -18,11 +18,11 @@ def setUpModule():
     print('-> ', __name__)
 
 
-def tearDownModule():
-    body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
-    ms_client = MediaServerSetup().ms_client
-    ms_client.api('channels/delete', method='post', data=body)
-    ms_client.session.close()
+# def tearDownModule():
+#     body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
+#     ms_client = MediaServerSetup().ms_client
+#     ms_client.api('channels/delete', method='post', data=body)
+#     ms_client.session.close()
 
 
 class FakeOptions:
@@ -76,7 +76,8 @@ class TestMediaTransferE2E(TestCase):
                     self.assertEqual(data[key], m_uploaded.get(key))
                 except AssertionError:
                     if key == 'channel':
-                        self.assertEqual(data[key], m_uploaded.get('parent_title'))
+                        channel_title = self.mediatransfer.get_channel(oid=data['channel']).get('title')
+                        self.assertEqual(channel_title, m_uploaded.get('parent_title'))
                     elif key == 'speaker_name':
                         self.assertEqual(data[key], m_uploaded.get('speaker'))
                     elif key == 'validated':
@@ -86,6 +87,8 @@ class TestMediaTransferE2E(TestCase):
                     else:
                         logger.error(f'[{key}] not equal')
                         raise
+            nb_slides, nb_slides_uploaded = self.nb_slides_uploaded(m)
+            self.assertEqual(nb_slides, nb_slides_uploaded)
 
     def test_create_channel(self):
         paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
@@ -119,5 +122,14 @@ class TestMediaTransferE2E(TestCase):
             self.assertTrue(found)
             ms_tree = ms_tree.get('channels')[c_found_index]
 
-    def test_migrate_slides(self):
-        pass
+    def nb_slides_uploaded(self, media):
+        nb_slides = len(media['data']['slides']['urls'])
+        nb_slides_uploaded = int()
+        result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
+        if result:
+            nb_slides_uploaded = len(result.get('slides'))
+        else:
+            logger.error('No slides found')
+            raise AssertionError
+
+        return nb_slides, nb_slides_uploaded

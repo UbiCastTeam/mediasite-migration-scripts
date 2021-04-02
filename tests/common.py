@@ -74,7 +74,8 @@ def set_test_data():
 
 def create_test_channel():
     test_channel = dict()
-    test_channel_name = 'test-{dt.month}/{dt.day}/{dt.year}-{dt.hour}:{dt.minute}:{dt.second}'.format(dt=datetime.now())
+    dt = datetime.now()
+    test_channel_name = f'test-{dt.month}/{dt.day}/{dt.year}-{dt.hour + 2}:{dt.minute}:{dt.second}'.format()
 
     mediatransfer = MediaTransfer()
     ms_client = mediatransfer.ms_client

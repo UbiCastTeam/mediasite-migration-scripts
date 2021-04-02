@@ -1,0 +1,57 @@
+[
+    {
+        "data": {
+            "title": "unit test",
+            "channel": "E2E",
+            "creation": "2021-03-16T12:39:26.287Z",
+            "speaker_id": "Ubicast_Admin",
+            "speaker_name": "test name",
+            "speaker_email": "test@ubicast.eu",
+            "validated": "yes",
+            "description": "Presenters: Doctor who\ndescription of test",
+            "keywords": "B-B1DIER05",
+            "slug": "mediasite-test",
+            "external_data": "{\n  \"availability\": \"Available\",\n  \"creation_date\": \"2021-03-16T12:39:26.287Z\",\n  \"creator\": \"MediasiteAdmin\",\n  \"description\": \"description of test\",\n  \"has_slides_details\": false,\n  \"id\": \"test\",\n  \"other_presenters\": [\n    {\n      \"display_name\": \"Doctor who\"\n    }\n  ],\n  \"owner_display_name\": \"test name\",\n  \"owner_mail\": \"test@ubicast.eu\",\n  \"owner_username\": \"Ubicast_Admin\",\n  \"presenter_display_name\": \"Doctor test\",\n  \"published_status\": true,\n  \"slides\": {\n    \"details\": null,\n    \"stream_type\": \"Video1\",\n    \"urls\": [\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\"\n    ]\n  },\n  \"tags\": [\n    \"B-B1DIER05\"\n  ],\n  \"timed_events\": [],\n  \"title\": \"unit test\",\n  \"url\": \"https://mediasite.ubicast.net/Site1/Play/id\",\n  \"videos\": [\n    {\n      \"files\": [\n        {\n          \"duration_ms\": 2577666,\n          \"encoding_infos\": {\n            \"audio_codec\": \"AAC\",\n            \"height\": 1200,\n            \"video_codec\": \"H264\",\n            \"width\": 1602\n          },\n          \"format\": \"video/mp4\",\n          \"is_transcode_source\": true,\n          \"size_bytes\": 103507411,\n          \"url\": \"tests/samples/MEDIA190326120008811.mp4\"\n        }\n      ],\n      \"stream_type\": \"Video1\"\n    }\n  ]\n}",
+            "transcode": "no",
+            "origin": "mediatransfer",
+            "detect_slides": "no",
+            "layout": "webinar",
+            "slides": {
+                "stream_type": "Slide",
+                "urls": [
+                    "tests/samples/slide_sample.jpg",
+                    "tests/samples/slide_sample.jpg",
+                    "tests/samples/slide_sample.jpg"
+                ],
+                "details": [
+                    {
+                        "TimeMilliseconds": 0,
+                        "Number": 1,
+                        "Title": null,
+                        "Content": null,
+                        "OcrText": "test"
+                    },
+                    {
+                        "TimeMilliseconds": 1,
+                        "Number": 2,
+                        "Title": null,
+                        "Content": null,
+                        "OcrText": null
+                    },
+                    {
+                        "TimeMilliseconds": 2,
+                        "Number": 3,
+                        "Title":"title",
+                        "Content": null,
+                        "OcrText": null
+                    }
+                ]
+            },
+            "video_type": "video_slides",
+            "file_url": "https://beta.ubicast.net/resources/r126199c71c5azcfh66p43da84ie6m/media190326120008811_clean.mp4?st=G9prQxUCZBIu4bExYkYOFg&e=1617283280&usage=download"
+        },
+        "ref": {
+            "channel_path": "/E2E"
+        }
+    }
+]

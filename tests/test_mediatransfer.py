@@ -65,14 +65,8 @@ class TestMediaTransfer(TestCase):
         self.assertEqual(len_catalogs, len(catalogs))
 
     def test_to_mediaserver_keys(self):
-        folder_index = random.randrange(len(self.mediasite_data))
-        i = 0
-        while not self.mediasite_data[folder_index].get('presentations') and i < 100:
-            folder_index = random.randint(0, len(self.mediasite_data) - 1)
-            i += 1
-
         try:
-            presentation_example = self.mediasite_data[folder_index].get('presentations')[0]
+            presentation_example = self.mediasite_data[0].get('presentations')[0]
         except IndexError:
             logger.error('Can not found presentations')
         except Exception as e:
@@ -85,25 +79,15 @@ class TestMediaTransfer(TestCase):
         except Exception as e:
             logger.error(e)
 
-        found = False
-        mediaserver_media = dict()
-        for media in mediaserver_data:
-            if presentation_example['title'] == media['data']['title'] :
-                found = True
-                mediaserver_media = media['data']
-                break
-        self.assertTrue(found)
+        self.assertEqual(mediaserver_data[0]['data']['title'], presentation_example['title'])
+        self.assertEqual(mediaserver_data[0]['data']['creation'], presentation_example['creation_date'])
+        self.assertEqual(mediaserver_data[0]['data']['speaker_id'], presentation_example['owner_username'])
+        self.assertEqual(mediaserver_data[0]['data']['speaker_name'], presentation_example['owner_display_name'])
+        self.assertEqual(mediaserver_data[0]['data']['speaker_name'], presentation_example['owner_display_name'])
+        self.assertEqual(mediaserver_data[0]['data']['speaker_email'], presentation_example['owner_mail'])
+        self.assertEqual(mediaserver_data[0]['data']['validated'], 'yes' if presentation_example['published_status'] else 'no')
+        self.assertEqual(mediaserver_data[0]['data']['keywords'], ','.join(presentation_example['tags']))
+        self.assertEqual(mediaserver_data[0]['data']['slug'], 'mediasite-' + presentation_example['id'])
 
-        if mediaserver_media:
-            self.assertEqual(mediaserver_media['title'], presentation_example['title'])
-            self.assertEqual(mediaserver_media['creation'], presentation_example['creation_date'])
-            self.assertEqual(mediaserver_media['speaker_id'], presentation_example['owner_username'])
-            self.assertEqual(mediaserver_media['speaker_name'], presentation_example['owner_display_name'])
-            self.assertEqual(mediaserver_media['speaker_name'], presentation_example['owner_display_name'])
-            self.assertEqual(mediaserver_media['speaker_email'], presentation_example['owner_mail'])
-            self.assertEqual(mediaserver_media['validated'], 'yes' if presentation_example['published_status'] else 'no')
-            self.assertEqual(mediaserver_media['keywords'], ','.join(presentation_example['tags']))
-            self.assertEqual(mediaserver_media['slug'], 'mediasite-' + presentation_example['id'])
-
-            self.assertIsNotNone(mediaserver_media['file_url'])
-            self.assertEqual(json.loads(mediaserver_media['external_data']), presentation_example)
+        self.assertIsNotNone(mediaserver_data[0]['data']['file_url'])
+        self.assertEqual(json.loads(mediaserver_data[0]['data']['external_data']), presentation_example)
