@@ -31,6 +31,9 @@ MEDIASITE_API_URL = the API URL of your Mediasite server (e.g. https://my.medias
 MEDIASITE_API_USER = Mediasite user name
 MEDIASITE_API_PASSWORD = Mediasite user password
 MEDIASITE_API_KEY = API key generated in the Mediasite backoffice at /api/Docs/ApiKeyRegistration.aspx
+
+MEDIASERVER_API_KEY= API key generated in the Mediaserver backoffice at authentication/account-settings/
+MEDIASERVER_URL= Mediaserver URL
 ```
 ### Config
 Some parameters can be provided for migration.
