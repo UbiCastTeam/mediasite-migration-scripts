@@ -32,7 +32,7 @@ MEDIASITE_API_USER = Mediasite user name
 MEDIASITE_API_PASSWORD = Mediasite user password
 MEDIASITE_API_KEY = API key generated in the Mediasite backoffice at /api/Docs/ApiKeyRegistration.aspx
 ```
-#### Config
+### Config
 Some parameters can be provided for migration.
 
 - Create the config.json file
@@ -52,8 +52,8 @@ Some parameters can be provided for migration.
 }
 ```
 
-### Running scripts
-#### Analyze data
+## Running scripts
+### Analyze data
 For collecting statistics about the videos included in the  Mediasite platform (video type, available file format, ...), and informations for migration.
 
 `$ make analyze_data`
@@ -88,10 +88,26 @@ Counting downloadable mp4s (among 1944 urls)
 1815 downloadable mp4s, status codes: {'200': 1815, '404': 129}
 ```
 
-#### Import data only
+### Import data only
 If you do not want to analyze your, but only get the raw data. 
 
 `$ make import_data`
+
+### Migrate
+For migrating medias, considering the parameters you provided in config.json
+
+```
+$ make migrate
+...
+Connecting...
+Getting presentations... (take a few minutes)
+Uploading videos...
+Uploading: [14 / 14] -- 100%                      
+--------- Upload successful ---------
+ 
+Uploaded 14 medias
+
+```
 
 ## Arguments
 You can pass arguments into the scripts, with the variable **ARGS**.
