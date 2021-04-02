@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, mediasite_data=dict(), ms_log_level='WARNING', test=None, root_channel=None):
+    def __init__(self, mediasite_data=dict(), ms_log_level='WARNING', test=None, root_channel_oid=None):
         self.mediasite_data = mediasite_data
         self.catalogs = self._set_catalogs()
         self.presentations = self._set_presentations()
@@ -26,8 +26,8 @@ class MediaTransfer():
 
         self.ms_setup = MediaServerSetup(log_level=ms_log_level)
         self.ms_client = self.ms_setup.ms_client
-        if root_channel:
-            self.root_channel = root_channel
+        if root_channel_oid:
+            self.root_channel = self.get_channel(root_channel_oid)
         else:
             self.root_channel = self.get_root_channel()
         self.channels_created = list()
@@ -47,13 +47,14 @@ class MediaTransfer():
             channel_oid = self.create_channel(channel_path)[-1]
             if not channel_oid:
                 del media['data']['channel']
-                channel_oid = media['data']['channel'] = self.root_channel
+                media['data']['channel'] = self.root_channel.get('oid')
+            else:
+                media['data']['channel'] = channel_oid
 
             result = self.ms_client.api('medias/add', method='post', data=media['data'])
             if result.get('success'):
                 media['ref']['media_oid'] = result.get('oid')
                 media['ref']['slug'] = result.get('slug')
-                media['ref']['channel_oid'] = channel_oid
 
                 self.migrate_slides(media)
                 nb_medias_uploaded += 1
@@ -72,6 +73,7 @@ class MediaTransfer():
 
     def get_root_channel(self):
         oid = str()
+        root_channel = dict()
         try:
             with open('config.json') as f:
                 config = json.load(f)
@@ -87,13 +89,22 @@ class MediaTransfer():
             exit()
         return root_channel
 
-    def get_channel(self, oid):
+    def get_channel(self, oid=None, title=None):
         channel = None
-        channel = self.ms_client.api('channels/get', method='get', params={'oid': oid}, ignore_404=True)
+        if oid:
+            params = {'oid': oid}
+        elif title:
+            params = {'title': title}
+        else:
+            logger.error('No title or oid provided for getting channel')
+            return channel
+
+        channel = self.ms_client.api('channels/get', method='get', params=params, ignore_404=True)
         if channel and channel.get('success'):
             channel = channel.get('info')
         else:
             logger.error(f'Channel {oid} does not exist.')
+
         return channel
 
     def create_channel(self, channel_path):
@@ -104,7 +115,7 @@ class MediaTransfer():
         # path start with '/' , so tree[0] is a empty string
         tree.pop(0)
 
-        channel = self._create_channel(self.root_channel.get('title'), tree[0])
+        channel = self._create_channel(self.root_channel.get('oid'), tree[0])
         channels_oids.append(channel.get('oid'))
         logger.debug(f"Channel {channel.get('title')} created with oid {channel.get('oid')}")
 

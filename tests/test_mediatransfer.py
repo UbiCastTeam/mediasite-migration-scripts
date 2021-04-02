@@ -18,15 +18,10 @@ def setUpModule():
     print('-> ', __name__)
 
 
-def tearDownModule():
-    body = {'oid': test_channel.get('oid'), 'delete_resources': True, 'delete_content': True}
-    ms_client = MediaServerSetup().ms_client
-    ms_client.api('channels/delete', method='post', data=body)
-    ms_client.session.close()
-
 class FakeOptions:
     verbose = True
     info = False
+
 
 class TestMediaTransfer(TestCase):
 

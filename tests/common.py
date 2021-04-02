@@ -78,7 +78,7 @@ def create_test_channel():
 
     mediatransfer = MediaTransfer()
     ms_client = mediatransfer.ms_client
-    test_channel = ms_client.api('channels/add', method='post', data={'title': test_channel_name, 'parent': mediatransfer.root_channel.get('oid')})
+    test_channel = ms_client.api('channels/add', method='post', data={'title': test_channel_name, 'parent': 'c126199c71afcpw7vd1a'})
     ms_client.session.close()
 
     return test_channel

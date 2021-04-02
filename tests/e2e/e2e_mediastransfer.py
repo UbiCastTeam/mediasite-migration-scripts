@@ -19,11 +19,10 @@ def setUpModule():
 
 
 def tearDownModule():
-    pass
-    # body = {'oid': test_channel.get('oid'), 'delete_resources': True, 'delete_content': True}
-    # ms_client = MediaServerSetup().ms_client
-    # ms_client.api('channels/delete', method='post', data=body)
-    # ms_client.session.close()
+    body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
+    ms_client = MediaServerSetup().ms_client
+    ms_client.api('channels/delete', method='post', data=body)
+    ms_client.session.close()
 
 
 class FakeOptions:
@@ -35,8 +34,7 @@ class TestMediaTransferE2E(TestCase):
     def setUp(self):
         super(TestMediaTransferE2E)
         self.mediasite_data = common.set_test_data()
-        self.test_channel = {'oid': 'c126199c71afcpw7vd1a', 'title': 'Mediasite e2e tests'}
-        self.mediatransfer = MediaTransfer(self.mediasite_data, 'WARNING', test=True, root_channel=self.test_channel)
+        self.mediatransfer = MediaTransfer(self.mediasite_data, 'WARNING', test=True, root_channel_oid=test_channel.get('oid'))
         self.ms_client = self.mediatransfer.ms_client
         try:
             with open('tests/e2e/mediaserver_data_e2e.json') as f:
