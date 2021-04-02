@@ -115,7 +115,7 @@ Uploaded 14 medias
 ```
 
 ## Arguments
-You can pass arguments into the scripts, with the variable **ARGS**.
+You can pass arguments into the scripts, with the variable **ARGS**. '--help' will provide you the list of arguments for a script.
 
 ```
 $ make analyze_data ARGS="--verbose"
