@@ -6,7 +6,6 @@ import sys
 import os
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
-from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
 import tests.common as common
 
 

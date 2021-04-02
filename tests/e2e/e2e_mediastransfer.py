@@ -1,5 +1,4 @@
 from unittest import TestCase
-import random
 import json
 import logging
 import sys

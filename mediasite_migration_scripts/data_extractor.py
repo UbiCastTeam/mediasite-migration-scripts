@@ -6,6 +6,7 @@ import json
 
 from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
 
+
 logger = logging.getLogger(__name__)
 
 

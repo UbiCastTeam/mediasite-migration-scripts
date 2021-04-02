@@ -5,7 +5,7 @@ lint: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
-		flake8 --ignore=E501,E265,W503,W505 --exclude=.git/,.virtualenv/,__pycache__/,build/,submodules/
+		flake8 --ignore=E501,E265,W503,W505 --exclude=.git/,.virtualenv/,__pycache__/,build/,submodules/,env/
 
 shell: build
 	docker run -it \

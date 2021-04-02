@@ -42,6 +42,7 @@ class ColoredFormatter(logging.Formatter):
             record.levelname = levelname_color
         return logging.Formatter.format(self, record)
 
+
 def parse_mediasite_date(date_str):
     #2010-05-26T07:16:57Z
     if '.' in date_str:
@@ -54,6 +55,7 @@ def parse_mediasite_date(date_str):
 def get_age_days(date_str):
     days = (datetime.now() - parse_mediasite_date(date_str)).days
     return days
+
 
 def set_logger(options=None, run_path=None):
     if run_path is None:

@@ -5,7 +5,6 @@ from decouple import config
 import requests
 import shutil
 
-from mediasite_migration_scripts.lib import utils
 from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
 from mediasite_migration_scripts.data_extractor import DataExtractor
 
@@ -301,7 +300,7 @@ class MediaTransfer():
         if presentation.get('slides'):
             if presentation.get('slides').get('details'):
                 if len(presentation.get('videos')) > 1:
-                    video_type = composite_slides
+                    video_type = 'composite_slides'
                 else:
                     video_type = 'audio_slides'
                     for f in presentation.get('videos')[0].get('files'):

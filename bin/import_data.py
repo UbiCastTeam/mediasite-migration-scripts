@@ -6,7 +6,6 @@ import argparse
 import json
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
-from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
 from mediasite_migration_scripts.lib import utils
 
 if __name__ == '__main__':

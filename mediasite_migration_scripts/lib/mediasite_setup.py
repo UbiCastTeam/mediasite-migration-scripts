@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
 import logging
-from datetime import datetime
 from decouple import config
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
