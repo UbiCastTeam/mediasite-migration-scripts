@@ -97,10 +97,12 @@ If you do not want to analyze your, but only get the raw data.
 `$ make import_data`
 
 ### Migrate
+
 For migrating medias, considering the parameters you provided in config.json
 
+`$ make migrate`
+
 ```
-$ make migrate
 ...
 Connecting...
 Getting presentations... (take a few minutes)
