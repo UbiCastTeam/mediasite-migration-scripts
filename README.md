@@ -51,7 +51,7 @@ Some parameters can be provided for migration.
         "video/mp4": true,
         "video/x-ms-wmv": false
     },
-    "mediaserver_parent_channel": "c1261953feb82i5nhpis" # the Mediaserve root channel of all the content you migrate from Mediasite
+    "mediaserver_parent_channel": "c1261953feb82i5nhpis" # the Mediaserver root channel where all the content will be migrate
 }
 ```
 
