@@ -24,7 +24,7 @@ class TestMediaTransfer(TestCase):
     def setUp(self):
         super(TestMediaTransfer)
         self.mediasite_data = common.set_test_data()
-        self.mediatransfer = MediaTransfer(mediasite_data=mediasite_data=self.mediasite_data, unit_test=True)
+        self.mediatransfer = MediaTransfer(mediasite_data=self.mediasite_data, unit_test=True)
         self.mediaserver_data = self.mediatransfer.mediaserver_data
 
         fake_opt = FakeOptions()

@@ -31,7 +31,7 @@ migrate: build
 		--rm mediasite \
 		python3 bin/migrate.py $(ARGS)
 
-tests: build
+unit_tests: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
