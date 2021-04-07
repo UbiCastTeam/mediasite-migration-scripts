@@ -3,13 +3,10 @@ import random
 import json
 import logging
 import sys
-import os
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
 import tests.common as common
 
-
-test_channel = common.create_test_channel()
 logger = logging.getLogger(__name__)
 
 
@@ -27,22 +24,14 @@ class TestMediaTransfer(TestCase):
     def setUp(self):
         super(TestMediaTransfer)
         self.mediasite_data = common.set_test_data()
-        self.mediatransfer = MediaTransfer(self.mediasite_data, 'WARNING')
-        self.ms_client = self.mediatransfer.ms_client
+        self.mediatransfer = MediaTransfer(mediasite_data=mediasite_data=self.mediasite_data, unit_test=True)
         self.mediaserver_data = self.mediatransfer.mediaserver_data
 
         fake_opt = FakeOptions()
         fake_opt.verbose = sys.argv[-1] == '-v' or sys.argv[-1] == '--verbose'
         common.set_logger(options=fake_opt)
 
-        self.config = {}
-        file = 'config.json'
-        if os.path.exists(file):
-            with open(file) as f:
-                self.config = json.load(f)
-
     def tearDown(self):
-        self.ms_client.session.close()
         try:
             with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
                 json.dump(self.mediaserver_data, f)

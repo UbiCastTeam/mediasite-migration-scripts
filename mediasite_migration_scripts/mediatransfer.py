@@ -1,34 +1,43 @@
 import logging
 import json
 import os
-from decouple import config
 import requests
 import shutil
 
-from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
-from mediasite_migration_scripts.data_extractor import DataExtractor
+from mediasite_migration_scripts.ms_client.client import MediaServerClient
+from mediasite_migration_scripts.utils import common as utils
 
 logger = logging.getLogger(__name__)
 
 
 class MediaTransfer():
 
-    def __init__(self, mediasite_data=dict(), ms_log_level='WARNING', test=None, root_channel_oid=None):
+    def __init__(self, mediasite_data=dict(), config=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
         self.mediasite_data = mediasite_data
         self.catalogs = self._set_catalogs()
         self.presentations = self._set_presentations()
         self.formats_allowed = self._set_formats_allowed()
-        self.auth = (config('MEDIASITE_API_USER'), config('MEDIASITE_API_PASSWORD'))
-        self.extractor = DataExtractor()
+        self.auth = (config.get('mediasite_api_user'), config.get('mediasite_api_password'))
         self.dl_session = None
-        self.test = test
+        self.config = config
 
-        self.ms_setup = MediaServerSetup(log_level=ms_log_level)
-        self.ms_client = self.ms_setup.ms_client
-        if root_channel_oid:
-            self.root_channel = self.get_channel(root_channel_oid)
-        else:
-            self.root_channel = self.get_root_channel()
+        self.e2e_test = e2e_test
+        self.unit_test = unit_test
+        if not self.unit_test:
+            self.ms_config = {"API_KEY": config.get('mediaserver_api_key', ''),
+                              "CLIENT_ID": "mediasite-migration-client",
+                              "PROXIES": {"http": "",
+                                          "https": ""},
+                              "SERVER_URL": config.get('mediaserver_url', ''),
+                              "UPLOAD_CHUNK_SIZE": 5242880,
+                              "VERIFY_SSL": False,
+                              "LOG_LEVEL": 'WARNING'}
+            self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
+
+            if root_channel_oid:
+                self.root_channel = self.get_channel(root_channel_oid)
+            else:
+                self.root_channel = self.get_root_channel()
         self.channels_created = list()
         self.slide_annot_type = None
 
@@ -187,7 +196,7 @@ class MediaTransfer():
 
         logger.debug(f'Migrating slides for medias: {media_oid}')
         for i, url in enumerate(media_slides['urls']):
-            if self.test:
+            if self.e2e_test:
                 path = url
             else:
                 slide_dl_ok, path = self._download_slide(media_oid, url)
@@ -248,7 +257,7 @@ class MediaTransfer():
         else:
             logger.debug('No Mediaserver mapping. Generating mapping.')
             for folder in self.mediasite_data:
-                if self.extractor.is_folder_to_add(folder.get('path')):
+                if utils.is_folder_to_add(folder.get('path'), config=self.config):
                     for presentation in folder['presentations']:
                         presenters = str()
                         for p in presentation.get('other_presenters'):
@@ -280,13 +289,9 @@ class MediaTransfer():
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
                                 'layout': 'webinar' if v_type == 'computer_slides' else 'video',
                                 'slides': presentation.get('slides'),
-                                'video_type': v_type
+                                'video_type': v_type,
+                                'file_url': v_url
                             }
-
-                            if self.test:
-                                data['file'] = v_url
-                            else:
-                                data['file_url'] = v_url
 
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})
                         else:

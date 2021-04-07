@@ -4,7 +4,7 @@ import xml.dom.minidom as xml
 from pymediainfo import MediaInfo
 import json
 
-from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
+from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
 
 
 logger = logging.getLogger(__name__)
@@ -12,11 +12,17 @@ logger = logging.getLogger(__name__)
 
 class DataExtractor():
 
-    def __init__(self, max_folders=None):
+    def __init__(self, config=dict(), max_folders=None):
         print('Connecting...')
-        self.config = self._get_config()
-        self.setup = MediasiteSetup(self.config)
-        self.mediasite = self.setup.mediasite
+
+        self.config = {
+            'mediasite_base_url': config.get('mediasite_api_url'),
+            'mediasite_api_secret': config.get('mediasite_api_key'),
+            'mediasite_api_user': config.get('mediasite_api_user'),
+            'mediasite_api_pass': config.get('mediasite_api_password'),
+            'mediasite_folders_whitelist': config.get('whitelist')
+        }
+        self.mediasite = mediasite_controller.controller(self.config)
         self.max_folders = max_folders
 
         print('Getting presentations... (take a few minutes)')
@@ -25,16 +31,6 @@ class DataExtractor():
         self.catalogs = list()
         self.all_catalogs = self.mediasite.catalog.get_all_catalogs()
         self.all_data = self.extract_mediasite_data()
-
-    def _get_config(self):
-        try:
-            with open('config.json') as js:
-                config = json.load(js)
-        except Exception as e:
-            logger.debug(e)
-            logger.debug('No config file or file is corrupted.')
-            config = None
-        return config
 
     def extract_mediasite_data(self, parent_id=None):
         """

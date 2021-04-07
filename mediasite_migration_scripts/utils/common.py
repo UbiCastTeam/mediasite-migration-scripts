@@ -89,3 +89,12 @@ def set_logger(options=None, run_path=None):
     root_logger.addHandler(console)
 
     return root_logger
+
+
+def is_folder_to_add(path, config={}):
+    if config.get('mediasite_folders_whitelist'):
+        for fw in config['mediasite_folders_whitelist']:
+            if fw in path:
+                return True
+        return False
+    return True

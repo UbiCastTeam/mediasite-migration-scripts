@@ -10,7 +10,7 @@ import sys
 
 from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
-from mediasite_migration_scripts.lib import utils
+import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
     def usage(message=''):

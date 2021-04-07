@@ -2,15 +2,26 @@ from unittest import TestCase
 import json
 import logging
 import sys
-import os
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
-from mediasite_migration_scripts.lib.mediaserver_setup import MediaServerSetup
+from mediasite_migration_scripts.ms_client.client import MediaServerClient
+
 import tests.common as common
 
-
-test_channel = common.create_test_channel()
 logger = logging.getLogger(__name__)
+
+config = {}
+file = 'config.json'
+try:
+    with open(file) as f:
+        config = json.load(f)
+except Exception as e:
+    logger.critical('Failed to parse config file.')
+    logger.debug(e)
+    exit()
+
+test_utils = common.MediaServerTestUtils(config)
+test_channel = test_utils.create_test_channel()
 
 
 def setUpModule():
@@ -19,7 +30,17 @@ def setUpModule():
 
 def tearDownModule():
     body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
-    ms_client = MediaServerSetup().ms_client
+
+    ms_config = {
+        "API_KEY": config.get('mediaserver_api_key'),
+        "CLIENT_ID": "mediasite-migration-client",
+        "PROXIES": {"http": "",
+                    "https": ""},
+        "SERVER_URL": config.get('mediaserver_url'),
+        "UPLOAD_CHUNK_SIZE": 5242880,
+        "VERIFY_SSL": False,
+        "LOG_LEVEL": 'WARNING'}
+    ms_client = MediaServerClient(local_conf=ms_config, setup_logging=False)
     ms_client.api('channels/delete', method='post', data=body)
     ms_client.session.close()
 
@@ -33,7 +54,7 @@ class TestMediaTransferE2E(TestCase):
     def setUp(self):
         super(TestMediaTransferE2E)
         self.mediasite_data = common.set_test_data()
-        self.mediatransfer = MediaTransfer(self.mediasite_data, 'WARNING', test=True, root_channel_oid=test_channel.get('oid'))
+        self.mediatransfer = MediaTransfer(self.mediasite_data, config=config, e2e_test=True, root_channel_oid=test_channel.get('oid'))
         self.ms_client = self.mediatransfer.ms_client
         try:
             with open('tests/e2e/mediaserver_data_e2e.json') as f:
@@ -47,12 +68,6 @@ class TestMediaTransferE2E(TestCase):
         fake_opt = FakeOptions()
         fake_opt.verbose = sys.argv[-1] == '-v' or sys.argv[-1] == '--verbose'
         common.set_logger(options=fake_opt)
-
-        self.config = {}
-        file = 'config.json'
-        if os.path.exists(file):
-            with open(file) as f:
-                self.config = json.load(f)
 
     def tearDown(self):
         try:

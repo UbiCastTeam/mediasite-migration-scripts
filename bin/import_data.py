@@ -6,7 +6,7 @@ import argparse
 import json
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
-from mediasite_migration_scripts.lib import utils
+import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
     def usage(message=''):

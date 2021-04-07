@@ -8,7 +8,7 @@ import sys
 import logging
 
 from mediatransfer import MediaTransfer
-from mediasite_migration_scripts.lib import utils
+import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
     def usage(message=''):
@@ -26,15 +26,12 @@ if __name__ == '__main__':
                             dest='dryrun', default=False,
                             help='not really import medias.')
         parser.add_argument('-f', '--max-folders', dest='max_folders', default=0,
-                            help='specify maximum of folders to parse for metadata.')
+                            help='specify maximum of folders to include for migration.')
         parser.add_argument('--max-videos', dest='max_videos', default=0,
                             help='specify maximum of videos for upload.')
-        parser.add_argument('-rm', '--remove-medias', action='store_true',
-                            dest='remove_medias', default=False,
-                            help='remove all uploaded medias.')
-        parser.add_argument('-rc', '--remove-channel',
-                            dest='remove_channel', default=None,
-                            help='remove all uploaded channels.')
+        parser.add_argument('-cf', '--config-file',
+                            dest='config_file', action='store_true', default=None,
+                            help='add custom config file.')
 
         return parser.parse_args()
 
@@ -65,45 +62,33 @@ if __name__ == '__main__':
         print('Importing data failed')
         exit()
 
-    mediatransfer = MediaTransfer(mediasite_data, log_level)
+    config_file = 'config.json'
+    if options.config_file:
+        config_file = options.config_file
+    try:
+        with open(config_file) as f:
+            config = json.load(f)
+    except Exception as e:
+        logger.critical('Failed to parse config file.')
+        logger.debug(e)
+        print('--------- Aborted ---------')
+        exit()
+
+    mediatransfer = MediaTransfer(mediasite_data=mediasite_data, log_level)
     mediaserver_file = 'mediaserver_data.json'
 
-    if options.remove_medias:
-        run = input('You\'re about to remove all uploaded medias. Are you sure ? [y/N] ')
-        if run == 'y' or run == 'yes':
-            print('Removing all videos uploaded...')
-            nb_medias_removed = int()
-            try:
-                with open(mediaserver_file) as f:
-                    mediatransfer.mediaserver_data = json.load(f)
-            except Exception as e:
-                logger.error('No mediaserver metadata file found. Maybe no upload have been made ?')
-                logger.debug(e)
-                exit()
-            nb_medias_removed = mediatransfer.remove_uploaded_medias()
-            print(f'\nRemoved {nb_medias_removed} medias')
+    print('Uploading videos...')
+    max_videos = int(options.max_videos) if options.max_videos else None
+    nb_uploaded_medias = mediatransfer.upload_medias(max_videos)
+    print('--------- Upload successful ---------')
+    print(f' \nUploaded {nb_uploaded_medias} medias')
 
-    elif options.remove_channel:
-        run = input(f'You\'re about to remove channel: {options.remove_channel}. Are you sure ? [y/N] ')
-        if run == 'y' or run == 'yes':
-            print('Removing channel...')
-            nb_channel_removed = int()
-            nb_channel_removed = mediatransfer.remove_channel(options.remove_channel)
-            print(f'{nb_channel_removed} removed')
-
-    else:
-        print('Uploading videos...')
-        max_videos = int(options.max_videos) if options.max_videos else None
-        nb_uploaded_medias = mediatransfer.upload_medias(max_videos)
-        print('--------- Upload successful ---------')
-        print(f' \nUploaded {nb_uploaded_medias} medias')
-
-        mediaserver_data = mediatransfer.mediaserver_data
-        try:
-            with open(mediaserver_file, 'w') as f:
-                json.dump(mediaserver_data, f)
-        except Exception as e:
-            print('Failed to save Mediaserver mapping')
-            logger.debug(e)
+    mediaserver_data = mediatransfer.mediaserver_data
+    try:
+        with open(mediaserver_file, 'w') as f:
+            json.dump(mediaserver_data, f)
+    except Exception as e:
+        print('Failed to save Mediaserver mapping')
+        logger.debug(e)
 
     logger.info('----- END SCRIPT ' + 50 * '-' + '\n')

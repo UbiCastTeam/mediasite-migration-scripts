@@ -1,5 +1,5 @@
 import requests
-from mediasite_migration_scripts.lib.utils import get_age_days
+from mediasite_migration_scripts.utils.common import get_age_days
 
 
 class DataAnalyzer():
