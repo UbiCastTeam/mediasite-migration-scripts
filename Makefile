@@ -31,13 +31,13 @@ migrate: build
 		--rm mediasite \
 		python3 bin/migrate.py $(ARGS)
 
-unit_tests: build
+tests: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		python3 -m unittest tests/*.py $(ARGS)
 
-e2e_tests: build
+tests_e2e: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \

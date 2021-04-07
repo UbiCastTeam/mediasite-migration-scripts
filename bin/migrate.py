@@ -74,7 +74,7 @@ if __name__ == '__main__':
         print('--------- Aborted ---------')
         exit()
 
-    mediatransfer = MediaTransfer(mediasite_data=mediasite_data, log_level)
+    mediatransfer = MediaTransfer(mediasite_data=mediasite_data)
     mediaserver_file = 'mediaserver_data.json'
 
     print('Uploading videos...')

@@ -8,3 +8,6 @@ jobs:
     - stage: "Code validation"                # naming the Tests stage
       name: "Lint"            # names the first Tests stage job
       script: make lint
+    - stage: "Unit tests"
+      name: "Tests"
+      script: make tests
