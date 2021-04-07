@@ -9,7 +9,6 @@ import os
 import sys
 
 from mediasite_migration_scripts.data_analyzer import DataAnalyzer
-from mediasite_migration_scripts.lib.mediasite_setup import MediasiteSetup
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
@@ -158,30 +157,3 @@ if __name__ == '__main__':
     print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_tb} TB)'.format(**encoding_infos))
     print()
     print(encoding_infos['video_types_stats'])
-    print()
-
-    if options.doctor:
-        config_data = {}
-        try:
-            with open('config.json') as js:
-                config_data = json.load(js)
-        except Exception as e:
-            logging.debug(e)
-        mediasite = MediasiteSetup(config_data).mediasite
-
-        print('Listing all presentations created...')
-        all_presentations = mediasite.presentation.get_all_presentations()
-
-        presentations_in_folders = analyzer.presentations
-        presentations_not_in_folders = []
-        for presentation_from_all in all_presentations:
-            found = False
-            for presentation_in_folder in presentations_in_folders:
-                if presentation_from_all['id'] == presentation_in_folder['id']:
-                    found = True
-                    break
-            if not found:
-                presentations_not_in_folders.append(presentation_from_all)
-
-        print(f'''All presentations found in Mediasite platform : {len(all_presentations)}
-                Presentations not accounted in folders: {len(presentations_not_in_folders)}.''')
