@@ -2,7 +2,7 @@ language: python
 services:
   - docker
 git:
-  submodules: false
+  submodules: true
 jobs:
   include:
     - stage: "Code validation"                # naming the Tests stage

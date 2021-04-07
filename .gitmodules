@@ -3,4 +3,4 @@
 	url = https://github.com/UbiCastTeam/mediasite_client
 [submodule "submodules/mediaserver-client"]
 	path = submodules/mediaserver-client
-	url = git@github.com:UbiCastTeam/mediaserver-client.git
+	url = https://github.com/UbiCastTeam/mediaserver-client
