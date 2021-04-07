@@ -79,7 +79,14 @@ if __name__ == '__main__':
             logger.error('No data to analyze.')
             sys.exit(1)
 
-    analyzer = DataAnalyzer(data)
+    config_data = {}
+    try:
+        with open('config.json') as js:
+            config_data = json.load(js)
+    except Exception as e:
+        logging.debug(e)
+
+    analyzer = DataAnalyzer(data, config_data)
 
     line_sep_str = '-' * 50
     print(line_sep_str)
