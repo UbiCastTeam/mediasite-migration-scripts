@@ -3,8 +3,9 @@ from mediasite_migration_scripts.utils.common import get_age_days
 
 
 class DataAnalyzer():
-    def __init__(self, data):
-        self.folders = data
+    def __init__(self, data, config=None):
+        self.config = config
+        self.folders = self._filter_data(data)
         self.catalogs = self._set_catalogs()
         self.presentations = self._set_presentations()
         self.mp4_urls = self.set_mp4_urls()
@@ -12,7 +13,6 @@ class DataAnalyzer():
     def analyze_videos_infos(self):
         format_stats = self._get_video_format_stats()
         layout_stats = self._get_layout_stats()
-
         return format_stats, layout_stats
 
     def _get_video_format_stats(self):
@@ -289,6 +289,33 @@ class DataAnalyzer():
                     f.write('\n'.join(locals()[videolist]))
 
         return encoding_infos
+
+    def _filter_data(self, data):
+        folders = list()
+        whitelist = []
+        skipped_folders = set()
+        skipped_presentations = set()
+        if self.config:
+            whitelist = ['/' + x for x in self.config['whitelist']]
+            print(f'Restricting to whitelisted paths {whitelist}')
+
+        for folder in data:
+            skip = False
+            if whitelist:
+                skip = True
+                for w in whitelist:
+                    if folder['path'].startswith(w):
+                        skip = False
+            for p in folder['presentations']:
+                if not skip:
+                    if folder not in folders:
+                        folders.append(folder)
+                else:
+                    skipped_folders.add(folder["id"])
+                    skipped_presentations.add(p["id"])
+        if whitelist:
+            print(f'Skipped {len(skipped_folders)} folders and {len(skipped_presentations)} presentations not matching the path whitelist')
+        return folders
 
     def _set_presentations(self):
         presentations = []
