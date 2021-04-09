@@ -57,7 +57,7 @@ def get_age_days(date_str):
     return days
 
 
-def set_logger(options=None, run_path=None):
+def set_logger(options=None, verbose=False, run_path=None):
     if run_path is None:
         run_path = os.path.dirname(os.path.realpath(__file__))
     current_datetime_string = '{dt.month}-{dt.day}-{dt.year}'.format(dt=datetime.now())
@@ -67,12 +67,14 @@ def set_logger(options=None, run_path=None):
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
 
     root_logger = logging.getLogger('root')
-    level = logging.WARNING
+    level = logging.INFO
     if options:
         if options.verbose:
             level = logging.DEBUG
-        elif options.info:
-            level = logging.INFO
+        elif options.quiet:
+            level = logging.ERROR
+    elif verbose:
+        level = logging.DEBUG
 
     root_logger.setLevel(level)
 

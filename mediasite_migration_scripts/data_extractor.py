@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class DataExtractor():
 
     def __init__(self, config=dict(), max_folders=None):
-        print('Connecting...')
+        logger.info('Connecting...')
 
         self.config = {
             'mediasite_base_url': config.get('mediasite_api_url'),
@@ -25,7 +25,7 @@ class DataExtractor():
         self.mediasite = mediasite_controller.controller(self.config)
         self.max_folders = max_folders
 
-        print('Getting presentations... (take a few minutes)')
+        logger.info('Getting presentations... (take a few minutes)')
         self.presentations = None
         self.folders = self.get_all_folders_infos()
         self.catalogs = list()
@@ -33,7 +33,7 @@ class DataExtractor():
         self.all_data = self.extract_mediasite_data()
 
     def extract_mediasite_data(self, parent_id=None):
-        """
+        '''
         Collect all data from Mediasite platform ordered by folder
 
         params :
@@ -42,7 +42,7 @@ class DataExtractor():
             list ot items containing folders' infos, and
                 list of items containing presentations' infos and
                     list of items containing videos and slides metadata
-        """
+        '''
         logger.info('Gathering and ordering all presentations / folders data ')
 
         presentations_folders = list()
@@ -66,7 +66,7 @@ class DataExtractor():
 
             for i, folder in enumerate(self.folders):
                 if i > 1:
-                    print('Requesting: ', f'[{i}]/[{len(self.folders)}] --', round(i / len(self.folders) * 100, 1), '%', end='\r', flush=True)
+                    print(f'Requesting: {[{i}]/[{len(self.folders)}]} -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
 
                 path = self._find_folder_path(folder['id'], self.folders)
                 if self.is_folder_to_add(path):
@@ -194,7 +194,7 @@ class DataExtractor():
         return presenters_infos
 
     def get_videos_infos(self, presentation_id):
-        logger.debug(f"Gathering video info for presentation : {presentation_id}")
+        logger.debug(f'Gathering video info for presentation : {presentation_id}')
 
         videos_infos = []
         video = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
@@ -310,7 +310,7 @@ class DataExtractor():
 
     def get_slides_infos(self, presentation, details=False):
         presentation_id = presentation['id']
-        logger.debug(f"Gathering slides infos for presentation: {presentation_id}")
+        logger.debug(f'Gathering slides infos for presentation: {presentation_id}')
 
         if details and presentation['has_slides_details']:
             option = 'SlideDetailsContent'
@@ -344,7 +344,7 @@ class DataExtractor():
         return slides_infos
 
     def get_hostname(self):
-        api_url = self.setup.config.get("mediasite_base_url")
+        api_url = self.setup.config.get('mediasite_base_url')
         hostname = api_url.split('/').pop()
         hostname = '/'.join(hostname)
         return hostname

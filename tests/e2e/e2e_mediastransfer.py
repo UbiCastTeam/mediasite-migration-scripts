@@ -5,7 +5,6 @@ import sys
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
-
 import tests.common as common
 
 logger = logging.getLogger(__name__)
@@ -16,9 +15,9 @@ try:
     with open(file) as f:
         config = json.load(f)
 except Exception as e:
-    logger.critical('Failed to parse config file.')
+    logger.error('Failed to parse config file.')
     logger.debug(e)
-    exit()
+    sys.exit(1)
 
 test_utils = common.MediaServerTestUtils(config)
 test_channel = test_utils.create_test_channel()
@@ -34,10 +33,7 @@ def tearDownModule():
     ms_config = {
         "API_KEY": config.get('mediaserver_api_key'),
         "CLIENT_ID": "mediasite-migration-client",
-        "PROXIES": {"http": "",
-                    "https": ""},
         "SERVER_URL": config.get('mediaserver_url'),
-        "UPLOAD_CHUNK_SIZE": 5242880,
         "VERIFY_SSL": False,
         "LOG_LEVEL": 'WARNING'}
     ms_client = MediaServerClient(local_conf=ms_config, setup_logging=False)
@@ -45,14 +41,9 @@ def tearDownModule():
     ms_client.session.close()
 
 
-class FakeOptions:
-    verbose = True
-    info = False
-
-
 class TestMediaTransferE2E(TestCase):
     def setUp(self):
-        super(TestMediaTransferE2E)
+        super().setUp()
         self.mediasite_data = common.set_test_data()
         self.mediatransfer = MediaTransfer(self.mediasite_data, config=config, e2e_test=True, root_channel_oid=test_channel.get('oid'))
         self.ms_client = self.mediatransfer.ms_client
@@ -62,14 +53,13 @@ class TestMediaTransferE2E(TestCase):
             self.mediatransfer.mediaserver_data = self.mediaserver_data
         except Exception as e:
             logger.debug(e)
-            logger.critical("Test data corrupted")
-            exit()
+            logger.error('Test data corrupted')
+            exit(1)
 
-        fake_opt = FakeOptions()
-        fake_opt.verbose = sys.argv[-1] == '-v' or sys.argv[-1] == '--verbose'
-        common.set_logger(options=fake_opt)
+        common.set_logger(verbose=True)
 
     def tearDown(self):
+        super().tearDown()
         try:
             with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
                 json.dump(self.mediaserver_data, f)
@@ -110,7 +100,7 @@ class TestMediaTransferE2E(TestCase):
         channels_created_oids = list()
 
         for p in paths_examples:
-            channels_created_oids.extend(self.mediatransfer.create_channel(p))
+            channels_created_oids.extend(self.mediatransfer.create_channels(p))
         self.assertEqual(len(channels_created_oids), len(channels_examples_titles))
 
         for oid in channels_created_oids:

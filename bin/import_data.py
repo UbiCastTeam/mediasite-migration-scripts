@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from argparse import RawTextHelpFormatter
 import argparse
 import json
+import sys
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
 import mediasite_migration_scripts.utils.common as utils
@@ -13,36 +13,48 @@ if __name__ == '__main__':
         return 'This script is used to extract metadata from mediasite platform'
 
     def manage_opts():
-        parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
-        parser.add_argument('-i', '--info', action='store_true',
-                            dest='info', default=False,
-                            help='print more status messages to stdout.')
+        parser = argparse.ArgumentParser(description=usage(), formatter_class=argparse.RawTextHelpFormatter)
+        parser.add_argument('-q', '--quiet', action='store_true',
+                            dest='quiet', default=False,
+                            help='print only error status messages to stdout.')
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=False,
                             help='print all status messages to stdout.')
-        parser.add_argument('-d', '--dry-run', action='store_true',
-                            dest='dryrun', default=False,
-                            help='not really import medias.')
         parser.add_argument('-f', '--max-folders', dest='max_folders', default=0,
                             help='specify maximum of folders to parse for metadata.')
+        parser.add_argument('-cf', '--config-file',
+                            dest='config_file', action='store_true', default=None,
+                            help='add custom config file.')
 
         return parser.parse_args()
 
     options = manage_opts()
     logger = utils.set_logger(options)
 
-    file = 'mediasite_data.json'
+    mediasite_file = 'mediasite_data.json'
     try:
-        with open(file) as f:
+        with open(mediasite_file) as f:
             data = json.load(f)
-            logger.info(f'{file} already found, not fetching catalog data')
+            logger.info(f'{mediasite_file} already found, not fetching catalog data')
     except Exception as e:
         logger.debug(e)
+
+        config_file = 'config.json'
+        if options.config_file:
+            config_file = options.config_file
         try:
-            extractor = DataExtractor(int(options.max_folders))
+            with open(config_file) as f:
+                config = json.load(f)
+        except Exception as e:
+            logger.debug(e)
+            logger.error('Failed to parse config file.')
+            logger.error('--------- Aborted ---------')
+            sys.exit(1)
+        try:
+            extractor = DataExtractor(config=config, max_folders=int(options.max_folders))
             data = extractor.all_data
 
-            with open(file, 'w') as f:
+            with open(mediasite_file, 'w') as f:
                 json.dump(data, f)
 
             with open('catalogs.json', 'w') as f:
@@ -50,5 +62,7 @@ if __name__ == '__main__':
 
             print('--------- Import data successfull --------- ')
         except Exception as e:
-            print('Import data failed !')
+            logger.error('Import data failed !')
             logger.debug(e)
+
+        sys.exit(1)

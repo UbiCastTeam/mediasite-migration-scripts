@@ -18,18 +18,10 @@ if __name__ == '__main__':
     def manage_opts():
         parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
         parser.add_argument(
-            '-i',
-            '--info',
-            action='store_true',
-            default=False,
-            help='print more status messages to stdout.',
-        )
-        parser.add_argument(
-            '-D',
-            '--doctor',
-            action='store_true',
-            default=False,
-            help='check what presentations have not been acounted',
+            '-q',
+            '--quiet',
+            dest='quiet', default=False,
+            help='print less status messages to stdout.'
         )
         parser.add_argument(
             '-v',
@@ -51,15 +43,6 @@ if __name__ == '__main__':
             default=False,
             help='store reports and presentation ids into separate files (e.g. presentations_composite_videos.txt)'
         )
-        parser.add_argument(
-            '-d',
-            '--dry-run',
-            action='store_true',
-            dest='dryrun',
-            default=False,
-            help='not really import medias.'
-        )
-
         return parser.parse_args()
 
     options = manage_opts()
@@ -79,15 +62,15 @@ if __name__ == '__main__':
             os.system(f'python3 bin/import_data.py {args}')
         else:
             print('--------- Aborted ---------')
-            exit()
+            sys.exit(1)
 
         try:
             with open(file) as f:
                 data = json.load(f)
         except Exception as e:
             logger.debug(e)
-            logger.error('Import failed')
-            exit()
+            logger.error('No data to analyze.')
+            sys.exit(1)
 
     analyzer = DataAnalyzer(data)
 

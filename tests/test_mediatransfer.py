@@ -1,8 +1,6 @@
 from unittest import TestCase
-import random
 import json
 import logging
-import sys
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
 import tests.common as common
@@ -14,11 +12,6 @@ def setUpModule():
     print('-> ', __name__)
 
 
-class FakeOptions:
-    verbose = True
-    info = False
-
-
 class TestMediaTransfer(TestCase):
 
     def setUp(self):
@@ -27,9 +20,7 @@ class TestMediaTransfer(TestCase):
         self.mediatransfer = MediaTransfer(mediasite_data=self.mediasite_data, unit_test=True)
         self.mediaserver_data = self.mediatransfer.mediaserver_data
 
-        fake_opt = FakeOptions()
-        fake_opt.verbose = sys.argv[-1] == '-v' or sys.argv[-1] == '--verbose'
-        common.set_logger(options=fake_opt)
+        common.set_logger(verbose=True)
 
     def tearDown(self):
         try:
@@ -39,11 +30,10 @@ class TestMediaTransfer(TestCase):
             logger.error(f'Failed to save mediaserver data file: {e}')
 
     def test_set_presentations(self):
-        folder_index = random.randrange(len(self.mediasite_data))
-        presentations_example = self.mediasite_data[folder_index]['presentations']
         presentations = self.mediatransfer._set_presentations()
-        for p in presentations_example:
-            self.assertIn(p, presentations)
+        for folder in self.mediasite_data:
+            for p in folder['presentations']:
+                self.assertIn(p, presentations)
 
     def test_set_catalogs(self):
         len_catalogs = 0

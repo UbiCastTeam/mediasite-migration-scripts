@@ -3,6 +3,7 @@ import json
 import os
 import requests
 import shutil
+import sys
 
 
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
@@ -25,14 +26,11 @@ class MediaTransfer():
         self.e2e_test = e2e_test
         self.unit_test = unit_test
         if not self.unit_test:
-            self.ms_config = {"API_KEY": config.get('mediaserver_api_key', ''),
-                              "CLIENT_ID": "mediasite-migration-client",
-                              "PROXIES": {"http": "",
-                                          "https": ""},
-                              "SERVER_URL": config.get('mediaserver_url', ''),
-                              "UPLOAD_CHUNK_SIZE": 5242880,
-                              "VERIFY_SSL": False,
-                              "LOG_LEVEL": 'WARNING'}
+            self.ms_config = {'API_KEY': config.get('mediaserver_api_key', ''),
+                              'CLIENT_ID': 'mediasite-migration-client',
+                              'SERVER_URL': config.get('mediaserver_url', ''),
+                              'VERIFY_SSL': False,
+                              'LOG_LEVEL': 'WARNING'}
             self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
 
             if root_channel_oid:
@@ -53,7 +51,7 @@ class MediaTransfer():
             if max_videos and index >= max_videos:
                 break
             channel_path = media['ref']['channel_path']
-            channel_oid = self.create_channel(channel_path)[-1]
+            channel_oid = self.create_channels(channel_path)[-1]
             if not channel_oid:
                 del media['data']['channel']
                 media['data']['channel'] = self.root_channel.get('oid')
@@ -68,7 +66,7 @@ class MediaTransfer():
                 self.migrate_slides(media)
                 nb_medias_uploaded += 1
             else:
-                logger.error(f'Failed to upload media: {media["title"]}')
+                logger.error(f"Failed to upload media: {media['title']}")
             print(' ' * 50, end='\r')
             print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
 
@@ -88,14 +86,14 @@ class MediaTransfer():
                 config = json.load(f)
             oid = config.get('mediaserver_parent_channel')
         except Exception as e:
-            logger.critical('No parent channel configured. See in config.json.')
+            logger.error('No parent channel configured. See in config.json.')
             logger.debug(e)
-            exit()
+            exit(1)
 
         root_channel = self.get_channel(oid)
         if not root_channel:
             logger.critical('Root channel does not exist. Please provide an existing channel oid in config.json')
-            exit()
+            sys.exit(1)
         return root_channel
 
     def get_channel(self, oid=None, title=None):
@@ -116,7 +114,7 @@ class MediaTransfer():
 
         return channel
 
-    def create_channel(self, channel_path):
+    def create_channels(self, channel_path):
         logger.debug(f'Creating channel path: {channel_path}')
 
         channels_oids = list()
@@ -171,7 +169,7 @@ class MediaTransfer():
 
         if media_slides:
             if media_slides['stream_type'] == 'Slide' and media_slides['details']:
-                slides_dir = f"mediasite_migration_scripts/files/{media_oid}/slides"
+                slides_dir = f'mediasite_migration_scripts/files/{media_oid}/slides'
                 os.makedirs(slides_dir, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
             else:
@@ -226,7 +224,7 @@ class MediaTransfer():
     def _download_slide(self, media_oid, url):
         ok = False
         filename = url.split('/').pop()
-        path = f"mediasite_migration_scripts/files/{media_oid}/slides/{filename}"
+        path = f'mediasite_migration_scripts/files/{media_oid}/slides/{filename}'
 
         if os.path.exists(path):
             ok = True
@@ -244,7 +242,7 @@ class MediaTransfer():
         result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': oid})
         if result.get('success'):
             for a in result.get('types'):
-                if a.get('label') == 'Slide':
+                if a.get('slug') == 'slide':
                     annotation_type = a.get('id')
 
         return annotation_type

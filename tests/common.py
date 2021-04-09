@@ -72,14 +72,10 @@ def set_test_data():
 
 class MediaServerTestUtils():
     def __init__(self, config={}):
-        print(config.get('mediaserver_url'))
         self.ms_config = {
             "API_KEY": config.get('mediaserver_api_key'),
             "CLIENT_ID": "mediasite-migration-client",
-            "PROXIES": {"http": "",
-                        "https": ""},
             "SERVER_URL": config.get('mediaserver_url'),
-            "UPLOAD_CHUNK_SIZE": 5242880,
             "VERIFY_SSL": False,
             "LOG_LEVEL": 'WARNING'}
         self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
