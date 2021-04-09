@@ -19,8 +19,9 @@ except Exception as e:
     logger.debug(e)
     sys.exit(1)
 
-test_utils = common.MediaServerTestUtils(config)
-test_channel = test_utils.create_test_channel()
+ms_test_utils = common.MediaServerTestUtils(config)
+test_channel = ms_test_utils.create_test_channel()
+ms_client = ms_test_utils.ms_client
 
 
 def setUpModule():
@@ -29,14 +30,6 @@ def setUpModule():
 
 def tearDownModule():
     body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
-
-    ms_config = {
-        "API_KEY": config.get('mediaserver_api_key'),
-        "CLIENT_ID": "mediasite-migration-client",
-        "SERVER_URL": config.get('mediaserver_url'),
-        "VERIFY_SSL": False,
-        "LOG_LEVEL": 'WARNING'}
-    ms_client = MediaServerClient(local_conf=ms_config, setup_logging=False)
     ms_client.api('channels/delete', method='post', data=body)
     ms_client.session.close()
 
@@ -46,7 +39,7 @@ class TestMediaTransferE2E(TestCase):
         super().setUp()
         self.mediasite_data = common.set_test_data()
         self.mediatransfer = MediaTransfer(self.mediasite_data, config=config, e2e_test=True, root_channel_oid=test_channel.get('oid'))
-        self.ms_client = self.mediatransfer.ms_client
+        self.ms_client = ms_client
         try:
             with open('tests/e2e/mediaserver_data_e2e.json') as f:
                 self.mediaserver_data = json.load(f)

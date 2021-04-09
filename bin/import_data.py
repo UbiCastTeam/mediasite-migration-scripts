@@ -20,18 +20,22 @@ if __name__ == '__main__':
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=False,
                             help='print all status messages to stdout.')
-        parser.add_argument('-f', '--max-folders', dest='max_folders', default=0,
-                            help='specify maximum of folders to parse for metadata.')
         parser.add_argument('-cf', '--config-file',
                             dest='config_file', action='store_true', default=None,
                             help='add custom config file.')
+        parser.add_argument('-mf', '--mediasite_file',
+                            dest='mediasite_file', action='store_true', default=None,
+                            help='add custom mediasite data file.')
 
         return parser.parse_args()
 
     options = manage_opts()
     logger = utils.set_logger(options)
 
-    mediasite_file = 'mediasite_data.json'
+    mediasite_file = options.mediasite_file
+    if mediasite_file is None:
+        mediasite_file = 'mediasite_data.json'
+
     try:
         with open(mediasite_file) as f:
             data = json.load(f)
@@ -51,7 +55,7 @@ if __name__ == '__main__':
             logger.error('--------- Aborted ---------')
             sys.exit(1)
         try:
-            extractor = DataExtractor(config=config, max_folders=int(options.max_folders))
+            extractor = DataExtractor(config=config)
             data = extractor.all_data
 
             with open(mediasite_file, 'w') as f:

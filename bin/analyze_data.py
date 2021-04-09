@@ -43,15 +43,23 @@ if __name__ == '__main__':
             default=False,
             help='store reports and presentation ids into separate files (e.g. presentations_composite_videos.txt)'
         )
+        parser.add_argument(
+            '-mf', '--mediasite_file',
+            dest='mediasite_file', action='store_true', default=None,
+            help='add custom mediasite data file.'
+        )
         return parser.parse_args()
 
     options = manage_opts()
     logger = utils.set_logger(options=options)
 
-    file = 'mediasite_data.json'
+    mediasite_file = options.mediasite_file
+    if mediasite_file is None:
+        mediasite_file = 'mediasite_data.json'
+
     try:
         data = []
-        with open(file) as f:
+        with open(mediasite_file) as f:
             data = json.load(f)
     except Exception as e:
         logging.debug(e)
@@ -65,7 +73,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         try:
-            with open(file) as f:
+            with open(mediasite_file) as f:
                 data = json.load(f)
         except Exception as e:
             logger.debug(e)

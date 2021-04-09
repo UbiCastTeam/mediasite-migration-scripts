@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class DataExtractor():
 
-    def __init__(self, config=dict(), max_folders=None):
+    def __init__(self, config=dict()):
         logger.info('Connecting...')
 
         self.config = {
@@ -23,7 +23,6 @@ class DataExtractor():
             'mediasite_folders_whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
-        self.max_folders = max_folders
 
         logger.info('Getting presentations... (take a few minutes)')
         self.presentations = None
@@ -79,8 +78,6 @@ class DataExtractor():
                                                   'presentations': self.get_presentations_infos(folder['id'])})
                     if catalogs:
                         self.catalogs.extend(catalogs)
-                if self.max_folders and i > self.max_folders:
-                    break
 
         return presentations_folders
 
