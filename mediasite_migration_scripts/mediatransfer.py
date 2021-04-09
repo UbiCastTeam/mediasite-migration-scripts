@@ -64,9 +64,11 @@ class MediaTransfer():
                 media['ref']['slug'] = result.get('slug')
 
                 self.migrate_slides(media)
+
                 nb_medias_uploaded += 1
             else:
                 logger.error(f"Failed to upload media: {media['title']}")
+
             print(' ' * 50, end='\r')
             print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
 
@@ -283,7 +285,7 @@ class MediaTransfer():
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
                                 'external_data': json.dumps(presentation, indent=2, sort_keys=True),
-                                'transcode': 'no',
+                                'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
                                 'layout': 'webinar' if v_type == 'computer_slides' else 'video',
@@ -291,7 +293,8 @@ class MediaTransfer():
                                 'video_type': v_type,
                                 'file_url': v_url
                             }
-
+                            if v_type == 'audio_only':
+                                data['thumb'] = 'mediasite_migration_scripts/files/utils/audio.jpg'
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})
                         else:
                             logger.debug(f"No valid url for presentation {presentation.get('id')}")
@@ -307,13 +310,20 @@ class MediaTransfer():
                     video_type = 'composite_slides'
                 else:
                     video_type = 'audio_slides'
-                    for f in presentation.get('videos')[0].get('files'):
+                    for f in presentation.get('videos', {})[0].get('files'):
                         if f.get('encoding_infos').get('video_codec'):
                             video_type = 'video_slides'
                             break
-            elif presentation.get('slides').get('stream_type').startswith('Video'):
-                slides_source = presentation.get('slides').get('stream_type')
-                video_type = 'computer_slides'
+            elif presentation['slides'].get('stream_type').startswith('Video'):
+                slides_source = presentation['slides'].get('stream_type')
+                if len(presentation['slides'].get('urls')) > 0:
+                    video_type = 'computer_slides'
+                else:
+                    video_type = 'audio_only'
+                    for f in presentation.get('videos', {})[0].get('files'):
+                        if f.get('encoding_infos', {}).get('video_codec'):
+                            video_type = 'computer_only'
+                            break
         else:
             video_type = 'video_only'
 
