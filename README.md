@@ -11,7 +11,7 @@ Scripts to import video data from Mediasite to Ubicast Mediaserver
 
 ### Setup
 
-First of all, you need to set up the connection with the Mediasite API.
+First of all, you need to set up the connection with the Mediasite API and Mediaserver API.
 
 - Clone the repository and submodules:
 
