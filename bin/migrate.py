@@ -15,20 +15,20 @@ if __name__ == '__main__':
 
     def manage_opts():
         parser = argparse.ArgumentParser(description=usage(), formatter_class=argparse.RawTextHelpFormatter)
-        parser.add_argument('-q', '--quiet',
+        parser.add_argument('-q', '--quiet', action='store_true',
                             dest='quiet', default=False,
                             help='print less status messages to stdout.')
         parser.add_argument('-v', '--verbose', action='store_true',
                             dest='verbose', default=False,
                             help='print all status messages to stdout.')
-        parser.add_argument('-f', '--max-folders', dest='max_folders', default=0,
-                            help='specify maximum of folders to include for migration.')
         parser.add_argument('--max-videos', dest='max_videos', default=0,
                             help='specify maximum of videos for upload.')
         parser.add_argument('-cf', '--config-file',
                             dest='config_file', action='store_true', default=None,
                             help='add custom config file.')
-
+        parser.add_argument('-mf', '--mediasite_file',
+                            dest='mediasite_file', action='store_true', default=None,
+                            help='add custom mediasite data file.')
         return parser.parse_args()
 
     options = manage_opts()
@@ -39,7 +39,10 @@ if __name__ == '__main__':
     logger.info('----- START SCRIPT' + 50 * '-')
     logger.debug(f'Starting {__file__}')
 
-    mediasite_file = 'mediasite_data.json'
+    mediasite_file = options.mediasite_file
+    if mediasite_file is None:
+        mediasite_file = 'mediasite_data.json'
+
     if not os.path.exists(mediasite_file):
         run_import = input('No metadata file. You need to import Mediasite metadata first.\nDo you want to run import ? [y/N] ')
         run_import = run_import.lower()

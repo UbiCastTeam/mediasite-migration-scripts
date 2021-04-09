@@ -1,8 +1,14 @@
 {
-    "whitelist": []
-    "video_formats_alowed': {
-	"video/mp4": true,
+    "mediasite_api_url": "",
+    "mediasite_api_key": "",
+    "mediasite_api_user": "",
+    "mediasite_api_password":"",
+    "mediaserver_url":"",
+    "mediaserver_api_key": "",
+    "mediaserver_parent_channel": "",
+    "whitelist": [],
+    "videos_formats_allowed": {
+        "video/mp4": true,
         "video/x-ms-wmv": false
-    },
-    "mediaserver_parent_channel": ""
+    }
 }
