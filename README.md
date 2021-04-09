@@ -11,7 +11,7 @@ Scripts to import video data from Mediasite to Ubicast Mediaserver
 
 ### Setup
 
-First of all, you need to set up the connection with the Mediasite API.
+First of all, you need to set up the connection with the Mediasite API and Mediaserver API.
 
 - Clone the repository and submodules:
 
@@ -20,35 +20,52 @@ $ git clone https://github.com/UbiCastTeam/mediasite-migration-scripts
 $ git submodule update --init
 ```
 
-- Create the .env file
-
-`$ cp .env.dist .env`
-
-- Fill it with your credentials:
-
-```
-MEDIASITE_API_URL = the API URL of your Mediasite server (e.g. https://my.mediasite.com/Site1/api/v1/)
-MEDIASITE_API_USER = Mediasite user name
-MEDIASITE_API_PASSWORD = Mediasite user password
-MEDIASITE_API_KEY = API key generated in the Mediasite backoffice at /api/Docs/ApiKeyRegistration.aspx
-```
-#### Whitelisting
-If you need to include only some folders in your migration.
+You have to fill some credentials to config.json. Also, some parameters can be provided for migration.
 
 - Create the config.json file
 
 `$ cp config.json.example config.json`
 
-- On config.json, put the folders name you want to include in ***whitelist***, e.g. :
+- On config.json, put the parameters e.g. :
 
 ```
 {
-    "whitelist": ["Presentations", "Mediasite Users"]
- }
+    "mediasite_api_url": "", # the API URL of your Mediasite server (e.g. https://my.mediasite.com/Site1/api/v1/)
+    "mediasite_api_key": "", # API key generated in the Mediasite backoffice at /api/Docs/ApiKeyRegistration.aspx
+    "mediasite_api_user": "", # Mediasite user name
+    "mediasite_api_password":"", #  Mediasite user password
+    "mediaserver_url":"", # API key generated in the Mediaserver backoffice at authentication/account-settings/
+    "mediaserver_api_key": "", # Mediaserver URL (e.g. https://my.mediaserver.net/)
+    "mediaserver_parent_channel": "", # the Mediaserver root channel oid where all the content will be migrate
+    "whitelist": ["Migratietest_2021mrt16"], # folders you want to migrate from Mediasite
+    "videos_formats_allowed": {   # video formats allowed
+        "video/mp4": true,
+        "video/x-ms-wmv": false
+    }
+}
+
 ```
 
-### Running scripts
-#### Analyze data
+## Running scripts
+### Migrate
+
+For migrating medias, considering the parameters you provided in config.json
+
+`$ make migrate`
+
+```
+...
+Connecting...
+Getting presentations... (take a few minutes)
+Uploading videos...
+Uploading: [14 / 14] -- 100%                      
+--------- Upload successful ---------
+ 
+Uploaded 14 medias
+
+```
+
+### Analyze data
 For collecting statistics about the videos included in the  Mediasite platform (video type, available file format, ...), and informations for migration.
 
 `$ make analyze_data`
@@ -83,16 +100,31 @@ Counting downloadable mp4s (among 1944 urls)
 1815 downloadable mp4s, status codes: {'200': 1815, '404': 129}
 ```
 
-#### Import data only
+### Import data only
 If you do not want to analyze your, but only get the raw data. 
 
 `$ make import_data`
 
+
 ## Arguments
-You can pass arguments into the scripts, with the variable **ARGS**.
+You can pass arguments into the scripts, with the variable **ARGS**. Argument '--help' will provide you the list of arguments for a script.
 
 ```
-$ make analyze_data ARGS="--verbose"
+$ make migrate ARGS="--help"
+...
+usage: migrate.py [-h] [-q] [-v] [--max-videos MAX_VIDEOS] [-cf] [-mf]
+
+This script is used to import media from mediasite to mediaserver
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -q, --quiet           print less status messages to stdout.
+  -v, --verbose         print all status messages to stdout.
+  --max-videos MAX_VIDEOS
+                        specify maximum of videos for upload.
+  -cf, --config-file    add custom config file.
+  -mf, --mediasite_file
+                        add custom mediasite data file.
 ```
 
  

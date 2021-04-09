@@ -9,8 +9,7 @@ import os
 import sys
 
 from mediasite_migration_scripts.data_analyzer import DataAnalyzer
-from mediasite_migration_scripts.lib.utils import MediasiteSetup
-
+import mediasite_migration_scripts.utils.common as utils
 if __name__ == '__main__':
     def usage(message=''):
         return 'This script is used to extract metadata from mediasite platform'
@@ -18,18 +17,10 @@ if __name__ == '__main__':
     def manage_opts():
         parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
         parser.add_argument(
-            '-i',
-            '--info',
-            action='store_true',
-            default=False,
-            help='print more status messages to stdout.',
-        )
-        parser.add_argument(
-            '-D',
-            '--doctor',
-            action='store_true',
-            default=False,
-            help='check what presentations have not been acounted',
+            '-q',
+            '--quiet',
+            dest='quiet', default=False,
+            help='print less status messages to stdout.'
         )
         parser.add_argument(
             '-v',
@@ -52,23 +43,22 @@ if __name__ == '__main__':
             help='store reports and presentation ids into separate files (e.g. presentations_composite_videos.txt)'
         )
         parser.add_argument(
-            '-d',
-            '--dry-run',
-            action='store_true',
-            dest='dryrun',
-            default=False,
-            help='not really import medias.'
+            '-mf', '--mediasite_file',
+            dest='mediasite_file', action='store_true', default=None,
+            help='add custom mediasite data file.'
         )
-
         return parser.parse_args()
 
     options = manage_opts()
-    logger = MediasiteSetup.set_logger(options)
+    logger = utils.set_logger(options=options)
 
-    file = 'data_debug.json' if options.dryrun else 'data.json'
+    mediasite_file = options.mediasite_file
+    if mediasite_file is None:
+        mediasite_file = 'mediasite_data.json'
+
     try:
         data = []
-        with open(file) as f:
+        with open(mediasite_file) as f:
             data = json.load(f)
     except Exception as e:
         logging.debug(e)
@@ -79,15 +69,15 @@ if __name__ == '__main__':
             os.system(f'python3 bin/import_data.py {args}')
         else:
             print('--------- Aborted ---------')
-            exit()
+            sys.exit(1)
 
         try:
-            with open(file) as f:
+            with open(mediasite_file) as f:
                 data = json.load(f)
         except Exception as e:
             logger.debug(e)
-            logger.error('Import failed')
-            exit()
+            logger.error('No data to analyze.')
+            sys.exit(1)
 
     analyzer = DataAnalyzer(data)
 
@@ -157,30 +147,3 @@ if __name__ == '__main__':
     print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_tb} TB)'.format(**encoding_infos))
     print()
     print(encoding_infos['video_types_stats'])
-    print()
-
-    if options.doctor:
-        config_data = {}
-        try:
-            with open('config.json') as js:
-                config_data = json.load(js)
-        except Exception as e:
-            logging.debug(e)
-        mediasite = MediasiteSetup(config_data).mediasite
-
-        print('Listing all presentations created...')
-        all_presentations = mediasite.presentation.get_all_presentations()
-
-        presentations_in_folders = analyzer.presentations
-        presentations_not_in_folders = []
-        for presentation_from_all in all_presentations:
-            found = False
-            for presentation_in_folder in presentations_in_folders:
-                if presentation_from_all['id'] == presentation_in_folder['id']:
-                    found = True
-                    break
-            if not found:
-                presentations_not_in_folders.append(presentation_from_all)
-
-        print(f'''All presentations found in Mediasite platform : {len(all_presentations)}
-                Presentations not accounted in folders: {len(presentations_not_in_folders)}.''')
