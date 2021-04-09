@@ -4,7 +4,6 @@ import logging
 import sys
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
-from mediasite_migration_scripts.ms_client.client import MediaServerClient
 import tests.common as common
 
 logger = logging.getLogger(__name__)
