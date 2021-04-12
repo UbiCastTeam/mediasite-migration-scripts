@@ -19,12 +19,12 @@ Gst.init([])
 
 
 def setup_logging(verbose=False):
-    logging.addLevelName(logging.ERROR, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
-    logging.addLevelName(logging.WARNING, "\033[1;33m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+    logging.addLevelName(logging.ERROR, '\033[1;31m%s\033[1;0m' % logging.getLevelName(logging.ERROR))
+    logging.addLevelName(logging.WARNING, '\033[1;33m%s\033[1;0m' % logging.getLevelName(logging.WARNING))
     level = getattr(logging, 'DEBUG' if verbose else 'INFO')
     logging.basicConfig(
         level=level,
-        format="%(asctime)s %(levelname)-8s %(message)s",
+        format='%(asctime)s %(levelname)-8s %(message)s',
     )
 
 
@@ -145,9 +145,9 @@ class Merger:
         self.pipeline = Gst.parse_launch(pipeline_desc)
         bus = self.pipeline.get_bus()
         bus.add_signal_watch()
-        bus.connect("message::eos", self._on_eos)
+        bus.connect('message::eos', self._on_eos)
         bus.connect('message::error', self._on_error)
-        bus.connect("message", self._on_message)
+        bus.connect('message', self._on_message)
 
         layout_preset = self.get_layout_preset(layers_data)
         layout_file = folder / 'mediaserver_layout.json'
@@ -160,7 +160,7 @@ class Merger:
 
     def _on_error(self, bus, message):
         error, debug = message.parse_error()
-        logging.error(f"{error}: {debug}")
+        logging.error(f'{error}: {debug}')
         self.pipeline.set_state(Gst.State.NULL)
         self.abort()
 
@@ -221,16 +221,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(
-        "-v",
-        "--verbose",
-        help="set verbosity to DEBUG",
-        action="store_true"
+        '-v',
+        '--verbose',
+        help='set verbosity to DEBUG',
+        action='store_true'
     )
 
     parser.add_argument(
-        "--preview",
-        help="Enable realtime video preview",
-        action="store_true"
+        '--preview',
+        help='Enable realtime video preview',
+        action='store_true'
     )
 
     parser.add_argument(
