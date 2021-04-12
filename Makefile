@@ -1,5 +1,5 @@
 build:
-	docker build -t mediasite -f Dockerfile .
+	docker build -t mediasite -f docker/Dockerfile .
 
 lint: build
 	docker run -it \
@@ -50,7 +50,7 @@ tests_e2e_mdtr: build
 		python3 -m unittest tests/e2e/e2e_mediatransfer.py $(ARGS)
 
 merge_build:
-	docker build -t mediasite-merge -f Dockerfile.merge .
+	docker build -t mediasite-merge -f docker/Dockerfile.arch .
 
 merge_shell:
 	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge /bin/bash
