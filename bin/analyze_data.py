@@ -30,7 +30,6 @@ if __name__ == '__main__':
             help='print all status messages to stdout.',
         )
         parser.add_argument(
-            '-c',
             '--check-resources',
             action='store_true',
             default=False,
@@ -43,48 +42,57 @@ if __name__ == '__main__':
             help='store reports and presentation ids into separate files (e.g. presentations_composite_videos.txt)'
         )
         parser.add_argument(
-            '-mf', '--mediasite_file',
-            dest='mediasite_file', action='store_true', default=None,
+            '--mediasite-file',
+            action='store_true',
+            default='mediasite_data.json',
             help='add custom mediasite data file.'
+        )
+        parser.add_argument(
+            '--config-file',
+            action='store_true',
+            default='config.json',
+            help='Json config file.'
         )
         return parser.parse_args()
 
     options = manage_opts()
     logger = utils.set_logger(options=options)
 
-    mediasite_file = options.mediasite_file
-    if mediasite_file is None:
-        mediasite_file = 'mediasite_data.json'
+    mediasite_data_file = options.mediasite_file
 
-    try:
-        data = []
-        with open(mediasite_file) as f:
-            data = json.load(f)
-    except Exception as e:
-        logging.debug(e)
-        logging.info('No data to analyse, or data is corrupted.')
-        run_import = input('No data to analyse. Do you want to run import data ? [y/N] ').lower()
+    should_run_import = False
+    if not os.path.isfile(mediasite_data_file):
+        logging.info(f'Data file {options.mediasite_file} not found')
+        should_run_import = True
+    else:
+        try:
+            with open(mediasite_data_file) as f:
+                data = json.load(f)
+        except Exception as e:
+            logging.info('Data file {options.mediasite_file} seems corrupted')
+            logging.debug(e)
+            should_run_import = True
+    if should_run_import:
+        run_import = input('No data to analyze. Do you want to run import data ? [y/N] ').lower()
         if run_import == 'y' or run_import == 'yes':
             args = ' '.join(sys.argv[1:])
-            os.system(f'python3 bin/import_data.py {args}')
+            returncode = os.system(f'python3 bin/import_data.py {args}')
+            if returncode != 0:
+                logging.error('Failed to import data')
+                sys.exit(1)
         else:
             print('--------- Aborted ---------')
             sys.exit(1)
 
-        try:
-            with open(mediasite_file) as f:
-                data = json.load(f)
-        except Exception as e:
-            logger.debug(e)
-            logger.error('No data to analyze.')
-            sys.exit(1)
-
+    config_file = options.config_file
     config_data = {}
     try:
-        with open('config.json') as js:
-            config_data = json.load(js)
+        if os.path.isfile(config_file):
+            logging.info(f'Loading config file {config_file}')
+            with open(config_file) as js:
+                config_data = json.load(js)
     except Exception as e:
-        logging.debug(e)
+        logging.error(e)
 
     analyzer = DataAnalyzer(data, config_data)
 
