@@ -311,8 +311,8 @@ class DataAnalyzer():
                     if folder not in folders:
                         folders.append(folder)
                 else:
-                    skipped_folders.add(folder["id"])
-                    skipped_presentations.add(p["id"])
+                    skipped_folders.add(folder['id'])
+                    skipped_presentations.add(p['id'])
         if whitelist:
             print(f'Skipped {len(skipped_folders)} folders and {len(skipped_presentations)} presentations not matching the path whitelist')
         return folders
