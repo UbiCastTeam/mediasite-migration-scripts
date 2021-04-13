@@ -1,5 +1,8 @@
 import requests
+import logging
 from mediasite_migration_scripts.utils.common import get_age_days
+
+logger = logging.getLogger(__name__)
 
 
 class DataAnalyzer():
@@ -47,7 +50,7 @@ class DataAnalyzer():
     def count_downloadable_mp4s(self):
         downloadable_mp4 = list()
         status_codes = dict()
-        print(f'Counting downloadable mp4s (among {len(self.mp4_urls)} urls)')
+        logger.info(f'Counting downloadable mp4s (among {len(self.mp4_urls)} urls)')
         with requests.Session() as session:
             for index, url in enumerate(self.mp4_urls):
                 print(f'[{index + 1}]/[{len(self.mp4_urls)}] -- {int(100 * (index + 1) / len(self.mp4_urls))}%', end='\r')
@@ -284,7 +287,7 @@ class DataAnalyzer():
         if dump:
             for videolist in videotypes:
                 fname = 'presentations_' + videolist + '.txt'
-                print(f'Dumping {fname}')
+                logger.info(f'Dumping {fname}')
                 with open(fname, 'w') as f:
                     f.write('\n'.join(locals()[videolist]))
 
@@ -297,7 +300,7 @@ class DataAnalyzer():
         skipped_presentations = set()
         if self.config:
             whitelist = ['/' + x for x in self.config['whitelist']]
-            print(f'Restricting to whitelisted paths {whitelist}')
+            logger.info(f'Restricting to whitelisted paths {whitelist}')
 
         for folder in data:
             skip = False
@@ -314,7 +317,7 @@ class DataAnalyzer():
                     skipped_folders.add(folder['id'])
                     skipped_presentations.add(p['id'])
         if whitelist:
-            print(f'Skipped {len(skipped_folders)} folders and {len(skipped_presentations)} presentations not matching the path whitelist')
+            logger.info(f'Skipped {len(skipped_folders)} folders and {len(skipped_presentations)} presentations not matching the path whitelist')
         return folders
 
     def _set_presentations(self):

@@ -20,14 +20,14 @@ if __name__ == '__main__':
             '-q',
             '--quiet',
             dest='quiet', default=False,
-            help='print less status messages to stdout.'
+            help='Print less information to stdout.'
         )
         parser.add_argument(
             '-v',
             '--verbose',
             action='store_true',
             default=False,
-            help='print all status messages to stdout.',
+            help='Print all information to stdout.',
         )
         parser.add_argument(
             '--check-resources',
@@ -81,7 +81,7 @@ if __name__ == '__main__':
                 logging.error('Failed to import data')
                 sys.exit(1)
         else:
-            print('--------- Aborted ---------')
+            logger.info('--------- Aborted ---------')
             sys.exit(1)
 
     config_file = options.config_file
@@ -96,57 +96,27 @@ if __name__ == '__main__':
 
     analyzer = DataAnalyzer(data, config_data)
 
-    line_sep_str = '-' * 50
-    print(line_sep_str)
-
-    print(f'Found {len(analyzer.folders)} folders')
-    print(f'Number of presentations in folders: {len(analyzer.presentations)}')
-    print(f'Found {len(analyzer.catalogs)} catalogs linked to folders')
-
     folder_in_catalogs = list()
     for folder in analyzer.folders:
         if len(folder['catalogs']) > 0:
             folder_in_catalogs.append(folder)
 
-    print(f'Number of folders linked to catalogs: {len(folder_in_catalogs)}')
-
-    folders_infos = analyzer.analyse_folders()
-    empty_folders = folders_infos['empty_folders']
-    empty_user_folders = folders_infos['empty_user_folders']
-    print(f'{len(empty_folders)} folders have no presentation inside {len(empty_user_folders)} user folders')
-
-    videos_format_stats, videos_layout_stats = analyzer.analyze_videos_infos()
-
-    with_mp4 = 0
-    no_mp4 = 0
-    for v_format, count in videos_format_stats.items():
-        if v_format == 'video/mp4':
-            with_mp4 = count
-        else:
-            no_mp4 += count
-    print(f'{no_mp4}% of videos without mp4 vs {with_mp4}% with mp4')
-
-    no_slide = videos_layout_stats['mono']
-    with_slides = videos_layout_stats['mono + slides']
-    multiple = videos_layout_stats['multiple']
-    print(f'There\'s {no_slide}% of videos with no slide, {with_slides}% with slides, and {multiple}% are compositions of multiple videos')
-
-    print(line_sep_str)
-
     if options.check_resources:
         downloadable_mp4_count = analyzer.count_downloadable_mp4s()
         downloadable_mp4 = downloadable_mp4_count['downloadable_mp4']
         status_codes = downloadable_mp4_count['status_codes']
-        print(f'{len(downloadable_mp4)} downloadable mp4s, status codes: {status_codes}')
+        print(f'Found {len(downloadable_mp4)} downloadable mp4s, status codes: {status_codes}')
 
-        print(line_sep_str)
-
+    logger.info('Computing stats')
+    videos_format_stats, videos_layout_stats = analyzer.analyze_videos_infos()
     encoding_infos = analyzer.analyze_encoding_infos(options.dump)
-    video_stats = encoding_infos['video_stats']
+
+    logger.info('Processing finished, displaying results')
 
     text = 'Format\tFormat pixels per frame\tDuration_hours\tCount\tSize_gbytes\tCreated this year\n'
     for key, val in encoding_infos['video_stats'].items():
         stats = '{pixels}\t{duration_hours}\t{count}\t{size_gbytes}\t{less_than_one_year_old}'.format(**val)
+        # for google docs number formatting
         text += f'{key}\t{stats.replace(".", ",")}\n'
 
     print()
@@ -155,10 +125,8 @@ if __name__ == '__main__':
         with open('presentations_format_list.txt', 'w') as f:
             f.write(text)
 
-    def get_percent(x, total):
-        return int(100 * x / total)
-
     print()
+    print(f'Found {len(analyzer.folders)} folders, {len(analyzer.presentations)} presentations, {len(folder_in_catalogs)} folders linked to a catalog')
     print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_tb} TB)'.format(**encoding_infos))
     print()
     print(encoding_infos['video_types_stats'])
