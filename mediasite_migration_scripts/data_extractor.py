@@ -5,14 +5,14 @@ from pymediainfo import MediaInfo
 import json
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
-
+import utils.common as utils
 
 logger = logging.getLogger(__name__)
 
 
 class DataExtractor():
 
-    def __init__(self, config=dict()):
+    def __init__(self, config=dict(), max_folders=None):
         logger.info('Connecting...')
 
         self.config = {
@@ -29,9 +29,9 @@ class DataExtractor():
         self.folders = self.get_all_folders_infos()
         self.catalogs = list()
         self.all_catalogs = self.mediasite.catalog.get_all_catalogs()
-        self.all_data = self.extract_mediasite_data()
+        self.all_data = self.extract_mediasite_data(max_folders=max_folders)
 
-    def extract_mediasite_data(self, parent_id=None):
+    def extract_mediasite_data(self, parent_id=None, max_folders=None):
         '''
         Collect all data from Mediasite platform ordered by folder
 
@@ -65,10 +65,10 @@ class DataExtractor():
 
             for i, folder in enumerate(self.folders):
                 if i > 1:
-                    print(f'Requesting: {[{i}]/[{len(self.folders)}]} -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
+                    print(f'Requesting: {[{i}]}/{[{len(self.folders)}]} -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
 
                 path = self._find_folder_path(folder['id'], self.folders)
-                if self.is_folder_to_add(path):
+                if utils.is_folder_to_add(path, self.config):
                     logger.debug('-' * 50)
                     logger.debug('Found folder : ' + path)
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
@@ -79,6 +79,9 @@ class DataExtractor():
                     if catalogs:
                         self.catalogs.extend(catalogs)
 
+                    if max_folders and i >= max_folders:
+                        break
+
         return presentations_folders
 
     def _find_folder_path(self, folder_id, folders, path=''):
@@ -88,14 +91,6 @@ class DataExtractor():
                 path += '/' + folder['name']
                 return path
         return ''
-
-    def is_folder_to_add(self, path):
-        if self.setup.config.get('mediasite_folders_whitelist'):
-            for fw in self.setup.config['mediasite_folders_whitelist']:
-                if fw in path:
-                    return True
-            return False
-        return True
 
     def get_presentations_infos(self, folder_id):
         logger.debug(f'Gettings presentations infos for folder: {folder_id}')
@@ -142,7 +137,7 @@ class DataExtractor():
 
     def get_all_folders_infos(self):
         folders_infos = list()
-        folders = self.mediasite.folder.get_all_folders(self.max_folders)
+        folders = self.mediasite.folder.get_all_folders()
         for folder in folders:
             folder_info = {
                 'id': folder.get('Id'),
