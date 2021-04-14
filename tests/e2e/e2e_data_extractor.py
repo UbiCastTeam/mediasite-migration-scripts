@@ -73,7 +73,7 @@ class TestDataExtractorE2E(TestCase):
             'videos',
             'slides'
         ]
-        for p in folder_example['presentations']:
-            if len(p) > 0:
-                self.assertListEqual(presentation_keys, list(p.keys()))
+        for folder in self.extractor.all_data:
+            if len(folder.get('presentations')) > 0:
+                self.assertListEqual(presentation_keys, list(folder['presentations'][0].keys()))
                 break
