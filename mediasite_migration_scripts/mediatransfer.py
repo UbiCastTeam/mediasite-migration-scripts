@@ -64,6 +64,7 @@ class MediaTransfer():
                 media['ref']['slug'] = result.get('slug')
 
                 self.migrate_slides(media)
+              
                 nb_medias_uploaded += 1
             else:
                 logger.error(f"Failed to upload media: {media['title']}")
@@ -205,7 +206,7 @@ class MediaTransfer():
                     logger.error(f'Failed to download slide {i + 1} for media {media_oid}')
 
             if self.slide_annot_type is None:
-                self.slide_annot_type = self._get_annotation_type_id(media_oid)
+                self.slide_annot_type = self._get_annotation_type_id(media_oid, annot_type='slide')
             details = {
                 'oid': media_oid,
                 'time': media_slides_details[i].get('TimeMilliseconds'),
@@ -236,13 +237,13 @@ class MediaTransfer():
                 ok = True
         return ok, path
 
-    def _get_annotation_type_id(self, oid):
+    def _get_annotation_type_id(self, oid, annot_type):
         annotation_type = int()
 
         result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': oid})
         if result.get('success'):
             for a in result.get('types'):
-                if a.get('slug') == 'slide':
+                if a.get('slug') == annot_type:
                     annotation_type = a.get('id')
 
         return annotation_type

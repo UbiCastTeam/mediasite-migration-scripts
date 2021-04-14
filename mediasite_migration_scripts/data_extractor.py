@@ -5,7 +5,7 @@ from pymediainfo import MediaInfo
 import json
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
-
+import utils.common as utils
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +65,10 @@ class DataExtractor():
 
             for i, folder in enumerate(self.folders):
                 if i > 1:
-                    print(f'Requesting: {[{i}]/[{len(self.folders)}]} -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
+                    print(f'Requesting: {[{i}]}/{[{len(self.folders)}]} -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
 
                 path = self._find_folder_path(folder['id'], self.folders)
-                if self.is_folder_to_add(path):
+                if utils.is_folder_to_add(path, self.config):
                     logger.debug('-' * 50)
                     logger.debug('Found folder : ' + path)
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
@@ -88,14 +88,6 @@ class DataExtractor():
                 path += '/' + folder['name']
                 return path
         return ''
-
-    def is_folder_to_add(self, path):
-        if self.setup.config.get('mediasite_folders_whitelist'):
-            for fw in self.setup.config['mediasite_folders_whitelist']:
-                if fw in path:
-                    return True
-            return False
-        return True
 
     def get_presentations_infos(self, folder_id):
         logger.debug(f'Gettings presentations infos for folder: {folder_id}')
@@ -142,7 +134,7 @@ class DataExtractor():
 
     def get_all_folders_infos(self):
         folders_infos = list()
-        folders = self.mediasite.folder.get_all_folders(self.max_folders)
+        folders = self.mediasite.folder.get_all_folders()
         for folder in folders:
             folder_info = {
                 'id': folder.get('Id'),
