@@ -6,6 +6,7 @@ import sys
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
 import tests.common as common
 
+common.set_logger(verbose=True)
 logger = logging.getLogger(__name__)
 
 config = {}
@@ -47,8 +48,6 @@ class TestMediaTransferE2E(TestCase):
             logger.debug(e)
             logger.error('Test data corrupted')
             exit(1)
-
-        common.set_logger(verbose=True)
 
     def tearDown(self):
         super().tearDown()

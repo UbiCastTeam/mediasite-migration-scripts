@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class DataExtractor():
 
-    def __init__(self, config=dict()):
+    def __init__(self, config=dict(), max_folders=None):
         logger.info('Connecting...')
 
         self.config = {
@@ -29,9 +29,9 @@ class DataExtractor():
         self.folders = self.get_all_folders_infos()
         self.catalogs = list()
         self.all_catalogs = self.mediasite.catalog.get_all_catalogs()
-        self.all_data = self.extract_mediasite_data()
+        self.all_data = self.extract_mediasite_data(max_folders=max_folders)
 
-    def extract_mediasite_data(self, parent_id=None):
+    def extract_mediasite_data(self, parent_id=None, max_folders=None):
         '''
         Collect all data from Mediasite platform ordered by folder
 
@@ -78,6 +78,9 @@ class DataExtractor():
                                                   'presentations': self.get_presentations_infos(folder['id'])})
                     if catalogs:
                         self.catalogs.extend(catalogs)
+
+                    if max_folders and i >= max_folders:
+                        break
 
         return presentations_folders
 
