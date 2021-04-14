@@ -76,3 +76,4 @@ class TestDataExtractorE2E(TestCase):
         for p in folder_example['presentations']:
             if len(p) > 0:
                 self.assertListEqual(presentation_keys, list(p.keys()))
+                break
