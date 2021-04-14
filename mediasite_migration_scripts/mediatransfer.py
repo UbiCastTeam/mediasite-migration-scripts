@@ -64,7 +64,6 @@ class MediaTransfer():
                 media['ref']['slug'] = result.get('slug')
 
                 self.migrate_slides(media)
-              
                 nb_medias_uploaded += 1
             else:
                 logger.error(f"Failed to upload media: {media['title']}")
