@@ -65,6 +65,11 @@ class MediaTransfer():
 
                 self.migrate_slides(media)
 
+                if media['data'].get('video_type') == 'audio_only':
+                    thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
+                    if not thumb_ok:
+                        logger.warning('Failed to upload audio thumbail for audio presentation')
+
                 nb_medias_uploaded += 1
             else:
                 logger.error(f"Failed to upload media: {media['title']}")
@@ -238,16 +243,22 @@ class MediaTransfer():
                 ok = True
         return ok, path
 
-    def _get_annotation_type_id(self, oid, annot_type):
+    def _get_annotation_type_id(self, media_oid, annot_type):
         annotation_type = int()
 
-        result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': oid})
+        result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': media_oid})
         if result.get('success'):
             for a in result.get('types'):
                 if a.get('slug') == annot_type:
                     annotation_type = a.get('id')
 
         return annotation_type
+
+    def _send_audio_thumb(self, media_oid):
+        file = open('mediasite_migration_scripts/files/utils/audio.jpg', 'rb')
+        result = self.ms_client.api('medias/edit', method='post', data={'oid': media_oid}, files={'thumb': file})
+        file.close()
+        return result.get('success')
 
     def to_mediaserver_keys(self):
         logger.debug('Matching Mediasite data to MediaServer keys mapping.')
@@ -288,7 +299,7 @@ class MediaTransfer():
                                 'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
-                                'layout': 'webinar' if v_type == 'computer_slides' else 'video',
+                                'layout': 'webinar' if v_type == 'computer_slides' or v_type == 'audio_slides' else 'video',
                                 'slides': presentation.get('slides'),
                                 'video_type': v_type,
                                 'file_url': v_url

@@ -133,7 +133,8 @@ dmypy.json
 !tests/e2e/mediaserver_data_e2e.json
 tests/content/
 config.json.backup
-mediasite_migration_scripts/files/
+mediasite_migration_scripts/files/*
+!mediasite_migration_scripts/files/utils/audio.jpg
 
 # VS Code
 .vscode

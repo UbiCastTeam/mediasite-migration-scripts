@@ -57,15 +57,20 @@ class TestMediaTransfer(TestCase):
         except Exception as e:
             logger.error(e)
 
-        self.assertEqual(mediaserver_data[0]['data']['title'], presentation_example['title'])
-        self.assertEqual(mediaserver_data[0]['data']['creation'], presentation_example['creation_date'])
-        self.assertEqual(mediaserver_data[0]['data']['speaker_id'], presentation_example['owner_username'])
-        self.assertEqual(mediaserver_data[0]['data']['speaker_name'], presentation_example['owner_display_name'])
-        self.assertEqual(mediaserver_data[0]['data']['speaker_name'], presentation_example['owner_display_name'])
-        self.assertEqual(mediaserver_data[0]['data']['speaker_email'], presentation_example['owner_mail'])
-        self.assertEqual(mediaserver_data[0]['data']['validated'], 'yes' if presentation_example['published_status'] else 'no')
-        self.assertEqual(mediaserver_data[0]['data']['keywords'], ','.join(presentation_example['tags']))
-        self.assertEqual(mediaserver_data[0]['data']['slug'], 'mediasite-' + presentation_example['id'])
-
-        self.assertIsNotNone(mediaserver_data[0]['data']['file_url'])
-        self.assertEqual(json.loads(mediaserver_data[0]['data']['external_data']), presentation_example)
+        data = mediaserver_data[0]['data']
+        self.assertEqual(data['title'], presentation_example['title'])
+        self.assertEqual(data['creation'], presentation_example['creation_date'])
+        self.assertEqual(data['speaker_id'], presentation_example['owner_username'])
+        self.assertEqual(data['speaker_name'], presentation_example['owner_display_name'])
+        self.assertEqual(data['speaker_name'], presentation_example['owner_display_name'])
+        self.assertEqual(data['speaker_email'], presentation_example['owner_mail'])
+        self.assertEqual(data['validated'], 'yes' if presentation_example['published_status'] else 'no')
+        self.assertEqual(data['keywords'], ','.join(presentation_example['tags']))
+        self.assertEqual(data['slug'], 'mediasite-' + presentation_example['id'])
+        self.assertEqual(data['transcode'], 'yes' if data['video_type'] == 'audio_only' else 'no',
+                         msg='Audio only medias must be transcoded')
+        self.assertEqual(data['detect_slides'], 'yes' if data['video_type'] == 'computer_slides' or data['video_type'] == 'composite_slides' else 'no',
+                         msg='Slide detection must be on if the media is "computer_slides" or "composites_slides" type')
+        self.assertEqual(data['layout'], 'webinar' if data['video_type'] == 'computer_slides' or data['video_type'] == 'audio_slides' else 'video')
+        self.assertIsNotNone(data['file_url'])
+        self.assertEqual(json.loads(data['external_data']), presentation_example)
