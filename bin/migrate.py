@@ -78,7 +78,6 @@ if __name__ == '__main__':
     logger.info('Uploading videos...')
     max_videos = int(options.max_videos) if options.max_videos else None
     nb_uploaded_medias = mediatransfer.upload_medias(max_videos)
-    logger.info('')
     logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
 
     if options.verbose:
