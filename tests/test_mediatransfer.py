@@ -43,13 +43,6 @@ class TestMediaTransfer(TestCase):
         self.assertEqual(len_catalogs, len(catalogs))
 
     def test_to_mediaserver_keys(self):
-        # try:
-        #     presentation_example = self.mediasite_data[0].get('presentations')[0]
-        # except IndexError:
-        #     logger.error('Can not found presentations')
-        # except Exception as e:
-        #     logger.error(e)
-
         mediaserver_data = self.mediatransfer.to_mediaserver_keys()
         try:
             with open('tests/mediaserver_data_test.json', 'w') as f:
