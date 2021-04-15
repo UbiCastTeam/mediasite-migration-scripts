@@ -176,7 +176,7 @@ class MediaTransfer():
 
         if media_slides:
             if media_slides['stream_type'] == 'Slide' and media_slides['details']:
-                slides_dir = f'mediasite_migration_scripts/files/{media_oid}/slides'
+                slides_dir = f'tmp/{media_oid}/slides'
                 os.makedirs(slides_dir, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
             else:
@@ -185,7 +185,7 @@ class MediaTransfer():
 
         if not slides_in_video and nb_slides > 0:
             logger.debug(f"{nb_slides_downloaded} slides downloaded and {nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
-            shutil.rmtree(slides_dir)
+            shutil.rmtree('tmp/')
 
         return nb_slides_uploaded, nb_slides
 
@@ -231,7 +231,7 @@ class MediaTransfer():
     def _download_slide(self, media_oid, url):
         ok = False
         filename = url.split('/').pop()
-        path = f'mediasite_migration_scripts/files/{media_oid}/slides/{filename}'
+        path = f'tmp/{media_oid}/slides{filename}'
 
         if os.path.exists(path):
             ok = True
