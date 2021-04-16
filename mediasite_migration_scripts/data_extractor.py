@@ -20,11 +20,10 @@ class DataExtractor():
             'mediasite_api_secret': config.get('mediasite_api_key'),
             'mediasite_api_user': config.get('mediasite_api_user'),
             'mediasite_api_pass': config.get('mediasite_api_password'),
-            'mediasite_folders_whitelist': config.get('whitelist')
+            'whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
 
-        logger.info('Getting presentations... (take a few minutes)')
         self.presentations = None
         self.folders = self.get_all_folders_infos()
         self.catalogs = list()
@@ -42,7 +41,6 @@ class DataExtractor():
                 list of items containing presentations' infos and
                     list of items containing videos and slides metadata
         '''
-        logger.info('Gathering and ordering all presentations / folders data ')
 
         presentations_folders = list()
 
@@ -63,6 +61,7 @@ class DataExtractor():
             if self.presentations is None:
                 self.presentations = self.mediasite.presentation.get_all_presentations()
 
+            logger.info('Ordering all presentations by folder')
             for i, folder in enumerate(self.folders):
                 if i > 1:
                     print(f'Requesting: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
@@ -119,13 +118,13 @@ class DataExtractor():
                     'owner_display_name': owner_infos.get('display_name', ''),
                     'owner_mail': owner_infos.get('mail', '').lower(),
                     'creator': presentation.get('Creator', ''),
-                    'other_presenters': self.get_presenters_infos(presentation.get('Id')),
-                    'availability': self.mediasite.presentation.get_availability(presentation.get('Id')),
+                    'other_presenters': self.get_presenters_infos(presentation.get('Id', '')),
+                    'availability': self.mediasite.presentation.get_availability(presentation.get('Id', '')),
                     'published_status': presentation.get('Status') == 'Viewable',
                     'has_slides_details': has_slides_details,
                     'description': presentation.get('Description', ''),
                     'tags': presentation.get('TagList', ''),
-                    'timed_events': [],
+                    'timed_events': self.get_timed_events(presentation.get('Id', '')),
                     'url': presentation.get('#Play').get('target', ''),
                 }
                 infos['videos'] = self.get_videos_infos(presentation.get('Id'))
@@ -334,6 +333,22 @@ class DataExtractor():
             slides_infos['details'] = slides.get('SlideDetails') if details else None
 
         return slides_infos
+
+    def get_timed_events(self, presentation_id):
+        chapters = []
+        if presentation_id:
+            timed_events = self.mediasite.presentation.get_content(presentation_id, resource_content='TimedEvents')
+
+            for event in timed_events:
+                if event.get('Payload'):
+                    chapter_xml = xml.parseString(event['Payload']).documentElement
+                    chapters.append({
+                        'chapter_index': chapter_xml.getElementsByTagName('Number')[0].firstChild.nodeValue,
+                        'chapter_title': chapter_xml.getElementsByTagName('Title')[0].firstChild.nodeValue,
+                        'chapter_position_s': event.get('Position', 1)
+                    })
+
+        return chapters
 
     def get_hostname(self):
         api_url = self.setup.config.get('mediasite_base_url')
