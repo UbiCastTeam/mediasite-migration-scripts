@@ -65,7 +65,7 @@ class TestMediaTransferE2E(TestCase):
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type']
+            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters']
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))

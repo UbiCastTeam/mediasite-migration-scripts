@@ -16,6 +16,13 @@
             "origin": "mediatransfer",
             "detect_slides": "no",
             "layout": "webinar",
+            "chapters": [
+                {
+                    "chapter_index": "1",
+                    "chapter_title": "Chapter Title",
+                    "chapter_position_ms": 10000
+                }
+            ],
             "slides": {
                 "stream_type": "Slide",
                 "urls": [

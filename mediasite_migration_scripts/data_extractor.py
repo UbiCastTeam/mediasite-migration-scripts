@@ -345,7 +345,7 @@ class DataExtractor():
                     chapters.append({
                         'chapter_index': chapter_xml.getElementsByTagName('Number')[0].firstChild.nodeValue,
                         'chapter_title': chapter_xml.getElementsByTagName('Title')[0].firstChild.nodeValue,
-                        'chapter_position_s': event.get('Position', 1)
+                        'chapter_position_ms': event.get('Position', 1)
                     })
 
         return chapters
