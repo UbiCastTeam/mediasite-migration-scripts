@@ -295,7 +295,7 @@ class MediaTransfer():
                                 'description': description,
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
-                                'external_data': json.dumps(presentation, indent=2, sort_keys=True),
+                                'external_data': json.dumps(presentation, indent=2, sort_keys=True) if self.config.get('external_data') else presentation.get('id'),
                                 'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',

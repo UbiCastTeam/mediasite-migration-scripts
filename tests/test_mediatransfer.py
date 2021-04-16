@@ -54,7 +54,7 @@ class TestMediaTransfer(TestCase):
             for index, presentation in enumerate(folder.get('presentations')):
                 for media in self.mediaserver_data:
                     data = media.get('data', {})
-                    if json.loads(data['external_data']) == presentation:
+                    if data['slug'] == 'mediasite-' + presentation['id']:
                         self.assertEqual(data['title'], presentation['title'])
                         self.assertEqual(data['creation'], presentation['creation_date'])
                         self.assertEqual(data['speaker_id'], presentation['owner_username'])
@@ -63,7 +63,6 @@ class TestMediaTransfer(TestCase):
                         self.assertEqual(data['speaker_email'], presentation['owner_mail'])
                         self.assertEqual(data['validated'], 'yes' if presentation['published_status'] else 'no')
                         self.assertEqual(data['keywords'], ','.join(presentation['tags']))
-                        self.assertEqual(data['slug'], 'mediasite-' + presentation['id'])
                         self.assertEqual(data['transcode'], 'yes' if data['video_type'] == 'audio_only' else 'no',
                                          msg='Audio only medias must be transcoded')
                         self.assertEqual(data['detect_slides'], 'yes' if data['video_type'] == 'computer_slides' or data['video_type'] == 'composite_slides' else 'no',
