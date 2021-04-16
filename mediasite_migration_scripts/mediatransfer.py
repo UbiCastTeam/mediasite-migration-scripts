@@ -231,7 +231,7 @@ class MediaTransfer():
     def _download_slide(self, media_oid, url):
         ok = False
         filename = url.split('/').pop()
-        path = f'/tmp/mediasite_files/{media_oid}/slides{filename}'
+        path = f'/tmp/mediasite_files/{media_oid}/slides/{filename}'
 
         if os.path.exists(path):
             ok = True
