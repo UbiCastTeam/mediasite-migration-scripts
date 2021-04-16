@@ -385,8 +385,7 @@ class MediaTransfer():
                 'type': self.chapters_annot_type
             }
             result = self.ms_client.api('annotations/post', method='post', data=data)
-            if not result.get('success'):
-                ok = False
+            ok = result.get('success', False)
 
         return ok
 
