@@ -68,5 +68,5 @@ class TestMediaTransfer(TestCase):
                                          msg='Audio only medias must be transcoded')
                         self.assertEqual(data['detect_slides'], 'yes' if data['video_type'] == 'computer_slides' or data['video_type'] == 'composite_slides' else 'no',
                                          msg='Slide detection must be on if the media is "computer_slides" or "composites_slides" type')
-                        self.assertEqual(data['layout'], 'webinar' if data['video_type'] == 'computer_slides' or data['video_type'] == 'audio_slides' else 'video')
+                        self.assertEqual(data['layout'], 'video' if data['video_type'] == 'computer_slides' or data['video_type'] == 'audio_slides' else 'webinar')
                         self.assertIsNotNone(data['file_url'])
