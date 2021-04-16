@@ -176,7 +176,7 @@ class MediaTransfer():
 
         if media_slides:
             if media_slides['stream_type'] == 'Slide' and media_slides['details']:
-                slides_dir = f'tmp/{media_oid}/slides'
+                slides_dir = f'/tmp/{media_oid}/slides'
                 os.makedirs(slides_dir, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
             else:
@@ -185,7 +185,7 @@ class MediaTransfer():
 
         if not slides_in_video and nb_slides > 0:
             logger.debug(f"{nb_slides_downloaded} slides downloaded and {nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
-            shutil.rmtree('tmp/')
+            shutil.rmtree('tmp')
 
         return nb_slides_uploaded, nb_slides
 
@@ -231,7 +231,7 @@ class MediaTransfer():
     def _download_slide(self, media_oid, url):
         ok = False
         filename = url.split('/').pop()
-        path = f'tmp/{media_oid}/slides{filename}'
+        path = f'/tmp/{media_oid}/slides{filename}'
 
         if os.path.exists(path):
             ok = True
@@ -255,7 +255,7 @@ class MediaTransfer():
         return annotation_type
 
     def _send_audio_thumb(self, media_oid):
-        file = open('mediasite_migration_scripts/files/utils/audio.jpg', 'rb')
+        file = open('/mediasite_migration_scripts/files/utils/audio.jpg', 'rb')
         result = self.ms_client.api('medias/edit', method='post', data={'oid': media_oid}, files={'thumb': file})
         file.close()
         return result.get('success')
@@ -321,17 +321,17 @@ class MediaTransfer():
                     video_type = 'composite_slides'
                 else:
                     video_type = 'audio_slides'
-                    for f in presentation.get('videos', {})[0].get('files'):
+                    for f in presentation.get('videos', [])[0].get('files'):
                         if f.get('encoding_infos').get('video_codec'):
                             video_type = 'video_slides'
                             break
-            elif presentation['slides'].get('stream_type').startswith('Video'):
+            elif presentation['slides'].get('stream_type', '').startswith('Video'):
                 slides_source = presentation['slides'].get('stream_type')
                 if len(presentation['slides'].get('urls')) > 0:
                     video_type = 'computer_slides'
                 else:
                     video_type = 'audio_only'
-                    for f in presentation.get('videos', {})[0].get('files'):
+                    for f in presentation.get('videos', [])[0].get('files'):
                         if f.get('encoding_infos', {}).get('video_codec'):
                             video_type = 'computer_only'
                             break
