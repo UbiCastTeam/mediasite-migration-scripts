@@ -94,8 +94,8 @@ def set_logger(options=None, verbose=False, run_path=None):
 
 
 def is_folder_to_add(path, config={}):
-    if config.get('mediasite_folders_whitelist'):
-        for fw in config['mediasite_folders_whitelist']:
+    if config.get('whitelist'):
+        for fw in config['whitelist']:
             if fw in path:
                 return True
         return False

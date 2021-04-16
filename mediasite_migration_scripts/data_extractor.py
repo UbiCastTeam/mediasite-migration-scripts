@@ -57,7 +57,7 @@ class DataExtractor():
                 for folder in presentations_folders:
                     self.catalogs.extend(folder.get('catalogs'))
             except Exception as e:
-                logger.warning('Failed to extract mediasite data from file. Collecting from API.')
+                logger.error('Failed to extract mediasite data from file.')
                 logger.debug(e)
         else:
             if self.presentations is None:
@@ -65,7 +65,7 @@ class DataExtractor():
 
             for i, folder in enumerate(self.folders):
                 if i > 1:
-                    print(f'Requesting: {[{i}]}/{[{len(self.folders)}]} -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
+                    print(f'Requesting: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
 
                 path = self._find_folder_path(folder['id'], self.folders)
                 if utils.is_folder_to_add(path, self.config):
