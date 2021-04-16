@@ -88,7 +88,7 @@ Requesting:  [10/595] -- 1.7 %
 
 ```
 
-Collecting data will take a while (~ 5 minutes per 1000 media), and global stats will be printed on your terminal. Collected data are stored in **data.json** in the root folder. If you keep the file, next time you run the script, collecting data will be skipped.
+Collecting data will take a while (~ 5 minutes per 1000 media), and global stats will be printed on your terminal. Collected data are stored in **mediasite_data.json** in the root folder. If you keep the file, next time you run the script, collecting data will be skipped.
 
 ```
 ...
