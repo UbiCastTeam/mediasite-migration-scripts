@@ -64,9 +64,16 @@ class MediaTransfer():
                 media['ref']['slug'] = result.get('slug')
 
                 self.migrate_slides(media)
+
+                if media['data'].get('video_type') == 'audio_only':
+                    thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
+                    if not thumb_ok:
+                        logger.warning('Failed to upload audio thumbail for audio presentation')
+
                 nb_medias_uploaded += 1
             else:
                 logger.error(f"Failed to upload media: {media['title']}")
+
             print(' ' * 50, end='\r')
             print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
 
@@ -169,7 +176,7 @@ class MediaTransfer():
 
         if media_slides:
             if media_slides['stream_type'] == 'Slide' and media_slides['details']:
-                slides_dir = f'mediasite_migration_scripts/files/{media_oid}/slides'
+                slides_dir = f'/tmp/mediasite_files/{media_oid}/slides'
                 os.makedirs(slides_dir, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
             else:
@@ -178,7 +185,7 @@ class MediaTransfer():
 
         if not slides_in_video and nb_slides > 0:
             logger.debug(f"{nb_slides_downloaded} slides downloaded and {nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
-            shutil.rmtree(slides_dir)
+            shutil.rmtree('/tmp/mediasite_files')
 
         return nb_slides_uploaded, nb_slides
 
@@ -224,7 +231,7 @@ class MediaTransfer():
     def _download_slide(self, media_oid, url):
         ok = False
         filename = url.split('/').pop()
-        path = f'mediasite_migration_scripts/files/{media_oid}/slides/{filename}'
+        path = f'/tmp/mediasite_files/{media_oid}/slides/{filename}'
 
         if os.path.exists(path):
             ok = True
@@ -236,16 +243,22 @@ class MediaTransfer():
                 ok = True
         return ok, path
 
-    def _get_annotation_type_id(self, oid, annot_type):
+    def _get_annotation_type_id(self, media_oid, annot_type):
         annotation_type = int()
 
-        result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': oid})
+        result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': media_oid})
         if result.get('success'):
             for a in result.get('types'):
                 if a.get('slug') == annot_type:
                     annotation_type = a.get('id')
 
         return annotation_type
+
+    def _send_audio_thumb(self, media_oid):
+        file = open('mediasite_migration_scripts/files/utils/audio.jpg', 'rb')
+        result = self.ms_client.api('medias/edit', method='post', data={'oid': media_oid}, files={'thumb': file})
+        file.close()
+        return result.get('success')
 
     def to_mediaserver_keys(self):
         logger.debug('Matching Mediasite data to MediaServer keys mapping.')
@@ -283,15 +296,16 @@ class MediaTransfer():
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
                                 'external_data': json.dumps(presentation, indent=2, sort_keys=True),
-                                'transcode': 'no',
+                                'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
-                                'layout': 'webinar' if v_type == 'computer_slides' else 'video',
+                                'layout': 'webinar' if v_type == 'computer_slides' or v_type == 'audio_slides' else 'video',
                                 'slides': presentation.get('slides'),
                                 'video_type': v_type,
                                 'file_url': v_url
                             }
-
+                            if v_type == 'audio_only':
+                                data['thumb'] = 'mediasite_migration_scripts/files/utils/audio.jpg'
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})
                         else:
                             logger.debug(f"No valid url for presentation {presentation.get('id')}")
@@ -307,13 +321,20 @@ class MediaTransfer():
                     video_type = 'composite_slides'
                 else:
                     video_type = 'audio_slides'
-                    for f in presentation.get('videos')[0].get('files'):
+                    for f in presentation.get('videos', [])[0].get('files'):
                         if f.get('encoding_infos').get('video_codec'):
                             video_type = 'video_slides'
                             break
-            elif presentation.get('slides').get('stream_type').startswith('Video'):
-                slides_source = presentation.get('slides').get('stream_type')
-                video_type = 'computer_slides'
+            elif presentation['slides'].get('stream_type', '').startswith('Video'):
+                slides_source = presentation['slides'].get('stream_type')
+                if len(presentation['slides'].get('urls')) > 0:
+                    video_type = 'computer_slides'
+                else:
+                    video_type = 'audio_only'
+                    for f in presentation.get('videos', [])[0].get('files'):
+                        if f.get('encoding_infos', {}).get('video_codec'):
+                            video_type = 'computer_only'
+                            break
         else:
             video_type = 'video_only'
 
