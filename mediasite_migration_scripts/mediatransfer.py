@@ -331,12 +331,15 @@ class MediaTransfer():
                     video_type = 'computer_slides'
                 else:
                     video_type = 'audio_only'
-                    for f in presentation.get('videos', [])[0].get('files'):
+                    for f in presentation.get('videos', [])[0].get('files', []):
                         if f.get('encoding_infos', {}).get('video_codec'):
                             video_type = 'computer_only'
                             break
         else:
-            video_type = 'video_only'
+            video_type = 'audio_only'
+            for f in presentation.get('videos', [])[0].get('files', []):
+                if f.get('encoding_infos', {}).get('video_codec'):
+                    video_type = 'video_only'
 
         return video_type, slides_source
 
