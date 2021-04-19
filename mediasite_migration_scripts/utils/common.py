@@ -66,7 +66,6 @@ def set_logger(options=None, verbose=False, run_path=None):
     formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
 
-    root_logger = logging.getLogger('root')
     level = logging.INFO
     if options:
         if options.verbose:
@@ -76,19 +75,21 @@ def set_logger(options=None, verbose=False, run_path=None):
     elif verbose:
         level = logging.DEBUG
 
+    root_logger = logging.getLogger('root')
     root_logger.setLevel(level)
 
-    console = logging.StreamHandler()
-    console.setFormatter(colored_formatter)
+    if not root_logger.handlers:
+        console = logging.StreamHandler()
+        console.setFormatter(colored_formatter)
 
-    logs_folder = 'logs/'
-    os.makedirs(logs_folder, exist_ok=True)
-    logfile_path = os.path.join(logs_folder, f'test_{current_datetime_string}.log')
-    logfile = logging.FileHandler(logfile_path)
-    logfile.setFormatter(formatter)
+        logs_folder = 'logs/'
+        os.makedirs(logs_folder, exist_ok=True)
+        logfile_path = os.path.join(logs_folder, f'test_{current_datetime_string}.log')
+        logfile = logging.FileHandler(logfile_path)
+        logfile.setFormatter(formatter)
 
-    root_logger.addHandler(logfile)
-    root_logger.addHandler(console)
+        root_logger.addHandler(logfile)
+        root_logger.addHandler(console)
 
     return root_logger
 
