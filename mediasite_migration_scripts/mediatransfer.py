@@ -299,7 +299,7 @@ class MediaTransfer():
                                 'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
-                                'layout': 'video' if v_type == 'computer_slides' or v_type == 'audio_slides' else 'webinar',
+                                'layout': 'webinar' if v_type == 'video_slides' else 'video',
                                 'slides': presentation.get('slides'),
                                 'video_type': v_type,
                                 'file_url': v_url
