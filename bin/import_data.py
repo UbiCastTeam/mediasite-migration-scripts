@@ -54,7 +54,12 @@ if __name__ == '__main__':
             logger.error('Failed to parse config file.')
             logger.error('--------- Aborted ---------')
             sys.exit(1)
+
         try:
+            filter_on = input('Do want apply the whitelist filter on metadata import? (for medias, whitelist filter will always be on) [y/N] ').lower()
+            if filter_on != 'y' and filter_on != 'yes':
+                config['whitelist'] = []
+
             extractor = DataExtractor(config=config)
             data = extractor.all_data
 
