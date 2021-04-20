@@ -87,14 +87,14 @@ class TestMediaTransferE2E(TestCase):
         self.mediatransfer.upload_medias()
 
         for u in self.mediatransfer.users:
-            self.is_user_created(u)
+            self.check_user(u)
 
         for m in medias_examples:
             data = m['data']
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters']
+            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'channel_unlisted']
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))
@@ -103,8 +103,8 @@ class TestMediaTransferE2E(TestCase):
                         channel_title = self.mediatransfer.get_channel(oid=data['channel']).get('title')
                         self.assertEqual(channel_title, m_uploaded.get('parent_title'))
                     elif key == 'speaker_name':
-                        self.assertEqual(data[key], m_uploaded.get('speaker'))
-                    elif key == 'validated':
+                        self.assertEqual(data['speaker_name'], m_uploaded.get('speaker'))
+                    elif key == 'validated' or key == 'unlisted':
                         self.assertTrue(m_uploaded.get(key)) if data[key] == 'yes' else self.assertFalse(m_uploaded.get(key))
                     elif key == 'layout' and data['layout'] == 'video':
                         self.assertEqual(m_uploaded.get('layout'), '')
@@ -116,6 +116,12 @@ class TestMediaTransferE2E(TestCase):
 
             self.check_slides(m)
             self.check_chapters(m)
+
+    def check_user(self, user):
+        user_created = self.ms_client.api('users/get', method='get', params={'id': user.get('id')})
+        self.assertTrue(user_created.get('success'))
+        for key in user.keys():
+            self.assertEqual(user[key], user_created['user'][key])
 
     def check_slides(self, media):
         result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
@@ -179,9 +185,10 @@ class TestMediaTransferE2E(TestCase):
             self.assertTrue(found)
             ms_tree = ms_tree.get('channels')[c_found_index]
 
-    def is_user_created(self, user):
-        user_created = self.ms_client.api('users/get', method='get', params={'id': user.get('id')})
-
-        self.assertTrue(user_created.get('success'))
-        for key in user.keys():
-            self.assertEqual(user[key], user_created['user'][key])
+        channel_unlisted = self.mediatransfer.create_channels('/Baby/Love', is_unlisted=True)
+        result = self.ms_client.api('channels/get', method='get', params={'oid': channel_unlisted}, ignore_404=True)
+        self.assertIsNotNone(result)
+        if result:
+            self.assertTrue(result.get('info', {}).get('unlisted'))
+        else:
+            logger.error(f'Channel {channel_unlisted} not found')

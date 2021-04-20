@@ -65,7 +65,7 @@ class MediaTransfer():
             if channel_path.startswith('/Mediasite Users'):
                 channel_oid = self.get_user_channel(media['data'].get('speaker_email', ''))
             else:
-                channel_oid = self.create_channels(channel_path)[-1]
+                channel_oid = self.create_channels(channel_path, is_unlisted=media['data']['channel_unlisted'])[-1]
 
             if not channel_oid:
                 del media['data']['channel']
@@ -193,29 +193,35 @@ class MediaTransfer():
 
         return ms_users
 
-    def create_channels(self, channel_path):
+    def create_channels(self, channel_path, is_unlisted=False):
         logger.debug(f'Creating channel path: {channel_path}')
 
         channels_oids = list()
         tree = channel_path.split('/')
         # path start with '/' , so tree[0] is a empty string
         tree.pop(0)
-
+        logger.debug(f'Tree {tree}')
         channel = self._create_channel(self.root_channel.get('oid'), tree[0])
         channels_oids.append(channel.get('oid'))
-        logger.debug(f"Channel {channel.get('title')} created with oid {channel.get('oid')}")
+
+        if not channel.get('already_created'):
+            logger.debug(f"Channel oid {channel.get('oid')}")
 
         i = 1
         while channel.get('success') and i < len(tree):
-            channel = self._create_channel(channels_oids[i - 1], tree[i])
-            logger.debug(f'Channel oid: {channel.get("oid")}')
+            last_channel = (i == len(tree) - 1)
+            logger.error(f'last_channel: {last_channel} / is_unlisted: {is_unlisted}')
+            channel = self._create_channel(parent_channel=channels_oids[i - 1], channel_title=tree[i], is_unlisted=last_channel and is_unlisted)
             channels_oids.append(channel.get('oid'))
+            logger.debug(f'Channel oid: {channel.get("oid")}')
             i += 1
+
         if i < len(tree):
             logger.error('Failed to construct channel path')
+
         return channels_oids
 
-    def _create_channel(self, parent_channel, channel_title):
+    def _create_channel(self, parent_channel, channel_title, is_unlisted=False):
         logger.debug(f'Creating channel {channel_title} with parent {parent_channel}')
         channel = dict()
 
@@ -225,11 +231,20 @@ class MediaTransfer():
                 logger.debug(f'Channel {channel_title} already created.')
                 channel = c
                 channel['success'] = True
+                channel['already_created'] = True
                 already_created = True
+                if is_unlisted:
+                    logger.debug(f'Channel edit: {channel_title}')
+                    result = self.ms_client.api('channels/edit', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
+                    if result and not result.get('success'):
+                        logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
+                    elif not result:
+                        logger.error(f'Attempt to edit a channel not created: {channel_title}')
                 break
 
         if not already_created:
-            result = self.ms_client.api('channels/add', method='post', data={'title': channel_title, 'parent': parent_channel})
+            data = {'title': channel_title, 'parent': parent_channel, 'unlisted': 'yes' if is_unlisted else 'no'}
+            result = self.ms_client.api('channels/add', method='post', data=data)
             if result and not result.get('success'):
                 logger.error(f'Failed to create channel: {channel} / Error: {result.get("error")}')
             elif not result:
@@ -237,6 +252,16 @@ class MediaTransfer():
             else:
                 channel = result
                 self.channels_created.append({'title': channel_title, 'oid': channel.get('oid')})
+
+                if is_unlisted:
+                    logger.debug(f"Channel {channel.get('oid')} unlisted : requesting channel edit")
+                    result = self.ms_client.api('channels/edit', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
+                    if result and not result.get('success'):
+                        logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
+                    elif not result:
+                        logger.error(f'Attempt to edit a channel not created: {channel_title}')
+                    else:
+                        logger.error(result)
 
         return channel
 
@@ -355,10 +380,14 @@ class MediaTransfer():
                         v_type, slides_source = self._find_video_type(presentation)
                         v_url = self._find_file_to_upload(presentation, slides_source)
 
+                        has_catalog = len(folder.get('catalogs', [])) > 0
+                        channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
                         if v_url:
                             data = {
                                 'title': presentation.get('title'),
-                                'channel': folder.get('name'),
+                                'channel': channel_name,
+                                'channel_unlisted': not has_catalog,
+                                'unlisted': 'yes' if not has_catalog else 'no',
                                 'creation': presentation.get('creation_date'),
                                 'speaker_id': presentation.get('owner_username'),
                                 'speaker_name': presentation.get('owner_display_name'),
@@ -377,6 +406,7 @@ class MediaTransfer():
                                 'video_type': v_type,
                                 'file_url': v_url
                             }
+
                             if v_type == 'audio_only':
                                 data['thumb'] = 'mediasite_migration_scripts/files/utils/audio.jpg'
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})

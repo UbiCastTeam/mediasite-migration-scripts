@@ -42,6 +42,13 @@ class TestMediaTransfer(TestCase):
                     data = media.get('data', {})
                     if data['slug'] == 'mediasite-' + presentation['id']:
                         self.assertEqual(data['title'], presentation['title'])
+
+                        has_catalog = len(folder.get('catalogs', [])) > 0
+                        channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
+                        self.assertEqual(data['channel'], channel_name)
+                        self.assertIn('channel_unlisted', data)
+                        self.assertNotEqual(data['channel_unlisted'], has_catalog)
+
                         self.assertEqual(data['creation'], presentation['creation_date'])
                         self.assertEqual(data['speaker_id'], presentation['owner_username'])
                         self.assertEqual(data['speaker_name'], presentation['owner_display_name'])

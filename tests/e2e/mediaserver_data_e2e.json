@@ -3,6 +3,8 @@
         "data": {
             "title": "e2e test",
             "channel": "E2E",
+            "channel_unlisted": true,
+            "unlisted": true,
             "creation": "2021-03-16T12:39:26.287Z",
             "speaker_id": "Ubicast_Admin",
             "speaker_name": "testname",
