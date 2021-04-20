@@ -200,7 +200,6 @@ class MediaTransfer():
         tree = channel_path.split('/')
         # path start with '/' , so tree[0] is a empty string
         tree.pop(0)
-        logger.debug(f'Tree {tree}')
         channel = self._create_channel(self.root_channel.get('oid'), tree[0])
         channels_oids.append(channel.get('oid'))
 
@@ -210,7 +209,6 @@ class MediaTransfer():
         i = 1
         while channel.get('success') and i < len(tree):
             last_channel = (i == len(tree) - 1)
-            logger.error(f'last_channel: {last_channel} / is_unlisted: {is_unlisted}')
             channel = self._create_channel(parent_channel=channels_oids[i - 1], channel_title=tree[i], is_unlisted=last_channel and is_unlisted)
             channels_oids.append(channel.get('oid'))
             logger.debug(f'Channel oid: {channel.get("oid")}')
@@ -235,7 +233,7 @@ class MediaTransfer():
                 already_created = True
                 if is_unlisted:
                     logger.debug(f'Channel edit: {channel_title}')
-                    result = self.ms_client.api('channels/edit', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
+                    result = self.ms_client.api('perms/edit/default/', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
                     if result and not result.get('success'):
                         logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
                     elif not result:
@@ -245,6 +243,7 @@ class MediaTransfer():
         if not already_created:
             data = {'title': channel_title, 'parent': parent_channel, 'unlisted': 'yes' if is_unlisted else 'no'}
             result = self.ms_client.api('channels/add', method='post', data=data)
+
             if result and not result.get('success'):
                 logger.error(f'Failed to create channel: {channel} / Error: {result.get("error")}')
             elif not result:
@@ -255,13 +254,12 @@ class MediaTransfer():
 
                 if is_unlisted:
                     logger.debug(f"Channel {channel.get('oid')} unlisted : requesting channel edit")
-                    result = self.ms_client.api('channels/edit', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
+
+                    result = self.ms_client.api('perms/edit/default/', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
                     if result and not result.get('success'):
                         logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
                     elif not result:
                         logger.error(f'Attempt to edit a channel not created: {channel_title}')
-                    else:
-                        logger.error(result)
 
         return channel
 
