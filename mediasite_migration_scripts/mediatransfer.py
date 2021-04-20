@@ -68,7 +68,6 @@ class MediaTransfer():
                 channel_oid = self.create_channels(channel_path, is_unlisted=media['data']['channel_unlisted'])[-1]
 
             if not channel_oid:
-                del media['data']['channel']
                 media['data']['channel'] = self.root_channel.get('oid')
             else:
                 media['data']['channel'] = channel_oid
@@ -383,7 +382,7 @@ class MediaTransfer():
                         if v_url:
                             data = {
                                 'title': presentation.get('title'),
-                                'channel': channel_name,
+                                'channel_title': channel_name,
                                 'channel_unlisted': not has_catalog,
                                 'unlisted': 'yes' if not has_catalog else 'no',
                                 'creation': presentation.get('creation_date'),
@@ -407,7 +406,15 @@ class MediaTransfer():
 
                             if v_type == 'audio_only':
                                 data['thumb'] = 'mediasite_migration_scripts/files/utils/audio.jpg'
-                            mediaserver_data.append({'data': data, 'ref': {'channel_path': folder.get('path')}})
+
+                            if has_catalog:
+                                channel_path_splitted = folder.get('path').split('/')
+                                channel_path_splitted[-1] = channel_name
+                                path = '/'.join(channel_path_splitted)
+                            else:
+                                path = folder.get('path')
+
+                            mediaserver_data.append({'data': data, 'ref': {'channel_path': path}})
                         else:
                             logger.debug(f"No valid url for presentation {presentation.get('id')}")
                             continue

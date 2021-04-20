@@ -45,9 +45,17 @@ class TestMediaTransfer(TestCase):
 
                         has_catalog = len(folder.get('catalogs', [])) > 0
                         channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
-                        self.assertEqual(data['channel'], channel_name)
+                        self.assertEqual(data['channel_title'], channel_name)
                         self.assertIn('channel_unlisted', data)
                         self.assertNotEqual(data['channel_unlisted'], has_catalog)
+
+                        if has_catalog:
+                            channel_path_splitted = folder['path'].split('/')
+                            channel_path_splitted[-1] = channel_name
+                            path = '/'.join(channel_path_splitted)
+                        else:
+                            path = folder['path']
+                        self.assertEqual(media.get('ref', {}).get('channel_path'), path)
 
                         self.assertEqual(data['creation'], presentation['creation_date'])
                         self.assertEqual(data['speaker_id'], presentation['owner_username'])
