@@ -5,6 +5,7 @@ import logging
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
 import tests.common as common
 
+common.set_logger(verbose=True)
 logger = logging.getLogger(__name__)
 
 
@@ -19,8 +20,6 @@ class TestMediaTransfer(TestCase):
         self.mediasite_data = common.set_test_data()
         self.mediatransfer = MediaTransfer(mediasite_data=self.mediasite_data, unit_test=True)
         self.mediaserver_data = self.mediatransfer.mediaserver_data
-
-        common.set_logger(verbose=True)
 
     def tearDown(self):
         try:
