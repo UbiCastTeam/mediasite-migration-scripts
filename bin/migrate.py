@@ -56,6 +56,8 @@ if __name__ == '__main__':
     try:
         with open(mediasite_file) as f:
             mediasite_data = json.load(f)
+        with open('mediasite_users.json') as f:
+            mediasite_users = json.load(f)
     except Exception as e:
         logger.debug(e)
         logger.error('Importing data failed')
@@ -73,7 +75,7 @@ if __name__ == '__main__':
         logger.error('--------- Aborted ---------')
         sys.exit(1)
 
-    mediatransfer = MediaTransfer(config=config, mediasite_data=mediasite_data)
+    mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users)
 
     logger.info('Uploading videos...')
     max_videos = int(options.max_videos) if options.max_videos else None

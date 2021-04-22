@@ -100,6 +100,7 @@ class DataExtractor():
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
                 logger.debug('-' * 50)
+                logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
                 has_slides_details = False
                 for stream_type in presentation.get('Streams'):
                     if stream_type.get('StreamType') == 'Slide':
@@ -119,7 +120,7 @@ class DataExtractor():
                     'presenter_display_name': presenter_display_name,
                     'owner_username': owner_infos.get('username', ''),
                     'owner_display_name': owner_infos.get('display_name', ''),
-                    'owner_mail': owner_infos.get('mail', '').lower(),
+                    'owner_mail': owner_infos.get('mail', ''),
                     'creator': presentation.get('Creator', ''),
                     'other_presenters': self.get_presenters_infos(presentation.get('Id', '')),
                     'availability': self.mediasite.presentation.get_availability(presentation.get('Id', '')),
@@ -169,7 +170,7 @@ class DataExtractor():
         user_infos = dict()
 
         for u in self.users:
-            if u.get('username') == username:
+            if u.get('username') == username.lower():
                 logger.debug(f'User {username} already fetched.')
                 user_infos = u
                 break
@@ -178,9 +179,9 @@ class DataExtractor():
             user = self.mediasite.user.get_profile_by_username(username)
             if user:
                 user_infos = {
-                    'username': username,
+                    'username': username.lower(),
                     'display_name': user.get('DisplayName'),
-                    'mail': user.get('Email')
+                    'mail': user.get('Email').lower()
                 }
                 self.users.append(user_infos)
 
@@ -233,7 +234,7 @@ class DataExtractor():
                     file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
                 if not file_infos.get('encoding_infos'):
-                    logger.debug(f"Failed to get video encoding infos from API for presentation: {file['ParentResourceId']}")
+                    logger.debug(f"Video encoding infos not found in API for presentation: {file['ParentResourceId']}")
                     if file_infos.get('url'):
                         file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
                     elif 'LocalUrl' in content_server:
@@ -307,7 +308,7 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logger.debug(f'File is not a video: {video_url}')
         except Exception as e:
-            logger.debug(f'Video encoding infos could not be parsed for: {video_url}')
+            logger.warning(f'Video encoding infos could not be parsed for: {video_url}')
             logger.debug(e)
 
         return encoding_infos

@@ -4,6 +4,7 @@ import logging
 import sys
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
+from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
 import tests.common as common
 
 common.set_logger(verbose=True)
@@ -20,8 +21,12 @@ except Exception as e:
     sys.exit(1)
 
 ms_test_utils = common.MediaServerTestUtils(config)
+
 test_channel = ms_test_utils.create_test_channel()
 ms_client = ms_test_utils.ms_client
+
+mediasite_data = common.set_test_data()
+mediasite_users = common.set_test_users()
 
 
 def setUpModule():
@@ -37,8 +42,7 @@ def tearDownModule():
 class TestMediaTransferE2E(TestCase):
     def setUp(self):
         super().setUp()
-        self.mediasite_data = common.set_test_data()
-        self.mediatransfer = MediaTransfer(self.mediasite_data, config=config, e2e_test=True, root_channel_oid=test_channel.get('oid'))
+        self.mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users, e2e_test=True, root_channel_oid=test_channel.get('oid'))
         self.ms_client = ms_client
         try:
             with open('tests/e2e/mediaserver_data_e2e.json') as f:
@@ -51,15 +55,35 @@ class TestMediaTransferE2E(TestCase):
 
     def tearDown(self):
         super().tearDown()
+
         try:
             with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
                 json.dump(self.mediaserver_data, f)
+            with open(common.MEDIASERVER_USERS_FILE, 'w') as f:
+                json.dump(self.mediatransfer.users, f)
         except Exception as e:
-            logger.error(f'Failed to save mediaserver data file: {e}')
+            logger.error(f'Failed to save mediaserver tests files: {e}')
+
+        logger.critical(f'users before removal: {self.mediatransfer.users}')
+        for u in self.mediatransfer.users:
+            try:
+                result = self.ms_client.api('users/delete', method='post', data={'email': u.get('email', '')})
+            except MSReqErr as e:
+                result = {'success': False, 'error': e}
+
+            if result.get('success'):
+                logger.debug(f"Deleted user {u.get('username')}")
+                logger.debug(f'request result: {result}')
+            else:
+                logger.error(f"Failed to delete user {u} / Error: {result.get('error')}")
 
     def test_upload_medias(self):
         medias_examples = self.mediaserver_data
         self.mediatransfer.upload_medias()
+
+        for u in self.mediatransfer.users:
+            self.is_user_created(u)
+
         for m in medias_examples:
             data = m['data']
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
@@ -143,3 +167,10 @@ class TestMediaTransferE2E(TestCase):
                     break
             self.assertTrue(found)
             ms_tree = ms_tree.get('channels')[c_found_index]
+
+    def is_user_created(self, user):
+        user_created = self.ms_client.api('users/get', method='get', params={'id': user.get('id')})
+
+        self.assertTrue(user_created.get('success'))
+        for key in user.keys():
+            self.assertEqual(user[key], user_created['user'][key])

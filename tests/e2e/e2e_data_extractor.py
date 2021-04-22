@@ -30,11 +30,20 @@ class TestDataExtractorE2E(TestCase):
     def setUp(self):
         super().setUp()
         try:
-            self.extractor = DataExtractor(config, max_folders=5, e2e_tests=True)
+            self.extractor = DataExtractor(config, max_folders=10, e2e_tests=True)
         except Exception as e:
             logger.debug(e)
             logger.error('Metadata extraction gone wrong')
             raise AssertionError
+
+    def tearDown(self):
+        super().tearDown()
+        try:
+            with open('tests/mediasite_users_test.json', 'w') as f:
+                json.dump(self.extractor.users, f)
+        except Exception as e:
+            logger.debug(e)
+            logger.error('Failed to save mediasite users infos')
 
     def test_extract_mediasite_data(self):
         self.assertIsInstance(self.extractor.all_data, list)
@@ -77,6 +86,9 @@ class TestDataExtractorE2E(TestCase):
             if len(folder.get('presentations')) > 0:
                 self.assertListEqual(presentation_keys, list(folder['presentations'][0].keys()))
                 break
+
+        self.assertIsInstance(self.extractor.users, list)
+        self.assertGreater(len(self.extractor.users), 0)
 
         usernames = [user.get('username') for user in self.extractor.users]
         for i, u in enumerate(usernames):

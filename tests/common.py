@@ -8,13 +8,26 @@ from mediasite_migration_scripts.ms_client.client import MediaServerClient
 
 
 MEDIASITE_DATA_FILE = 'tests/mediasite_data_test.json'
+MEDIASITE_USERS_FILE = 'tests/mediasite_users_test.json'
 MEDIASERVER_DATA_FILE = 'tests/mediaserver_data_test.json'
+MEDIASERVER_USERS_FILE = 'tests/mediaserver_users_test.json'
 
 logger = logging.getLogger(__name__)
 
 
 def set_logger(*args, **kwargs):
     return utils.set_logger(*args, **kwargs)
+
+
+def set_test_users():
+    users = list()
+
+    file = MEDIASITE_USERS_FILE
+    if os.path.exists(file):
+        with open(file) as f:
+            users = json.load(f)
+
+    return users
 
 
 def set_test_data():

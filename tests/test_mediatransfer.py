@@ -28,19 +28,6 @@ class TestMediaTransfer(TestCase):
         except Exception as e:
             logger.error(f'Failed to save mediaserver data file: {e}')
 
-    def test_set_presentations(self):
-        presentations = self.mediatransfer._set_presentations()
-        for folder in self.mediasite_data:
-            for p in folder['presentations']:
-                self.assertIn(p, presentations)
-
-    def test_set_catalogs(self):
-        len_catalogs = 0
-        for folder in self.mediasite_data:
-            len_catalogs += len(folder.get('catalogs', []))
-        catalogs = self.mediatransfer._set_catalogs()
-        self.assertEqual(len_catalogs, len(catalogs))
-
     def test_to_mediaserver_keys(self):
         mediaserver_data = self.mediatransfer.to_mediaserver_keys()
         try:

@@ -14,21 +14,21 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, mediasite_data=dict(), config=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
-        self.mediasite_data = mediasite_data
-        self.catalogs = self._set_catalogs()
-        self.presentations = self._set_presentations()
-        self.formats_allowed = self._set_formats_allowed()
-        self.auth = (config.get('mediasite_api_user'), config.get('mediasite_api_password'))
-        self.dl_session = None
+    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
+        self.mediasite_data = mediasite_data
+
+        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
+        self.dl_session = None
 
         self.e2e_test = e2e_test
         self.unit_test = unit_test
-        if not self.unit_test:
-            self.ms_config = {'API_KEY': config.get('mediaserver_api_key', ''),
+        if self.unit_test:
+            self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
+        else:
+            self.ms_config = {'API_KEY': self.config.get('mediaserver_api_key', ''),
                               'CLIENT_ID': 'mediasite-migration-client',
-                              'SERVER_URL': config.get('mediaserver_url', ''),
+                              'SERVER_URL': self.config.get('mediaserver_url', ''),
                               'VERIFY_SSL': False,
                               'LOG_LEVEL': 'WARNING'}
             self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
@@ -37,15 +37,22 @@ class MediaTransfer():
                 self.root_channel = self.get_channel(root_channel_oid)
             else:
                 self.root_channel = self.get_root_channel()
+
+        self.formats_allowed = self.config.get('videos_formats_allowed', {})
         self.channels_created = list()
         self.slide_annot_type = None
         self.chapters_annot_type = None
 
         self.mediaserver_data = self.to_mediaserver_keys()
+        self.users = self.to_mediaserver_users(mediasite_users)
 
     def upload_medias(self, max_videos=None):
         logger.debug(f'{len(self.mediaserver_data)} medias found for uploading.')
         logger.debug('Uploading videos')
+
+        for index, user in enumerate(self.users):
+            user_id = self.create_user(index, user)
+            user['id'] = user_id
 
         nb_medias_uploaded = 0
         for index, media in enumerate(self.mediaserver_data):
@@ -63,6 +70,7 @@ class MediaTransfer():
             if result.get('success'):
                 media['ref']['media_oid'] = result.get('oid')
                 media['ref']['slug'] = result.get('slug')
+                del media['data']['api_key']
 
                 self.migrate_slides(media)
 
@@ -103,7 +111,7 @@ class MediaTransfer():
 
         root_channel = self.get_channel(oid)
         if not root_channel:
-            logger.critical('Root channel does not exist. Please provide an existing channel oid in config.json')
+            logger.error('Root channel does not exist. Please provide an existing channel oid in config.json')
             sys.exit(1)
         return root_channel
 
@@ -124,6 +132,34 @@ class MediaTransfer():
             logger.error(f'Channel {oid} does not exist.')
 
         return channel
+
+    def create_user(self, index=int(), user=dict()):
+        logger.debug(f"Creating user {user.get('username')}")
+
+        user_id = str()
+
+        result = self.ms_client.api('users/add', method='post', data=user)
+        if result.get('success'):
+            logger.debug(f"Created user {user.get('username')} with id {result.get('id')}")
+
+            user_id = result.get('id')
+            del user['api_key']
+        else:
+            logger.error(f"Failed te create user {user.get('username')} / Error: {result.get('error')}")
+
+        return user_id
+
+    def to_mediaserver_users(self, mediasite_users=list()):
+        ms_users = list()
+
+        for user in mediasite_users:
+            ms_users.append({
+                'email': user.get('mail', ''),
+                'username': user.get('username', ''),
+                'speaker_id': user.get('display_name', '')
+            })
+
+        return ms_users
 
     def create_channels(self, channel_path):
         logger.debug(f'Creating channel path: {channel_path}')
@@ -240,7 +276,7 @@ class MediaTransfer():
         if os.path.exists(path):
             ok = True
         else:
-            r = self.dl_session.get(url, auth=self.auth)
+            r = self.dl_session.get(url, auth=self.mediasite_auth)
             if r.ok:
                 with open(path, 'wb') as f:
                     f.write(r.content)
@@ -388,28 +424,3 @@ class MediaTransfer():
             ok = result.get('success', False)
 
         return ok
-
-    def _set_formats_allowed(self):
-        formats = dict()
-        try:
-            with open('config.json') as f:
-                config = json.load(f)
-            formats = config.get('videos_formats_allowed')
-        except Exception as e:
-            logger.debug(e)
-            logger.info('No config file. Settings set to default (all folder, all medias)')
-
-        return formats
-
-    def _set_catalogs(self):
-        catalogs = list()
-        for folder in self.mediasite_data:
-            catalogs.extend(folder.get('catalogs'))
-        return catalogs
-
-    def _set_presentations(self):
-        presentations = []
-        for folder in self.mediasite_data:
-            for p in folder['presentations']:
-                presentations.append(p)
-        return presentations
