@@ -20,7 +20,17 @@
                 {
                     "chapter_index": "1",
                     "chapter_title": "Chapter Title",
-                    "chapter_position_ms": 10000
+                    "chapter_position_ms": 1000
+                },
+                {
+                    "chapter_index": "2",
+                    "chapter_title": "Chapter Title 2",
+                    "chapter_position_ms": 2000
+                },
+                {
+                    "chapter_index": "3",
+                    "chapter_title": "Chapter Title 3",
+                    "chapter_position_ms": 3000
                 }
             ],
             "slides": {
@@ -39,14 +49,14 @@
                         "OcrText": "test"
                     },
                     {
-                        "TimeMilliseconds": 1,
+                        "TimeMilliseconds": 1000,
                         "Number": 2,
                         "Title": null,
                         "Content": null,
                         "OcrText": null
                     },
                     {
-                        "TimeMilliseconds": 2,
+                        "TimeMilliseconds": 2000,
                         "Number": 3,
                         "Title":"title",
                         "Content": null,

@@ -42,3 +42,10 @@ tests_e2e: build
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		python3 -m unittest tests/e2e/*.py $(ARGS)
+
+
+tests_e2e_mdtr: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 -m unittest tests/e2e/e2e_mediatransfer.py $(ARGS)
