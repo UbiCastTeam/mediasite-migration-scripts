@@ -69,3 +69,4 @@ class TestMediaTransfer(TestCase):
                                          msg='Slide detection must be on if the media is "computer_slides" or "composites_slides" type')
                         self.assertEqual(data['layout'], 'webinar' if data['video_type'] == 'video_slides' else 'video',)
                         self.assertIsNotNone(data['file_url'])
+                        self.assertEqual(data['chapters'], presentation['timed_events'])

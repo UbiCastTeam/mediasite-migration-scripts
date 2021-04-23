@@ -65,7 +65,7 @@ class TestMediaTransferE2E(TestCase):
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type']
+            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters']
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))
@@ -82,8 +82,35 @@ class TestMediaTransferE2E(TestCase):
                     else:
                         logger.error(f'[{key}] not equal')
                         raise
-            nb_slides, nb_slides_uploaded = self.nb_slides_uploaded(m)
-            self.assertEqual(nb_slides, nb_slides_uploaded)
+
+            self.check_slides(m)
+            self.check_chapters(m)
+
+    def check_slides(self, media):
+        result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
+        if result:
+            slides_up = result.get('slides')
+            slides = media['data']['slides']['urls']
+            self.assertEqual(len(slides), len(slides_up), msg=f'slides: {len(slides)} / slides_up: {len(slides_up)}')
+
+            slides_details = media['data']['slides']['details']
+            for i, slide in enumerate(slides_details):
+                self.assertEqual(slide.get('TimeMilliseconds'), slides_up[i].get('time'))
+                self.assertIsNotNone(slides_up[i].get('attachment', {}).get('url'))
+        else:
+            logger.error('No slides found')
+            raise AssertionError
+
+    def check_chapters(self, media):
+        result = self.ms_client.api('annotations/chapters/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
+        if result and result.get('success'):
+            chapters_up = result.get('chapters')
+            chapters = media['data']['chapters']
+            self.assertEqual(len(chapters), len(chapters_up), msg=f'chapters: {len(chapters)} / chapters_up: {len(chapters_up)}')
+
+            for i, chapter in enumerate(chapters):
+                self.assertEqual(chapter.get('chapter_position_ms'), chapters_up[i].get('time'))
+                self.assertEqual(chapter.get('chapter_title'), chapters_up[i].get('title'))
 
     def test_create_channel(self):
         paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
@@ -116,15 +143,3 @@ class TestMediaTransferE2E(TestCase):
                     break
             self.assertTrue(found)
             ms_tree = ms_tree.get('channels')[c_found_index]
-
-    def nb_slides_uploaded(self, media):
-        nb_slides = len(media['data']['slides']['urls'])
-        nb_slides_uploaded = int()
-        result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
-        if result:
-            nb_slides_uploaded = len(result.get('slides'))
-        else:
-            logger.error('No slides found')
-            raise AssertionError
-
-        return nb_slides, nb_slides_uploaded

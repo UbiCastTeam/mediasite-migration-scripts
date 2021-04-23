@@ -74,4 +74,4 @@ if __name__ == '__main__':
             logger.error('Import data failed !')
             logger.debug(e)
 
-        sys.exit(1)
+            sys.exit(1)

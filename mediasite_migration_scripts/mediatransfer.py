@@ -39,6 +39,7 @@ class MediaTransfer():
                 self.root_channel = self.get_root_channel()
         self.channels_created = list()
         self.slide_annot_type = None
+        self.chapters_annot_type = None
 
         self.mediaserver_data = self.to_mediaserver_keys()
 
@@ -69,6 +70,9 @@ class MediaTransfer():
                     thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
                     if not thumb_ok:
                         logger.warning('Failed to upload audio thumbail for audio presentation')
+
+                if len(media['data'].get('chapters')) > 0:
+                    self.add_chapters(media['ref']['media_oid'], chapters=media['data']['chapters'])
 
                 nb_medias_uploaded += 1
             else:
@@ -301,6 +305,7 @@ class MediaTransfer():
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
                                 'layout': 'webinar' if v_type == 'video_slides' else 'video',
                                 'slides': presentation.get('slides'),
+                                'chapters': presentation.get('timed_events'),
                                 'video_type': v_type,
                                 'file_url': v_url
                             }
@@ -365,6 +370,24 @@ class MediaTransfer():
                 break
 
         return video_url
+
+    def add_chapters(self, media_oid, chapters):
+        ok = True
+
+        if self.chapters_annot_type is None:
+            self.chapters_annot_type = self._get_annotation_type_id(media_oid, annot_type='chapter')
+
+        for c in chapters:
+            data = {
+                'oid': media_oid,
+                'title': c.get('chapter_title'),
+                'time': c.get('chapter_position_ms'),
+                'type': self.chapters_annot_type
+            }
+            result = self.ms_client.api('annotations/post', method='post', data=data)
+            ok = result.get('success', False)
+
+        return ok
 
     def _set_formats_allowed(self):
         formats = dict()

@@ -30,7 +30,7 @@ class TestDataExtractorE2E(TestCase):
     def setUp(self):
         super().setUp()
         try:
-            self.extractor = DataExtractor(config, max_folders=10)
+            self.extractor = DataExtractor(config, max_folders=5)
         except Exception as e:
             logger.debug(e)
             logger.error('Metadata extraction gone wrong')
