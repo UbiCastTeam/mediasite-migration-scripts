@@ -88,6 +88,7 @@
             "origin": "mediatransfer",
             "detect_slides": "no",
             "layout": "video",
+            "chapters": [],
             "slides": {
                 "stream_type": "Slide",
                 "urls": [

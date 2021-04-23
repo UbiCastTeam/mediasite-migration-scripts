@@ -113,7 +113,6 @@ class TestMediaTransferE2E(TestCase):
                     else:
                         logger.error(f'[{key}] not equal')
                         raise
-<<<<<<< HEAD:tests/e2e/e2e_mediatransfer.py
 
             self.check_slides(m)
             self.check_chapters(m)
@@ -123,12 +122,14 @@ class TestMediaTransferE2E(TestCase):
         if result:
             slides_up = result.get('slides')
             slides = media['data']['slides']['urls']
-            self.assertEqual(len(slides), len(slides_up), msg=f'slides: {len(slides)} / slides_up: {len(slides_up)}')
-
             slides_details = media['data']['slides']['details']
-            for i, slide in enumerate(slides_details):
-                self.assertEqual(slide.get('TimeMilliseconds'), slides_up[i].get('time'))
-                self.assertIsNotNone(slides_up[i].get('attachment', {}).get('url'))
+
+            if slides_details:
+                self.assertEqual(len(slides), len(slides_up), msg=f'slides: {len(slides)} / slides_up: {len(slides_up)}')
+
+                for i, slide in enumerate(slides_details):
+                    self.assertEqual(slide.get('TimeMilliseconds'), slides_up[i].get('time'))
+                    self.assertIsNotNone(slides_up[i].get('attachment', {}).get('url'))
         else:
             logger.error('No slides found')
             raise AssertionError
@@ -143,12 +144,6 @@ class TestMediaTransferE2E(TestCase):
             for i, chapter in enumerate(chapters):
                 self.assertEqual(chapter.get('chapter_position_ms'), chapters_up[i].get('time'))
                 self.assertEqual(chapter.get('chapter_title'), chapters_up[i].get('title'))
-=======
->>>>>>> migrate medias to personal channels refs #33871:tests/e2e/e2e_mediastransfer.py
-
-            if data['video_type'] != 'computer_slides' and data['video_type'] != 'composite_slides':
-                nb_slides, nb_slides_uploaded = self.nb_slides_uploaded(m)
-                self.assertEqual(nb_slides, nb_slides_uploaded, msg=f"media: {m.get('ref', {}).get('media_oid')} / video type : {data['video_type']}")
 
     def test_create_channels(self):
         print('-> test_create_channels', 20 * '-')
@@ -184,21 +179,6 @@ class TestMediaTransferE2E(TestCase):
             self.assertTrue(found)
             ms_tree = ms_tree.get('channels')[c_found_index]
 
-<<<<<<< HEAD:tests/e2e/e2e_mediatransfer.py
-=======
-    def nb_slides_uploaded(self, media):
-        nb_slides = len(media['data']['slides']['urls'])
-        nb_slides_uploaded = 0
-        result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
-        if result:
-            nb_slides_uploaded = len(result.get('slides'))
-        else:
-            logger.error('No slides found')
-            raise AssertionError
-
-        return nb_slides, nb_slides_uploaded
-
->>>>>>> migrate medias to personal channels refs #33871:tests/e2e/e2e_mediastransfer.py
     def is_user_created(self, user):
         user_created = self.ms_client.api('users/get', method='get', params={'id': user.get('id')})
 
