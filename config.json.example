@@ -10,5 +10,6 @@
     "videos_formats_allowed": {
         "video/mp4": true,
         "video/x-ms-wmv": false
-    }
+    },
+    "external_data" : false
 }

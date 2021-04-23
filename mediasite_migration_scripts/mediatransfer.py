@@ -295,11 +295,11 @@ class MediaTransfer():
                                 'description': description,
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
-                                'external_data': json.dumps(presentation, indent=2, sort_keys=True),
+                                'external_data': json.dumps(presentation, indent=2, sort_keys=True) if self.config.get('external_data') else presentation.get('id'),
                                 'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
-                                'layout': 'video' if v_type == 'computer_slides' or v_type == 'audio_slides' else 'webinar',
+                                'layout': 'webinar' if v_type == 'video_slides' else 'video',
                                 'slides': presentation.get('slides'),
                                 'video_type': v_type,
                                 'file_url': v_url
@@ -331,12 +331,15 @@ class MediaTransfer():
                     video_type = 'computer_slides'
                 else:
                     video_type = 'audio_only'
-                    for f in presentation.get('videos', [])[0].get('files'):
+                    for f in presentation.get('videos', [])[0].get('files', []):
                         if f.get('encoding_infos', {}).get('video_codec'):
                             video_type = 'computer_only'
                             break
         else:
-            video_type = 'video_only'
+            video_type = 'audio_only'
+            for f in presentation.get('videos', [])[0].get('files', []):
+                if f.get('encoding_infos', {}).get('video_codec'):
+                    video_type = 'video_only'
 
         return video_type, slides_source
 

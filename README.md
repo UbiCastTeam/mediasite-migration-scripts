@@ -41,7 +41,8 @@ You have to fill some credentials to config.json. Also, some parameters can be p
     "videos_formats_allowed": {   # video formats allowed
         "video/mp4": true,
         "video/x-ms-wmv": false
-    }
+    },
+    "external_data" : false # add Mediasite data in external data field on Mediaserver
 }
 
 ```
@@ -58,9 +59,9 @@ For migrating medias, considering the parameters you provided in config.json
 Connecting...
 Getting presentations... (take a few minutes)
 Uploading videos...
-Uploading: [14 / 14] -- 100%                      
+Uploading: [14 / 14] -- 100%
 --------- Upload successful ---------
- 
+
 Uploaded 14 medias
 
 ```
@@ -70,9 +71,9 @@ For collecting statistics about the videos included in the  Mediasite platform (
 
 `$ make analyze_data`
 
-If it's the first time you run the script, it will require to collect data from Mediasite API.  
+If it's the first time you run the script, it will require to collect data from Mediasite API.
 ```
-$ make analyze_data 
+$ make analyze_data
 docker build -t mediasite -f Dockerfile .
 Sending build context to Docker daemon  152.8MB
 Step 1/7 : FROM debian:10
@@ -87,7 +88,7 @@ Requesting:  [10/595] -- 1.7 %
 
 ```
 
-Collecting data will take a while (~ 5 minutes per 1000 media), and global stats will be printed on your terminal. Collected data are stored in **data.json** in the root folder. If you keep the file, next time you run the script, collecting data will be skipped.
+Collecting data will take a while (~ 5 minutes per 1000 media), and global stats will be printed on your terminal. Collected data are stored in **mediasite_data.json** in the root folder. If you keep the file, next time you run the script, collecting data will be skipped.
 
 ```
 ...
@@ -101,7 +102,7 @@ Counting downloadable mp4s (among 1944 urls)
 ```
 
 ### Import data only
-If you do not want to analyze your, but only get the raw data. 
+If you want to only get the raw data, without analysis.
 
 `$ make import_data`
 
@@ -127,4 +128,4 @@ optional arguments:
                         add custom mediasite data file.
 ```
 
- 
+
