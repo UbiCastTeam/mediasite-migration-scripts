@@ -96,6 +96,7 @@ class TestMediaTransferE2E(TestCase):
             slides_details = media['data']['slides']['details']
             for i, slide in enumerate(slides_details):
                 self.assertEqual(slide.get('TimeMilliseconds'), slides_up[i].get('time'))
+                self.assertIsNotNone(slides_up[i].get('attachment', {}).get('url'))
         else:
             logger.error('No slides found')
             raise AssertionError
@@ -109,6 +110,7 @@ class TestMediaTransferE2E(TestCase):
 
             for i, chapter in enumerate(chapters):
                 self.assertEqual(chapter.get('chapter_position_ms'), chapters_up[i].get('time'))
+                self.assertEqual(chapter.get('chapter_title'), chapters_up[i].get('title'))
 
     def test_create_channel(self):
         paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
