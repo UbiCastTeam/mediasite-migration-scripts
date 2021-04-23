@@ -23,6 +23,7 @@ except Exception as e:
 test_utils = common.MediaServerTestUtils(config)
 test_channel = test_utils.create_test_channel()
 test_utils.ms_client.session.close()
+del test_utils.ms_client
 
 mediasite_data = common.set_test_data()
 mediasite_users = common.set_test_users()
