@@ -8,9 +8,11 @@ from mediasite_migration_scripts.ms_client.client import MediaServerClient
 
 
 MEDIASITE_DATA_FILE = 'tests/mediasite_data_test.json'
-MEDIASITE_USERS_FILE = 'tests/mediasite_users_test.json'
 MEDIASERVER_DATA_FILE = 'tests/mediaserver_data_test.json'
-MEDIASERVER_USERS_FILE = 'tests/mediaserver_users_test.json'
+
+MEDIASERVER_DATA_E2E_FILE = 'tests/e2e/mediaserver_data_e2e.json'
+MEDIASITE_USERS_FILE = 'tests/e2e/mediasite_users_test.json'
+MEDIASERVER_USERS_FILE = 'tests/e2e/mediaserver_users_test.json'
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +24,24 @@ def set_logger(*args, **kwargs):
 def set_test_users():
     users = list()
 
+    file = MEDIASERVER_DATA_E2E_FILE
+    if os.path.exists(file):
+        with open(file) as f:
+            data = json.load(f)
+
     file = MEDIASITE_USERS_FILE
     if os.path.exists(file):
         with open(file) as f:
             users = json.load(f)
+    else:
+        for media in data:
+            users.append({
+                "mail": media.get('data', {}).get('speaker_email'),
+                "username": media.get('data', {}).get('speaker_name'),
+                "display_name": media.get('data', {}).get('speaker_id')
+            })
+        with open(file, 'w') as f:
+            json.dump(users, f)
 
     return users
 

@@ -50,16 +50,21 @@ class MediaTransfer():
         logger.debug(f'{len(self.mediaserver_data)} medias found for uploading.')
         logger.debug('Uploading videos')
 
-        for index, user in enumerate(self.users):
-            user_id = self.create_user(index, user)
+        for user in self.users:
+            user_id = self.create_user(user)
             user['id'] = user_id
 
         nb_medias_uploaded = 0
         for index, media in enumerate(self.mediaserver_data):
             if max_videos and index >= max_videos:
                 break
+
             channel_path = media['ref']['channel_path']
-            channel_oid = self.create_channels(channel_path)[-1]
+            if channel_path.startswith('/Mediasite Users'):
+                channel_oid = self.get_user_channel(media['data'].get('speaker_email', ''))
+            else:
+                channel_oid = self.create_channels(channel_path)[-1]
+
             if not channel_oid:
                 del media['data']['channel']
                 media['data']['channel'] = self.root_channel.get('oid')
@@ -97,24 +102,6 @@ class MediaTransfer():
 
         return nb_medias_uploaded
 
-    def get_root_channel(self):
-        oid = str()
-        root_channel = dict()
-        try:
-            with open('config.json') as f:
-                config = json.load(f)
-            oid = config.get('mediaserver_parent_channel')
-        except Exception as e:
-            logger.error('No parent channel configured. See in config.json.')
-            logger.debug(e)
-            exit(1)
-
-        root_channel = self.get_channel(oid)
-        if not root_channel:
-            logger.error('Root channel does not exist. Please provide an existing channel oid in config.json')
-            sys.exit(1)
-        return root_channel
-
     def get_channel(self, oid=None, title=None):
         channel = None
         if oid:
@@ -133,7 +120,37 @@ class MediaTransfer():
 
         return channel
 
-    def create_user(self, index=int(), user=dict()):
+    def get_root_channel(self):
+        oid = str()
+        root_channel = dict()
+        try:
+            with open('config.json') as f:
+                config = json.load(f)
+            oid = config.get('mediaserver_parent_channel')
+        except Exception as e:
+            logger.error('No parent channel configured. See in config.json.')
+            logger.debug(e)
+            exit(1)
+
+        root_channel = self.get_channel(oid)
+        if not root_channel:
+            logger.error('Root channel does not exist. Please provide an existing channel oid in config.json')
+            sys.exit(1)
+        return root_channel
+
+    def get_user_channel(self, user_email):
+        logger.debug(f'Getting user channel for user email {user_email}')
+        channel_oid = str()
+
+        result = self.ms_client.api('channels/personal/', method='get', params={'email': user_email}, ignore_404=True)
+        if result and result.get('success'):
+            channel_oid = result.get('oid')
+        else:
+            logger.error(f"Failed to get user channel for {user_email} / Error: {result.get('error')}")
+
+        return channel_oid
+
+    def create_user(self, user):
         logger.debug(f"Creating user {user.get('username')}")
 
         user_id = str()
@@ -144,12 +161,16 @@ class MediaTransfer():
 
             user_id = result.get('id')
             del user['api_key']
+
+            result = self.ms_client.api('perms/edit/', method='post', data={'type': 'user', 'id': user_id, 'can_have_personal_channel': 'True'})
+            if not result.get('success'):
+                logger.error(f"Failed te granted permission to have personnal channel for user {user.get('username')}")
         else:
             logger.error(f"Failed te create user {user.get('username')} / Error: {result.get('error')}")
 
         return user_id
 
-    def to_mediaserver_users(self, mediasite_users=list()):
+    def to_mediaserver_users(self, mediasite_users):
         ms_users = list()
 
         for user in mediasite_users:
@@ -209,13 +230,13 @@ class MediaTransfer():
         return channel
 
     def migrate_slides(self, media):
-        media_oid = media['ref']['media_oid']
-        media_slides = media['data']['slides']
+        media_oid = media['ref'].get('media_oid')
+        media_slides = media['data'].get('slides')
         nb_slides_downloaded, nb_slides_uploaded, nb_slides = 0, 0, 0
         slides_in_video = False
 
         if media_slides:
-            if media_slides['stream_type'] == 'Slide' and media_slides['details']:
+            if media_slides.get('stream_type') == 'Slide' and media_slides.get('details'):
                 slides_dir = f'/tmp/mediasite_files/{media_oid}/slides'
                 os.makedirs(slides_dir, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)

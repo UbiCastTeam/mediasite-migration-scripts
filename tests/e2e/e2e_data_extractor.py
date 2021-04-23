@@ -36,15 +36,6 @@ class TestDataExtractorE2E(TestCase):
             logger.error('Metadata extraction gone wrong')
             raise AssertionError
 
-    def tearDown(self):
-        super().tearDown()
-        try:
-            with open('tests/mediasite_users_test.json', 'w') as f:
-                json.dump(self.extractor.users, f)
-        except Exception as e:
-            logger.debug(e)
-            logger.error('Failed to save mediasite users infos')
-
     def test_extract_mediasite_data(self):
         self.assertIsInstance(self.extractor.all_data, list)
         self.assertGreater(len(self.extractor.all_data), 0)
