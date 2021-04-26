@@ -7,6 +7,7 @@ from mediasite_migration_scripts.mediatransfer import MediaTransfer
 from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
 import tests.common as common
 
+
 common.set_logger(verbose=True)
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,12 @@ def tearDownModule():
     body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
     ms_client.api('channels/delete', method='post', data=body)
 
-    ms_client.session.close()
-
     for u in mediatransfer.users:
+        user_channel = mediatransfer.get_user_channel(u.get('email'))
+        if user_channel:
+            body = {'oid': user_channel, 'delete_resources': 'yes', 'delete_content': 'yes'}
+            ms_client.api('channels/delete', method='post', data=body)
+
         try:
             result = ms_client.api('users/delete', method='post', data={'email': u.get('email', '')}, ignore_404=True)
         except MSReqErr as e:
@@ -52,6 +56,9 @@ def tearDownModule():
             logger.debug(f"Deleted user {u.get('username')}")
         else:
             logger.error(f"Failed to delete user {u} / Error: {result.get('error')}")
+
+    mediatransfer.ms_client.session.close()
+    ms_client.session.close()
 
 
 class TestMediaTransferE2E(TestCase):
@@ -94,7 +101,7 @@ class TestMediaTransferE2E(TestCase):
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'channel_unlisted']
+            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'channel_unlisted', 'chapters']
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))

@@ -4,6 +4,7 @@ import xml.dom.minidom as xml
 from pymediainfo import MediaInfo
 import json
 import requests
+from datetime import datetime
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
 import utils.common as utils
@@ -74,7 +75,17 @@ class DataExtractor():
                 if utils.is_folder_to_add(path, config=self.config):
                     logger.debug('-' * 50)
                     logger.debug('Found folder : ' + path)
+
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
+                    if catalogs:
+                        most_recent = datetime.strptime('0001-12-25T00:00:00', '%Y-%m-%dT%H:%M:%S')
+                        for c in catalogs:
+                            tmp = datetime.strptime(c.get('creation_date'), '%Y-%m-%dT%H:%M:%S')
+                            if tmp > most_recent:
+                                most_recent = tmp
+                        folder['name'] = c.get('name')
+                        folder['linked_catalog_id'] = c.get('id')
+
                     presentations_folders.append({**folder,
                                                   'catalogs': catalogs,
                                                   'path': path,
@@ -145,11 +156,11 @@ class DataExtractor():
         folders = self.mediasite.folder.get_all_folders()
         for folder in folders:
             folder_info = {
-                'id': folder.get('Id'),
-                'parent_id': folder.get('ParentFolderId'),
-                'name': folder.get('Name'),
-                'owner_username': folder.get('Owner'),
-                'description': folder.get('Description')
+                'id': folder.get('Id', ''),
+                'parent_id': folder.get('ParentFolderId', ''),
+                'name': folder.get('Name', ''),
+                'owner_username': folder.get('Owner', ''),
+                'description': folder.get('Description', '')
             }
             folders_infos.append(folder_info)
 
@@ -159,11 +170,13 @@ class DataExtractor():
         folder_catalogs = list()
         for catalog in self.all_catalogs:
             if folder_id == catalog.get('LinkedFolderId'):
-                infos = {'id': catalog.get('Id'),
-                         'name': catalog.get('Name'),
-                         'description': catalog.get('Description'),
-                         'url': catalog.get('CatalogUrl'),
-                         'owner_username': catalog.get('Owner')}
+                infos = {'id': catalog.get('Id', ''),
+                         'name': catalog.get('Name', ''),
+                         'description': catalog.get('Description', ''),
+                         'url': catalog.get('CatalogUrl', ''),
+                         'owner_username': catalog.get('Owner', ''),
+                         'creation_date': catalog.get('CreationDate', '')
+                         }
                 folder_catalogs.append(infos)
         return folder_catalogs
 

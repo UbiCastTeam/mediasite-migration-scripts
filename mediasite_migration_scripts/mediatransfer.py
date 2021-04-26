@@ -172,6 +172,9 @@ class MediaTransfer():
             user_id = result.get('id')
             del user['api_key']
 
+            if not user_id:
+                logger.warning(f"MediaServer dit not return an id when creating user {user.get('username')}")
+
             result = self.ms_client.api('perms/edit/', method='post', data={'type': 'user', 'id': user_id, 'can_have_personal_channel': 'True'})
             if not result.get('success'):
                 logger.error(f"Failed te granted permission to have personnal channel for user {user.get('username')}")
@@ -222,14 +225,12 @@ class MediaTransfer():
         logger.debug(f'Creating channel {channel_title} with parent {parent_channel}')
         channel = dict()
 
-        already_created = False
         for c in self.channels_created:
             if channel_title == c.get('title'):
                 logger.debug(f'Channel {channel_title} already created.')
                 channel = c
                 channel['success'] = True
                 channel['already_created'] = True
-                already_created = True
                 if is_unlisted:
                     logger.debug(f'Channel edit: {channel_title}')
                     result = self.ms_client.api('perms/edit/default/', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
@@ -239,7 +240,7 @@ class MediaTransfer():
                         logger.error(f'Attempt to edit a channel not created: {channel_title}')
                 break
 
-        if not already_created:
+        if not channel.get('already_created'):
             data = {'title': channel_title, 'parent': parent_channel, 'unlisted': 'yes' if is_unlisted else 'no'}
             result = self.ms_client.api('channels/add', method='post', data=data)
 
@@ -371,8 +372,8 @@ class MediaTransfer():
 
                         description_text = presentation.get('description', '')
                         description_text = description_text if description_text else ''
-                        presenters = f'Presenters: {presenters}\n' if presenters else ''
-                        description = f'{presenters}{description_text}'
+                        presenters = f'Presenters: {presenters}' if presenters else ''
+                        description = f'[{presenters}]<br/>{description_text}'
 
                         v_type, slides_source = self._find_video_type(presentation)
                         v_url = self._find_file_to_upload(presentation, slides_source)
