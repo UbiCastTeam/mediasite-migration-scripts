@@ -66,12 +66,14 @@ if __name__ == '__main__':
             with open(mediasite_file, 'w') as f:
                 json.dump(data, f)
 
-            with open('catalogs.json', 'w') as f:
-                json.dump(extractor.catalogs, f)
+            with open('mediasite_catalogs.json', 'w') as f:
+                json.dump(extractor.linked_catalogs, f)
+
+            with open('mediasite_users.json', 'w') as f:
+                json.dump(extractor.users, f)
 
             print('--------- Import data successfull --------- ')
         except Exception as e:
             logger.error('Import data failed !')
             logger.debug(e)
-
             sys.exit(1)

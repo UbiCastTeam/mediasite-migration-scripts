@@ -4,6 +4,7 @@ import logging
 import sys
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
+from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
 import tests.common as common
 
 common.set_logger(verbose=True)
@@ -19,27 +20,46 @@ except Exception as e:
     logger.debug(e)
     sys.exit(1)
 
-ms_test_utils = common.MediaServerTestUtils(config)
-test_channel = ms_test_utils.create_test_channel()
-ms_client = ms_test_utils.ms_client
+test_utils = common.MediaServerTestUtils(config)
+test_channel = test_utils.create_test_channel()
+test_utils.ms_client.session.close()
+del test_utils.ms_client
+
+mediasite_data = common.set_test_data()
+mediasite_users = common.set_test_users()
+
+mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users, e2e_test=True, root_channel_oid=test_channel.get('oid'))
+ms_client = mediatransfer.ms_client
 
 
 def setUpModule():
-    print('-> ', __name__)
+    print('-> ', __name__, 50 * '-')
 
 
 def tearDownModule():
     body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
     ms_client.api('channels/delete', method='post', data=body)
+
     ms_client.session.close()
+
+    for u in mediatransfer.users:
+        try:
+            result = ms_client.api('users/delete', method='post', data={'email': u.get('email', '')}, ignore_404=True)
+        except MSReqErr as e:
+            result = {'success': False, 'error': e}
+
+        if result.get('success'):
+            logger.debug(f"Deleted user {u.get('username')}")
+        else:
+            logger.error(f"Failed to delete user {u} / Error: {result.get('error')}")
 
 
 class TestMediaTransferE2E(TestCase):
     def setUp(self):
         super().setUp()
-        self.mediasite_data = common.set_test_data()
-        self.mediatransfer = MediaTransfer(self.mediasite_data, config=config, e2e_test=True, root_channel_oid=test_channel.get('oid'))
+        self.mediatransfer = mediatransfer
         self.ms_client = ms_client
+
         try:
             with open('tests/e2e/mediaserver_data_e2e.json') as f:
                 self.mediaserver_data = json.load(f)
@@ -54,12 +74,21 @@ class TestMediaTransferE2E(TestCase):
         try:
             with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
                 json.dump(self.mediaserver_data, f)
+            with open(common.MEDIASERVER_USERS_FILE, 'w') as f:
+                json.dump(self.mediatransfer.users, f)
         except Exception as e:
-            logger.error(f'Failed to save mediaserver data file: {e}')
+            logger.error(f'Failed to save mediaserver tests files: {e}')
+
+        self.ms_client.session.close()
 
     def test_upload_medias(self):
+        print('-> test_upload_medias', 20 * '-')
         medias_examples = self.mediaserver_data
         self.mediatransfer.upload_medias()
+
+        for u in self.mediatransfer.users:
+            self.is_user_created(u)
+
         for m in medias_examples:
             data = m['data']
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
@@ -77,6 +106,8 @@ class TestMediaTransferE2E(TestCase):
                         self.assertEqual(data[key], m_uploaded.get('speaker'))
                     elif key == 'validated':
                         self.assertTrue(m_uploaded.get(key)) if data[key] == 'yes' else self.assertFalse(m_uploaded.get(key))
+                    elif key == 'layout' and data['layout'] == 'video':
+                        self.assertEqual(m_uploaded.get('layout'), '')
                     elif key in keys_to_skip:
                         continue
                     else:
@@ -91,12 +122,14 @@ class TestMediaTransferE2E(TestCase):
         if result:
             slides_up = result.get('slides')
             slides = media['data']['slides']['urls']
-            self.assertEqual(len(slides), len(slides_up), msg=f'slides: {len(slides)} / slides_up: {len(slides_up)}')
-
             slides_details = media['data']['slides']['details']
-            for i, slide in enumerate(slides_details):
-                self.assertEqual(slide.get('TimeMilliseconds'), slides_up[i].get('time'))
-                self.assertIsNotNone(slides_up[i].get('attachment', {}).get('url'))
+
+            if slides_details:
+                self.assertEqual(len(slides), len(slides_up), msg=f'slides: {len(slides)} / slides_up: {len(slides_up)}')
+
+                for i, slide in enumerate(slides_details):
+                    self.assertEqual(slide.get('TimeMilliseconds'), slides_up[i].get('time'))
+                    self.assertIsNotNone(slides_up[i].get('attachment', {}).get('url'))
         else:
             logger.error('No slides found')
             raise AssertionError
@@ -112,7 +145,9 @@ class TestMediaTransferE2E(TestCase):
                 self.assertEqual(chapter.get('chapter_position_ms'), chapters_up[i].get('time'))
                 self.assertEqual(chapter.get('chapter_title'), chapters_up[i].get('title'))
 
-    def test_create_channel(self):
+    def test_create_channels(self):
+        print('-> test_create_channels', 20 * '-')
+
         paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
         channels_examples_titles = ''.join(paths_examples).split('/')[1:]
         channels_created_oids = list()
@@ -143,3 +178,10 @@ class TestMediaTransferE2E(TestCase):
                     break
             self.assertTrue(found)
             ms_tree = ms_tree.get('channels')[c_found_index]
+
+    def is_user_created(self, user):
+        user_created = self.ms_client.api('users/get', method='get', params={'id': user.get('id')})
+
+        self.assertTrue(user_created.get('success'))
+        for key in user.keys():
+            self.assertEqual(user[key], user_created['user'][key])

@@ -30,7 +30,7 @@ class TestDataExtractorE2E(TestCase):
     def setUp(self):
         super().setUp()
         try:
-            self.extractor = DataExtractor(config, max_folders=5)
+            self.extractor = DataExtractor(config, max_folders=10, e2e_tests=True)
         except Exception as e:
             logger.debug(e)
             logger.error('Metadata extraction gone wrong')
@@ -77,3 +77,11 @@ class TestDataExtractorE2E(TestCase):
             if len(folder.get('presentations')) > 0:
                 self.assertListEqual(presentation_keys, list(folder['presentations'][0].keys()))
                 break
+
+        self.assertIsInstance(self.extractor.users, list)
+        self.assertGreater(len(self.extractor.users), 0)
+
+        usernames = [user.get('username') for user in self.extractor.users]
+        for i, u in enumerate(usernames):
+            usernames.pop(i)
+            self.assertNotIn(u, usernames)
