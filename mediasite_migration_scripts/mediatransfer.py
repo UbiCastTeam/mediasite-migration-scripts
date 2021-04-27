@@ -202,7 +202,7 @@ class MediaTransfer():
         tree = channel_path.split('/')
         # path start with '/' , so tree[0] is a empty string
         tree.pop(0)
-        channel = self._create_channel(self.root_channel.get('oid'), tree[0])
+        channel = self._create_channel(self.root_channel.get('oid'), tree[0], is_unlisted=is_unlisted)
         channels_oids.append(channel.get('oid'))
 
         if not channel.get('already_created'):
@@ -222,7 +222,7 @@ class MediaTransfer():
         return channels_oids
 
     def _create_channel(self, parent_channel, channel_title, is_unlisted=False):
-        logger.debug(f'Creating channel {channel_title} with parent {parent_channel}')
+        logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
         for c in self.channels_created:
