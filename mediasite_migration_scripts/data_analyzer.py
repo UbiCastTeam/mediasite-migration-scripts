@@ -130,19 +130,38 @@ class DataAnalyzer():
 
         total_video_count = 0
         video_stats = dict()
+        videotypes_dict = dict()
 
-        unimportable_videos = list()
-        unsupported_videos = list()
-        empty_videos = list()
+        videotypes = [
+            'audio_only',
+            'audio_slides',
+            'video_only',
+            'video_slides',
+            'computervideo_only',
+            'computervideo_slides',
+            'composite_videos',
+            'composite_slides',
+            'unsupported_videos',
+            'empty_videos',
+        ]
 
-        audio_only = list()
-        audio_slides = list()
-        video_only = list()
-        video_slides = list()
-        computervideo_only = list()
-        computervideo_slides = list()
-        composite_videos = list()
-        composite_slides = list()
+        class VideoType:
+            def __init__(self, name):
+                self.name = name
+                self.count = 0
+                self.duration_hours = 0
+                self.size_gbytes = 0
+                self.items = list()
+
+            def add(self, pres_id, duration_hours, size_gbytes):
+                if pres_id not in self.items:
+                    self.items.append(pres_id)
+                self.count += 1
+                self.duration_hours += duration_hours
+                self.size_gbytes += size_gbytes
+
+        for t in videotypes:
+            videotypes_dict[t] = VideoType(t)
 
         stat_template = {
             'count': 0,
@@ -160,6 +179,7 @@ class DataAnalyzer():
 
                 format_str = ''
                 dur_h = size_gb = 0
+                videotype = 'unsupported_videos'
 
                 videos = presentation['videos']
                 pres_id = presentation['id']
@@ -178,8 +198,7 @@ class DataAnalyzer():
                 if len(videos) > 0:
                     dur_h = videos[0]['files'][0].get('duration_ms', 0) / (3600 * 1000)
                     if dur_h == 0:
-                        empty_videos.append(pres_id)
-                        unimportable_videos.append(pres_id)
+                        videotype = 'empty_videos'
                     else:
                         if len(videos) == 1 or (len(videos) == 2 and has_slides):
                             video = presentation['videos'][0]
@@ -187,35 +206,35 @@ class DataAnalyzer():
                             video_file = self.get_best_video_file(video['files'])
                             encoding_infos = video_file.get('encoding_infos')
                             format_str = self.get_video_format_str(encoding_infos)
+                            size_gb = video_file.get('size_bytes', 0) / GB
                             if format_str == 'AAC':
                                 if has_slides and slides_are_synced:
                                     format_str = 'AAC with slides'
-                                    audio_slides.append(pres_id)
+                                    videotype = 'audio_slides'
                                 else:
-                                    audio_only.append(pres_id)
+                                    videotype = 'audio_only'
                             elif format_str != 'unknown':
-                                size_gb = video_file.get('size_bytes', 0) / GB
                                 if len(videos) == 1:
                                     if has_slides:
                                         if video_stream_type == slides_stream_type:
                                             if not slides_are_synced:
-                                                computervideo_only.append(pres_id)
+                                                videotype = 'computervideo_only'
                                             else:
-                                                computervideo_slides.append(pres_id)
+                                                videotype = 'computervideo_slides'
                                         elif slides_are_synced:
-                                            video_slides.append(pres_id)
+                                            videotype = 'video_slides'
                                         else:
                                             # there are slides but they are not synced
-                                            video_only.append(pres_id)
+                                            videotype = 'video_only'
                                     else:
-                                        video_only.append(pres_id)
+                                        videotype = 'video_only'
                                 else:
                                     if slides_are_synced:
-                                        composite_slides.append(pres_id)
+                                        videotype = 'composite_slides'
                                     else:
-                                        composite_videos.append(pres_id)
+                                        videotype = 'composite_videos'
                         elif len(videos) == 2:
-                            composite_videos.append(pres_id)
+                            videotype = 'composite_videos'
                             composite_info = {
                                 'width': 0,
                                 'height': 0,
@@ -223,18 +242,15 @@ class DataAnalyzer():
                                 'audio_codec': 'AAC',
                             }
                             for v in videos:
+                                size_gb += video_file.get('size_bytes', 0) / GB
                                 encoding_infos = self.get_best_video_file(v['files']).get('encoding_infos')
                                 # skip audio-only resources
                                 if encoding_infos and encoding_infos.get('video_codec'):
                                     composite_info['width'] += encoding_infos['width']
                                     composite_info['height'] = max(composite_info['height'], encoding_infos['height'])
                             format_str = self.get_video_format_str(composite_info) + ' (composite)'
-                            # predict rough composite size
-                            # bpp: 2.5 bits per pixel
-                            pixelcount = composite_info['width'] * composite_info['height']
-                            bitrate_bps = pixelcount * 2.5
-                            bitrate_bytes_persec = bitrate_bps / 8
-                            size_gb = dur_h * 3600 * bitrate_bytes_persec / GB
+
+                    videotypes_dict[videotype].add(pres_id, dur_h, size_gb)
 
                     if video_stats.get(format_str) is None:
                         video_stats[format_str] = dict(stat_template)
@@ -250,39 +266,21 @@ class DataAnalyzer():
                     total_duration_h += dur_h
                     total_size_gb += size_gb
 
-                    if format_str == 'unknown':
-                        unsupported_videos.append(pres_id)
-                        unimportable_videos.append(pres_id)
-
-        videotypes = [
-            'audio_only',
-            'audio_slides',
-            'video_only',
-            'video_slides',
-            'computervideo_only',
-            'computervideo_slides',
-            'composite_videos',
-            'composite_slides',
-            'unsupported_videos',
-            'empty_videos',
-        ]
-
         # generate a test library with one sample of each type
         test_data = []
 
-        types_table_string = 'Type\tCount\tSample\n'
+        types_table_string = 'Type\tCount\tDuration_h\tSize_GB\tSample\n'
         for videotype in videotypes:
-            data = locals()[videotype]
-            sample_pres_id = data[0] if len(data) else None
+            data = videotypes_dict[videotype]
+            sample_pres_id = data.items[0] if data.count > 0 else None
             # clone it so that we can anonymize it
             sample_folder = self.copy_folder_by_presentation_id(sample_pres_id, new_name=videotype)
             test_data.append(sample_folder)
-            types_table_string += f'{videotype}\t{len(data)}\t{sample_pres_id}\n'
+            types_table_string += f'{videotype}\t{data.count}\t{int(data.duration_hours)}\t{int(data.size_gbytes)}\t{sample_pres_id}\n'
 
         encoding_infos = {
             'total_video_count': total_video_count,
-            'total_importable': total_video_count - len(unimportable_videos),
-            'total_unimportable': len(unimportable_videos),
+            'total_importable': total_video_count - videotypes_dict['unsupported_videos'].count,
             'total_duration_h': int(total_duration_h),
             'total_size_tb': int(total_size_gb / 1000),
             'video_stats': video_stats,
@@ -298,7 +296,7 @@ class DataAnalyzer():
                 fname = 'presentations_' + videolist + '.txt'
                 logger.info(f'Dumping {fname}')
                 with open(fname, 'w') as f:
-                    f.write('\n'.join(locals()[videolist]))
+                    f.write('\n'.join(videotypes_dict[videolist].items))
 
             fname = 'samples.json'
             with open(fname, 'w') as f:
