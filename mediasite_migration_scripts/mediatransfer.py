@@ -32,7 +32,8 @@ class MediaTransfer():
                               'CLIENT_ID': 'mediasite-migration-client',
                               'SERVER_URL': self.config.get('mediaserver_url', ''),
                               'VERIFY_SSL': False,
-                              'LOG_LEVEL': 'WARNING'}
+                              'LOG_LEVEL': 'WARNING',
+                              'TIMEOUT': 120}
             self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
 
             if root_channel_oid:
@@ -49,48 +50,57 @@ class MediaTransfer():
         self.users = self.to_mediaserver_users(mediasite_users)
 
     def upload_medias(self, max_videos=None):
-        logger.debug(f'{len(self.mediaserver_data)} medias found for uploading.')
+        nb_medias = len(self.mediaserver_data)
+        logger.debug(f'{nb_medias} medias found for uploading.')
         logger.debug('Uploading videos')
 
-        for user in self.users:
+        for i, user in enumerate(self.users):
             user_id = self.create_user(user)
             user['id'] = user_id
 
         nb_medias_uploaded = 0
-        for index, media in enumerate(self.mediaserver_data):
-            if max_videos and index >= max_videos:
-                break
+        attempts = 0
+        while nb_medias != nb_medias_uploaded and attempts < 10:
+            attempts += 1
+            logger.debug(f'Attempt {attempts} for uploading medias.')
+            for index, media in enumerate(self.mediaserver_data):
+                if max_videos and index >= max_videos:
+                    break
+                if not media.get('ref', {}).get('media_oid'):
+                    try:
+                        channel_path = media['ref']['channel_path']
+                        if channel_path.startswith('/Mediasite Users'):
+                            channel_oid = self.get_user_channel(media['data'].get('speaker_email', ''))
+                        else:
+                            channel_oid = self.create_channels(channel_path, is_unlisted=media['data']['channel_unlisted'])[-1]
 
-            channel_path = media['ref']['channel_path']
-            if channel_path.startswith('/Mediasite Users'):
-                channel_oid = self.get_user_channel(media['data'].get('speaker_email', ''))
-            else:
-                channel_oid = self.create_channels(channel_path, is_unlisted=media['data']['channel_unlisted'])[-1]
+                        if not channel_oid:
+                            media['data']['channel'] = self.root_channel.get('oid')
+                        else:
+                            media['data']['channel'] = channel_oid
 
-            if not channel_oid:
-                media['data']['channel'] = self.root_channel.get('oid')
-            else:
-                media['data']['channel'] = channel_oid
+                        result = self.ms_client.api('medias/add', method='post', data=media['data'])
+                        if result.get('success'):
+                            media['ref']['media_oid'] = result.get('oid')
+                            media['ref']['slug'] = result.get('slug')
+                            del media['data']['api_key']
 
-            result = self.ms_client.api('medias/add', method='post', data=media['data'])
-            if result.get('success'):
-                media['ref']['media_oid'] = result.get('oid')
-                media['ref']['slug'] = result.get('slug')
-                del media['data']['api_key']
+                            self.migrate_slides(media)
 
-                self.migrate_slides(media)
+                            if media['data'].get('video_type') == 'audio_only':
+                                thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
+                                if not thumb_ok:
+                                    logger.warning('Failed to upload audio thumbail for audio presentation')
 
-                if media['data'].get('video_type') == 'audio_only':
-                    thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
-                    if not thumb_ok:
-                        logger.warning('Failed to upload audio thumbail for audio presentation')
+                            if len(media['data'].get('chapters')) > 0:
+                                self.add_chapters(media['ref']['media_oid'], chapters=media['data']['chapters'])
 
-                if len(media['data'].get('chapters')) > 0:
-                    self.add_chapters(media['ref']['media_oid'], chapters=media['data']['chapters'])
-
-                nb_medias_uploaded += 1
-            else:
-                logger.error(f"Failed to upload media: {media['title']}")
+                            nb_medias_uploaded += 1
+                        else:
+                            logger.error(f"Failed to upload media: {media['title']}")
+                    except requests.exceptions.ReadTimeout:
+                        logger.warning('Request timeout. Another attempt will be lauched at the end.')
+                        continue
 
             print(' ' * 50, end='\r')
             print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
@@ -159,7 +169,9 @@ class MediaTransfer():
         try:
             result = self.ms_client.api('users/add', method='post', data=user)
         except MSReqErr as e:
-            if 'A user with the same email already exists.' in e.__str__():
+            same_email_error = 'A user with the same email already exists.'
+            same_username_error = 'A user with the same username already exists.'
+            if same_email_error or same_username_error in e.__str__():
                 logger.debug(f"User {user.get('username')} already exists.")
                 del user['api_key']
                 return user_id

@@ -24,10 +24,10 @@ if __name__ == '__main__':
         parser.add_argument('--max-videos', dest='max_videos', default=0,
                             help='specify maximum of videos for upload.')
         parser.add_argument('-cf', '--config-file',
-                            dest='config_file', action='store_true', default=None,
+                            dest='config_file', default=None,
                             help='add custom config file.')
         parser.add_argument('-mf', '--mediasite_file',
-                            dest='mediasite_file', action='store_true', default=None,
+                            dest='mediasite_file', default=None,
                             help='add custom mediasite data file.')
         return parser.parse_args()
 
