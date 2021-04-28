@@ -105,7 +105,6 @@ class MediaTransfer():
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
 
-
         print('')
 
         self.ms_client.session.close()
@@ -395,6 +394,7 @@ class MediaTransfer():
                         has_catalog = len(folder.get('catalogs', [])) > 0
                         channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
                         if v_url:
+                            logger.debug(f"Found file with handled format for presentation {presentation.get('id')}: {v_url} ")
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
@@ -431,7 +431,7 @@ class MediaTransfer():
 
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': path}})
                         else:
-                            logger.debug(f"No valid url for presentation {presentation.get('id')}")
+                            logger.error(f"No file with handled format for presentation {presentation.get('id')}")
                             continue
         return mediaserver_data
 
