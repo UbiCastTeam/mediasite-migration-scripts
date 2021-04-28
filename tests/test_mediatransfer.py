@@ -36,8 +36,10 @@ class TestMediaTransfer(TestCase):
         except Exception as e:
             logger.error(e)
 
+        len_presentations = 0
         for folder in self.mediasite_data:
             for index, presentation in enumerate(folder.get('presentations')):
+                len_presentations += 1
                 for media in self.mediaserver_data:
                     data = media.get('data', {})
                     if data['slug'] == 'mediasite-' + presentation['id']:
@@ -71,3 +73,5 @@ class TestMediaTransfer(TestCase):
                         self.assertEqual(data['layout'], 'webinar' if data['video_type'] == 'video_slides' else 'video',)
                         self.assertIsNotNone(data['file_url'])
                         self.assertEqual(data['chapters'], presentation['timed_events'])
+
+        self.assertEqual(len_presentations, len(self.mediaserver_data))

@@ -369,6 +369,7 @@ class MediaTransfer():
 
     def to_mediaserver_keys(self):
         logger.debug('Matching Mediasite data to MediaServer keys mapping.')
+        logger.debug(f'Whitelist: {self.config.get("whitelist")}')
 
         mediaserver_data = list()
         if hasattr(self, 'mediaserver_data'):
@@ -483,7 +484,6 @@ class MediaTransfer():
                 break
             else:
                 logger.debug(f"File format not handled: {v.get('format')}")
-                break
 
         return video_url
 
