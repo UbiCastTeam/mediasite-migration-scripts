@@ -110,6 +110,7 @@ class MediaServerTestUtils():
         dt = datetime.now()
         test_channel_name = f'test-{dt.month}/{dt.day}/{dt.year}-{dt.hour + 2}:{dt.minute}:{dt.second}'.format()
 
+        # Parent E2E test channel : https://beta.ubicast.net/channels/#mediasite-e2e-tests
         test_channel = self.ms_client.api('channels/add', method='post', data={'title': test_channel_name, 'parent': 'c12619b455e75glxvuja'})
         self.ms_client.session.close()
 
