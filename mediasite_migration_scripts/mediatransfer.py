@@ -347,7 +347,8 @@ class MediaTransfer():
             if r.ok:
                 with open(path, 'wb') as f:
                     f.write(r.content)
-                ok = True
+                ok = r.ok
+
         return ok, path
 
     def _get_annotation_type_id(self, media_oid, annot_type):
