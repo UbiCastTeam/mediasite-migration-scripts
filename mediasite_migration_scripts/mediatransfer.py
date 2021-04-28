@@ -53,6 +53,7 @@ class MediaTransfer():
         nb_medias = len(self.mediaserver_data)
         logger.debug(f'{nb_medias} medias found for uploading.')
         logger.debug('Uploading videos')
+        print(' ' * 50, end='\r')
 
         for i, user in enumerate(self.users):
             user_id = self.create_user(user)
@@ -64,6 +65,8 @@ class MediaTransfer():
             attempts += 1
             logger.debug(f'Attempt {attempts} for uploading medias.')
             for index, media in enumerate(self.mediaserver_data):
+                print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
+
                 if max_videos and index >= max_videos:
                     break
                 if not media.get('ref', {}).get('media_oid'):
@@ -102,8 +105,6 @@ class MediaTransfer():
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
 
-            print(' ' * 50, end='\r')
-            print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
 
         print('')
 
