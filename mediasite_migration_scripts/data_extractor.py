@@ -3,6 +3,8 @@ import logging
 import xml.dom.minidom as xml
 from pymediainfo import MediaInfo
 import json
+import requests
+from datetime import datetime
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
 import utils.common as utils
@@ -14,6 +16,7 @@ class DataExtractor():
 
     def __init__(self, config=dict(), max_folders=None, e2e_tests=False):
         logger.info('Connecting...')
+        self.session = None
         self.e2e_tests = e2e_tests
         self.config = {
             'mediasite_base_url': config.get('mediasite_api_url'),
@@ -72,7 +75,17 @@ class DataExtractor():
                 if utils.is_folder_to_add(path, config=self.config):
                     logger.debug('-' * 50)
                     logger.debug('Found folder : ' + path)
+
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
+                    if catalogs:
+                        most_recent = datetime.strptime('0001-12-25T00:00:00', '%Y-%m-%dT%H:%M:%S')
+                        for c in catalogs:
+                            tmp = datetime.strptime(c.get('creation_date'), '%Y-%m-%dT%H:%M:%S')
+                            if tmp > most_recent:
+                                most_recent = tmp
+                        folder['name'] = c.get('name')
+                        folder['linked_catalog_id'] = c.get('id')
+
                     presentations_folders.append({**folder,
                                                   'catalogs': catalogs,
                                                   'path': path,
@@ -143,11 +156,11 @@ class DataExtractor():
         folders = self.mediasite.folder.get_all_folders()
         for folder in folders:
             folder_info = {
-                'id': folder.get('Id'),
-                'parent_id': folder.get('ParentFolderId'),
-                'name': folder.get('Name'),
-                'owner_username': folder.get('Owner'),
-                'description': folder.get('Description')
+                'id': folder.get('Id', ''),
+                'parent_id': folder.get('ParentFolderId', ''),
+                'name': folder.get('Name', ''),
+                'owner_username': folder.get('Owner', ''),
+                'description': folder.get('Description', '')
             }
             folders_infos.append(folder_info)
 
@@ -157,11 +170,13 @@ class DataExtractor():
         folder_catalogs = list()
         for catalog in self.all_catalogs:
             if folder_id == catalog.get('LinkedFolderId'):
-                infos = {'id': catalog.get('Id'),
-                         'name': catalog.get('Name'),
-                         'description': catalog.get('Description'),
-                         'url': catalog.get('CatalogUrl'),
-                         'owner_username': catalog.get('Owner')}
+                infos = {'id': catalog.get('Id', ''),
+                         'name': catalog.get('Name', ''),
+                         'description': catalog.get('Description', ''),
+                         'url': catalog.get('CatalogUrl', ''),
+                         'owner_username': catalog.get('Owner', ''),
+                         'creation_date': catalog.get('CreationDate', '')
+                         }
                 folder_catalogs.append(infos)
         return folder_catalogs
 
@@ -308,8 +323,16 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logger.debug(f'File is not a video: {video_url}')
         except Exception as e:
-            logger.warning(f'Video encoding infos could not be parsed for: {video_url}')
             logger.debug(e)
+
+            if self.session is None:
+                self.session = requests.Session()
+
+            response = self.session.head(video_url)
+            if not response.ok:
+                logger.warning(f'Video not found on Mediasite [404]: {video_url}')
+            else:
+                logger.warning(f'Video encoding infos could not be parsed: {video_url} / Request response status : {response.status_code}')
 
         return encoding_infos
 

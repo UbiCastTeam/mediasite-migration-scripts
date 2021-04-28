@@ -30,18 +30,14 @@ def set_test_users():
             data = json.load(f)
 
     file = MEDIASITE_USERS_FILE
-    if os.path.exists(file):
-        with open(file) as f:
-            users = json.load(f)
-    else:
-        for media in data:
-            users.append({
-                "mail": media.get('data', {}).get('speaker_email'),
-                "username": media.get('data', {}).get('speaker_name'),
-                "display_name": media.get('data', {}).get('speaker_id')
-            })
-        with open(file, 'w') as f:
-            json.dump(users, f)
+    for media in data:
+        users.append({
+            "mail": media.get('data', {}).get('speaker_email'),
+            "username": media.get('data', {}).get('speaker_name'),
+            "display_name": media.get('data', {}).get('speaker_id')
+        })
+    with open(file, 'w') as f:
+        json.dump(users, f)
 
     return users
 
@@ -114,7 +110,8 @@ class MediaServerTestUtils():
         dt = datetime.now()
         test_channel_name = f'test-{dt.month}/{dt.day}/{dt.year}-{dt.hour + 2}:{dt.minute}:{dt.second}'.format()
 
-        test_channel = self.ms_client.api('channels/add', method='post', data={'title': test_channel_name, 'parent': 'c126199c71afcpw7vd1a'})
+        # Parent E2E test channel : https://beta.ubicast.net/channels/#mediasite-e2e-tests
+        test_channel = self.ms_client.api('channels/add', method='post', data={'title': test_channel_name, 'parent': 'c12619b455e75glxvuja'})
         self.ms_client.session.close()
 
         return test_channel

@@ -7,6 +7,7 @@ from mediasite_migration_scripts.mediatransfer import MediaTransfer
 from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
 import tests.common as common
 
+
 common.set_logger(verbose=True)
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,12 @@ def tearDownModule():
     body = {'oid': test_channel.get('oid'), 'delete_resources': 'yes', 'delete_content': 'yes'}
     ms_client.api('channels/delete', method='post', data=body)
 
-    ms_client.session.close()
-
     for u in mediatransfer.users:
+        user_channel = mediatransfer.get_user_channel(u.get('email'))
+        if user_channel:
+            body = {'oid': user_channel, 'delete_resources': 'yes', 'delete_content': 'yes'}
+            ms_client.api('channels/delete', method='post', data=body)
+
         try:
             result = ms_client.api('users/delete', method='post', data={'email': u.get('email', '')}, ignore_404=True)
         except MSReqErr as e:
@@ -52,6 +56,9 @@ def tearDownModule():
             logger.debug(f"Deleted user {u.get('username')}")
         else:
             logger.error(f"Failed to delete user {u} / Error: {result.get('error')}")
+
+    mediatransfer.ms_client.session.close()
+    ms_client.session.close()
 
 
 class TestMediaTransferE2E(TestCase):
@@ -87,7 +94,7 @@ class TestMediaTransferE2E(TestCase):
         self.mediatransfer.upload_medias()
 
         for u in self.mediatransfer.users:
-            self.is_user_created(u)
+            self.check_user(u)
 
         for m in medias_examples:
             data = m['data']
@@ -103,11 +110,14 @@ class TestMediaTransferE2E(TestCase):
                         channel_title = self.mediatransfer.get_channel(oid=data['channel']).get('title')
                         self.assertEqual(channel_title, m_uploaded.get('parent_title'))
                     elif key == 'speaker_name':
-                        self.assertEqual(data[key], m_uploaded.get('speaker'))
-                    elif key == 'validated':
+                        self.assertEqual(data['speaker_name'], m_uploaded.get('speaker'))
+                    elif key == 'validated' or key == 'unlisted':
                         self.assertTrue(m_uploaded.get(key)) if data[key] == 'yes' else self.assertFalse(m_uploaded.get(key))
                     elif key == 'layout' and data['layout'] == 'video':
                         self.assertEqual(m_uploaded.get('layout'), '')
+                    elif key == 'channel_unlisted':
+                        channel = self.ms_client.api('channels/get/', method='get', params={'oid': data['channel'], 'full': 'yes'})
+                        self.assertEqual(data['channel_unlisted'], channel.get('info').get('unlisted'), msg=f'Media: {data}, CHannel: {channel}')
                     elif key in keys_to_skip:
                         continue
                     else:
@@ -116,6 +126,12 @@ class TestMediaTransferE2E(TestCase):
 
             self.check_slides(m)
             self.check_chapters(m)
+
+    def check_user(self, user):
+        user_created = self.ms_client.api('users/get', method='get', params={'id': user.get('id')})
+        self.assertTrue(user_created.get('success'))
+        for key in user.keys():
+            self.assertEqual(user[key], user_created['user'][key])
 
     def check_slides(self, media):
         result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
@@ -179,9 +195,10 @@ class TestMediaTransferE2E(TestCase):
             self.assertTrue(found)
             ms_tree = ms_tree.get('channels')[c_found_index]
 
-    def is_user_created(self, user):
-        user_created = self.ms_client.api('users/get', method='get', params={'id': user.get('id')})
-
-        self.assertTrue(user_created.get('success'))
-        for key in user.keys():
-            self.assertEqual(user[key], user_created['user'][key])
+        channel_unlisted = self.mediatransfer.create_channels('/Baby/Love', is_unlisted=True)
+        result = self.ms_client.api('channels/get', method='get', params={'oid': channel_unlisted}, ignore_404=True)
+        self.assertIsNotNone(result)
+        if result:
+            self.assertTrue(result.get('info', {}).get('unlisted'))
+        else:
+            logger.error(f'Channel {channel_unlisted} not found')

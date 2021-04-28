@@ -11,7 +11,16 @@
                 "name": "Poupou",
                 "description": "One catalog for all",
                 "url": "url.com",
-                "owner_username": "Nico"
+                "owner_username": "Nico",
+                "creation_date" : "2020-03-10T06:58:41"
+            },
+            {
+                "id": "oiregoigtrg52r5896",
+                "name": "Coucou",
+                "description": "All for one catalog",
+                "url": "url2.com",
+                "owner_username": "Nico",
+                "creation_date" : "2020-04-29T07:22:41"
             }
         ],
         "path": "/testfolder/Migratietest_2021mrt16",

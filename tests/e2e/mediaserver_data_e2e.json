@@ -3,10 +3,12 @@
         "data": {
             "title": "e2e test",
             "channel": "E2E",
+            "channel_unlisted": true,
+            "unlisted": true,
             "creation": "2021-03-16T12:39:26.287Z",
-            "speaker_id": "Ubicast_Admin",
+            "speaker_id": "Mediasite Test",
             "speaker_name": "testname",
-            "speaker_email": "test@ubicast.eu",
+            "speaker_email": "mediasite.test@ubicast.eu",
             "validated": "yes",
             "description": "Presenters: Doctor who\ndescription of test",
             "keywords": "B-B1DIER05",
@@ -65,7 +67,7 @@
                 ]
             },
             "video_type": "video_slides",
-            "file_url": "https://beta.ubicast.net/resources/r126199c71c5azcfh66p43da84ie6m/media190326120008811_clean.mp4?st=G9prQxUCZBIu4bExYkYOFg&e=1617283280&usage=download"
+            "file_url": "https://beta.ubicast.net/resources/r12619b456b51omb6nr79axz3xyn43/media_6086d33c1bcb1a002937754d_826285_original.mp4?st=c43jC82dqjbYNbzV1tEKUQ&e=1619463595&usage=download"
         },
         "ref": {
             "channel_path": "/E2E"
@@ -75,10 +77,11 @@
         "data": {
             "title": "user test",
             "channel": "ubicast_user",
+            "channel_unlisted": false,
             "creation": "2021-03-16T12:39:26.287Z",
             "speaker_id": "Ubicast_User",
-            "speaker_name": "username",
-            "speaker_email": "ubicast.user.test@ubicast.eu",
+            "speaker_name": "testname2",
+            "speaker_email": "mediasite.test2@ubicast.eu",
             "validated": "yes",
             "description": "Presenters: Doctor who\ndescription of test",
             "keywords": "B-B1DIER05",
@@ -99,7 +102,7 @@
                 "details": []
             },
             "video_type": "computer_slides",
-            "file_url": "https://beta.ubicast.net/resources/r126199c71c5azcfh66p43da84ie6m/media190326120008811_clean.mp4?st=G9prQxUCZBIu4bExYkYOFg&e=1617283280&usage=download"
+            "file_url": "https://beta.ubicast.net/resources/r12619b456b51omb6nr79axz3xyn43/media_6086d33c1bcb1a002937754d_826285_original.mp4?st=c43jC82dqjbYNbzV1tEKUQ&e=1619463595&usage=download"
         },
         "ref": {
             "channel_path": "/Mediasite Users/Ubicast_Admin"

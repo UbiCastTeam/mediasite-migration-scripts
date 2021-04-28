@@ -51,7 +51,29 @@ class TestDataExtractorE2E(TestCase):
             'path',
             'presentations'
         ]
-        self.assertListEqual(folder_keys, list(folder_example.keys()))
+        catalogs_example = folder_example['catalogs']
+        if catalogs_example:
+            folder_keys.append('linked_catalog_id')
+
+        for key in folder_keys:
+            self.assertIn(key, folder_example.keys())
+
+        catalogs_keys = [
+            'id',
+            'name',
+            'description',
+            'url',
+            'owner_username',
+            'creation_date'
+        ]
+        found_linked_catalog = False
+        for c_example in catalogs_example:
+            if folder_example.get('linked_catalog_id') == c_example.get('id'):
+                found_linked_catalog = True
+                self.assertEqual(folder_example.get('name'), c_example.get('name'))
+            for key in catalogs_keys:
+                self.assertIn(key, c_example.keys())
+        self.assertTrue(found_linked_catalog)
 
         presentation_keys = [
             'id',
@@ -79,9 +101,9 @@ class TestDataExtractorE2E(TestCase):
                 break
 
         self.assertIsInstance(self.extractor.users, list)
-        self.assertGreater(len(self.extractor.users), 0)
 
         usernames = [user.get('username') for user in self.extractor.users]
         for i, u in enumerate(usernames):
+            self.assertIn(u, usernames)
             usernames.pop(i)
             self.assertNotIn(u, usernames)
