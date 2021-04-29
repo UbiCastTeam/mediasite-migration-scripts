@@ -37,11 +37,11 @@ class Merger:
         self.mainloop = mainloop
         self.options = options
 
-    def get_layout_preset(self, layers_data):
+    def get_layout_preset(self, width, height, layers_data):
         layout_preset = {
             'composition_area': {
-                'w': self.options.width,
-                'h': self.options.height,
+                'w': width,
+                'h': height,
             },
             'layers': layers_data,
         }
@@ -88,7 +88,14 @@ class Merger:
                 input_videos[video.name] = info
 
         reduction_factor = 1
-        if total_native_width > videomixer_width:
+        if total_native_width < videomixer_width:
+            print(f'Warning, native files summed width is smaller {total_native_width}x{max_height} than target resolution {videomixer_width}x{videomixer_height}')
+            output_ratio = videomixer_width / videomixer_height
+            videomixer_width = total_native_width
+            videomixer_height = int(total_native_width / output_ratio)
+            print(f'Falling back to {videomixer_width}x{videomixer_height}')
+        elif total_native_width > videomixer_width:
+            print(f'Native files summed size {total_native_width}x{max_height} is larger than target resolution, will reduce to match target resolution')
             reduction_factor = videomixer_width / total_native_width
 
         layers_data = list()
@@ -149,7 +156,7 @@ class Merger:
         bus.connect('message::error', self._on_error)
         bus.connect('message', self._on_message)
 
-        layout_preset = self.get_layout_preset(layers_data)
+        layout_preset = self.get_layout_preset(videomixer_width, videomixer_height, layers_data)
         layout_file = folder / 'mediaserver_layout.json'
         with open(layout_file, 'w') as f:
             print(f'Wrote {layout_file}')
