@@ -4,8 +4,7 @@ python-dateutil
 pytz
 tzlocal
 
-# mediasite-migration-script 
-python-decouple
+# mediasite-migration-script
 mediainfo
 pymediainfo
 setuptools

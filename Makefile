@@ -56,4 +56,4 @@ merge_shell:
 	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge /bin/bash
 
 merge_run:
-	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge /src/bin/merge.py $(ARGS)
+	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge python3 bin/merge.py $(ARGS)
