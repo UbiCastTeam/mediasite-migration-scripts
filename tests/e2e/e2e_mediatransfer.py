@@ -117,7 +117,7 @@ class TestMediaTransferE2E(TestCase):
                         self.assertEqual(m_uploaded.get('layout'), '')
                     elif key == 'channel_unlisted':
                         channel = self.ms_client.api('channels/get/', method='get', params={'oid': data['channel'], 'full': 'yes'})
-                        self.assertEqual(data['channel_unlisted'], channel.get('info').get('unlisted'), msg=f'Media: {data}, CHannel: {channel}')
+                        self.assertEqual(data['channel_unlisted'], channel.get('info').get('unlisted'), msg=f'Media: {data}, Channel: {channel}')
                     elif key in keys_to_skip:
                         continue
                     else:

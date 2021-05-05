@@ -40,23 +40,38 @@ class VideoCompositor():
 
         return final_media_path
 
-    def download(self, video_url, media_folder):
+    def download(self, video_url, media_folder=str()):
         logger.debug(f'Downloading video : {video_url}')
         if self.dl_session is None:
             self.dl_session = requests.Session()
-
+        if not media_folder:
+            media_folder = self.download_folder
         video_path = Path()
-        r = self.dl_session.get(video_url, auth=self.mediasite_auth)
-        if r.ok:
+        with dl_session.get(video_url, stream=True) as r:
             media_folder.mkdir(parents=True, exist_ok=True)
             video_path = media_folder / f"{video_url.split('/')[-1].split('?')[0]}"
-            self.nb_folders += 1
+            r.raise_for_status()
             with open(video_path, 'wb') as f:
-                f.write(r.content)
+                logger.debug(f'Downloading {video_url} to {video_path}')
+                downloaded = 0
+                chunk_size = 8192
+                for chunk in r.iter_content(chunk_size=chunk_size):
+                    total_length = int(r.headers.get('content-length'))
+                    downloaded += chunk_size
+                    # If you have chunk encoded response uncomment if
+                    # and set chunk_size parameter to None.
+                    #if chunk:
+                    print(f'{int(100 * downloaded/total_length)}%', end='\r')
+                    f.write(chunk)
+            self.nb_folders += 1
+
+        if r.ok:
+            logger.debug(f'Successfuly downloaded video: {video_url}')
         else:
             logger.error(f'Failed to download video: {video_url}')
 
-        return video_path
+        return r.ok, video_path
+
 
     def merge(self, media_folder):
         logger.debug(f'Merging videos in folder : {media_folder}')

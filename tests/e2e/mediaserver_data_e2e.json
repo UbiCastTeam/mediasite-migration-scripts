@@ -67,7 +67,7 @@
                 ]
             },
             "video_type": "video_slides",
-            "file_url": "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4?st=4sqY2512cev7TIR-yxbWHQ&e=1619702441&usage=download"
+            "file_url": "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4?st=OzKcTlMTGiMsoxJyUfGS3w&e=1620220313&usage=download"
         },
         "ref": {
             "channel_path": "/E2E"
@@ -102,7 +102,7 @@
                 "details": []
             },
             "video_type": "computer_slides",
-            "file_url": "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4?st=4sqY2512cev7TIR-yxbWHQ&e=1619702441&usage=download"
+            "file_url": "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4?st=OzKcTlMTGiMsoxJyUfGS3w&e=1620220313&usage=download"
         },
         "ref": {
             "channel_path": "/Mediasite Users/Ubicast_Admin"
@@ -121,7 +121,7 @@
             "description": "Presenters: Doctor who\ndescription of test",
             "keywords": "B-B1DIER05",
             "slug": "mediasite-test",
-            "external_data": "{\n  \"availability\": \"Available\",\n  \"creation_date\": \"2021-03-16T12:39:26.287Z\",\n  \"creator\": \"MediasiteAdmin\",\n  \"description\": \"description of test\",\n  \"has_slides_details\": false,\n  \"id\": \"test\",\n  \"other_presenters\": [\n    {\n      \"display_name\": \"Doctor who\"\n    }\n  ],\n  \"owner_display_name\": \"test name\",\n  \"owner_mail\": \"test@ubicast.eu\",\n  \"owner_username\": \"Ubicast_Admin\",\n  \"presenter_display_name\": \"Doctor test\",\n  \"published_status\": true,\n  \"slides\": {\n    \"details\": null,\n    \"stream_type\": \"Video1\",\n    \"urls\": [\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\",\n      \"tests/samples/slide_sample.jpg\"\n    ]\n  },\n  \"tags\": [\n    \"B-B1DIER05\"\n  ],\n  \"timed_events\": [],\n  \"title\": \"unit test\",\n  \"url\": \"https://mediasite.ubicast.net/Site1/Play/id\",\n  \"videos\": [\n    {\n      \"files\": [\n        {\n          \"duration_ms\": 2577666,\n          \"encoding_infos\": {\n            \"audio_codec\": \"AAC\",\n            \"height\": 1200,\n            \"video_codec\": \"H264\",\n            \"width\": 1602\n          },\n          \"format\": \"video/mp4\",\n          \"is_transcode_source\": true,\n          \"size_bytes\": 103507411,\n          \"url\": \"tests/samples/MEDIA190326120008811.mp4\"\n        }\n      ],\n      \"stream_type\": \"Video1\"\n    }\n  ]\n}",
+            "external_data": "{\"id\": \"r789r8r8g2d8r7ttrteepog5\"}",
             "transcode": "no",
             "origin": "mediatransfer",
             "detect_slides": "no",
@@ -129,10 +129,10 @@
             "chapters": [],
             "slides": {},
             "video_type": "composite_video",
-            "file_url": "local_files_to_compose",
+            "file_url": "composites_files",
             "composites_videos_urls": [
-                "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4?st=Z-C4y189UhGKWEVM2LvAYQ&e=1619805548&usage=download",
-                "https://beta.ubicast.net/resources/r12619b82451d0sw5vlbj150q26l5a/media_6086d33c1bcb1a002937754d_826285_copie_clean.mp4?st=EDqc_RDAJEkZopvqqB4Xbw&e=1619804193&usage=download"
+                "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4?st=OzKcTlMTGiMsoxJyUfGS3w&e=1620220313&usage=download",
+                "https://beta.ubicast.net/resources/r12619b82451d0sw5vlbj150q26l5a/media_6086d33c1bcb1a002937754d_826285_copie_clean.mp4?st=880unBk9FGsoUuzNqhJEkA&e=1620220397&usage=download"
             ]
         },
         "ref": {
