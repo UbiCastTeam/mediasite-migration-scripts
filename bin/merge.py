@@ -143,9 +143,7 @@ class Merger:
             index += 1
             x_offset = adjusted_width
 
-        x264enc_options = 'speed-preset=faster'
-        if self.options.preview:
-            x264enc_options += ' tune=zerolatency'
+        x264enc_options = 'speed-preset=faster tune=zerolatency'
 
         pipeline_desc += f'compositor name=vmix background=black {compositor_options} ! video/x-raw, format=(string)I420, width=(int){videomixer_width}, height=(int){videomixer_height}, framerate=(fraction){framerate}, colorimetry=(string)bt709 ! tee name=tee ! queue name=qvenc ! x264enc {x264enc_options} ! progressreport update-freq=1 silent=true ! queue name=qmux ! mp4mux name=mux ! filesink location={output_file.resolve()}'
 
