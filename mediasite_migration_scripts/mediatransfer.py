@@ -53,6 +53,7 @@ class MediaTransfer():
         nb_medias = len(self.mediaserver_data)
         logger.debug(f'{nb_medias} medias found for uploading.')
         logger.debug('Uploading videos')
+        print(' ' * 50, end='\r')
 
         for i, user in enumerate(self.users):
             user_id = self.create_user(user)
@@ -64,6 +65,8 @@ class MediaTransfer():
             attempts += 1
             logger.debug(f'Attempt {attempts} for uploading medias.')
             for index, media in enumerate(self.mediaserver_data):
+                print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
+
                 if max_videos and index >= max_videos:
                     break
                 if not media.get('ref', {}).get('media_oid'):
@@ -101,9 +104,6 @@ class MediaTransfer():
                     except requests.exceptions.ReadTimeout:
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
-
-            print(' ' * 50, end='\r')
-            print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
 
         print('')
 
@@ -369,6 +369,7 @@ class MediaTransfer():
 
     def to_mediaserver_keys(self):
         logger.debug('Matching Mediasite data to MediaServer keys mapping.')
+        logger.debug(f'Whitelist: {self.config.get("whitelist")}')
 
         mediaserver_data = list()
         if hasattr(self, 'mediaserver_data'):
@@ -393,6 +394,7 @@ class MediaTransfer():
                         has_catalog = len(folder.get('catalogs', [])) > 0
                         channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
                         if v_url:
+                            logger.debug(f"Found file with handled format for presentation {presentation.get('id')}: {v_url} ")
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
@@ -429,7 +431,7 @@ class MediaTransfer():
 
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': path}})
                         else:
-                            logger.debug(f"No valid url for presentation {presentation.get('id')}")
+                            logger.error(f"No file with handled format for presentation {presentation.get('id')}")
                             continue
         return mediaserver_data
 
@@ -483,7 +485,6 @@ class MediaTransfer():
                 break
             else:
                 logger.debug(f"File format not handled: {v.get('format')}")
-                break
 
         return video_url
 
