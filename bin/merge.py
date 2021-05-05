@@ -32,10 +32,14 @@ def is_media_folder(path):
     return len(list(path.glob('*.mp4'))) != 0
 
 
+TIMEOUT_MS = 10000
+
+
 class Merger:
     def __init__(self, mainloop, options):
         self.mainloop = mainloop
         self.options = options
+        self.timeout_id = None
 
     def get_layout_preset(self, width, height, layers_data):
         layout_preset = {
@@ -164,6 +168,13 @@ class Merger:
 
         GLib.idle_add(self.pipeline.set_state, Gst.State.PLAYING)
         self.start_time = time.time()
+        self.timeout_id = GLib.timeout_add(TIMEOUT_MS, self._on_timeout)
+
+    def _on_timeout(self):
+        self.timeout_id = None
+        logging.error(f'No progress after {TIMEOUT_MS}ms, aborting with error')
+        self.abort()
+        return False
 
     def _on_error(self, bus, message):
         error, debug = message.parse_error()
@@ -175,11 +186,18 @@ class Merger:
         took = time.time() - self.start_time
         processing_speed = round(took / self.duration_s, 2)
         logging.info(f'Finished: {self.output_file}, processing speed: {processing_speed}x')
+        self.cancel_timeout()
         self.mainloop.quit()
+
+    def cancel_timeout(self):
+        if self.timeout_id:
+            GLib.source_remove(self.timeout_id)
+            self.timeout_id = None
 
     def abort(self):
         logging.info(f'Aborting and removing {self.output_file.name}')
         self.output_file.unlink()
+        self.cancel_timeout()
         self.mainloop.quit()
         sys.exit(1)
 
@@ -192,6 +210,8 @@ class Merger:
             if sname == 'progress':
                 percent = int(struct.get_value('percent'))
                 print(f'Processing: {percent}%', end='\r')
+                self.cancel_timeout()
+                self.timeout_id = GLib.timeout_add(TIMEOUT_MS, self._on_timeout)
 
     def get_media_info(self, media_file):
         path = str(Path(media_file).resolve())
