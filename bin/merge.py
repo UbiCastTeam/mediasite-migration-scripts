@@ -7,6 +7,7 @@ import json
 import logging
 from pathlib import Path
 import argparse
+import math
 from fractions import Fraction
 
 gi.require_version('Gst', '1.0')
@@ -40,6 +41,7 @@ class Merger:
         self.mainloop = mainloop
         self.options = options
         self.timeout_id = None
+        self.force_eos_id = None
 
     def get_layout_preset(self, width, height, layers_data):
         layout_preset = {
@@ -143,7 +145,9 @@ class Merger:
             index += 1
             x_offset = adjusted_width
 
-        x264enc_options = 'speed-preset=faster tune=zerolatency'
+        bitrate = int(math.sqrt(videomixer_width * videomixer_height) * 2)
+        print(f'Encoding at {videomixer_width}x{videomixer_height} {framerate} fps at {bitrate} kbits/s')
+        x264enc_options = f'speed-preset=faster tune=zerolatency bitrate={bitrate}'
 
         pipeline_desc += f'compositor name=vmix background=black {compositor_options} ! video/x-raw, format=(string)I420, width=(int){videomixer_width}, height=(int){videomixer_height}, framerate=(fraction){framerate}, colorimetry=(string)bt709 ! tee name=tee ! queue name=qvenc ! x264enc {x264enc_options} ! progressreport update-freq=1 silent=true ! queue name=qmux ! mp4mux name=mux ! filesink location={output_file.resolve()}'
 
@@ -167,6 +171,14 @@ class Merger:
         GLib.idle_add(self.pipeline.set_state, Gst.State.PLAYING)
         self.start_time = time.time()
         self.timeout_id = GLib.timeout_add(TIMEOUT_MS, self._on_timeout)
+        if self.options.max_duration:
+            logging.info(f'--max-duration option passed, will stop after {self.options.max_duration}s')
+            self.force_eos_id = GLib.timeout_add_seconds(self.options.max_duration, self.send_eos)
+
+    def send_eos(self):
+        logging.info('Forcing EOS')
+        event = Gst.Event.new_eos()
+        Gst.Element.send_event(self.pipeline, event)
 
     def _on_timeout(self):
         self.timeout_id = None
@@ -183,9 +195,15 @@ class Merger:
     def _on_eos(self, bus, message):
         took = time.time() - self.start_time
         processing_speed = round(took / self.duration_s, 2)
-        logging.info(f'Finished: {self.output_file}, processing speed: {processing_speed}x')
-        self.cancel_timeout()
+        logging.info(f'Finished: {self.output_file} with processing speed: {processing_speed}x')
+        GLib.idle_add(self.cancel_timeout)
+        GLib.idle_add(self.cancel_force_eos)
         self.mainloop.quit()
+
+    def cancel_force_eos(self):
+        if self.force_eos_id:
+            GLib.source_remove(self.force_eos_id)
+            self.force_eos_id = None
 
     def cancel_timeout(self):
         if self.timeout_id:
@@ -196,6 +214,7 @@ class Merger:
         logging.info(f'Aborting and removing {self.output_file.name}')
         self.output_file.unlink()
         self.cancel_timeout()
+        self.cancel_force_eos()
         self.mainloop.quit()
         sys.exit(1)
 
@@ -269,6 +288,13 @@ if __name__ == '__main__':
         type=int,
         help='Rendering width',
         default=2560,
+    )
+
+    parser.add_argument(
+        '--max-duration',
+        type=int,
+        help='Stop after this amount of seconds (disabled by default). Can be useful for looking at results quicker.',
+        default=0,
     )
 
     parser.add_argument(
