@@ -46,8 +46,9 @@ class VideoCompositor():
             self.dl_session = requests.Session()
         if not media_folder:
             media_folder = self.download_folder
+
         video_path = Path()
-        with dl_session.get(video_url, stream=True) as r:
+        with self.dl_session.get(video_url, stream=True) as r:
             media_folder.mkdir(parents=True, exist_ok=True)
             video_path = media_folder / f"{video_url.split('/')[-1].split('?')[0]}"
             r.raise_for_status()

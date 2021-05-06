@@ -97,8 +97,15 @@ class MediaTransfer():
                             data['channel'] = channel_oid
 
                         if data.get('video_type') == 'composite_video':
-                            logger.info('Composite video !!!!!')
-                            self.composites_videos.append(media)
+                            logger.info(f'Presentation {presentation_id} is a composite video.')
+                            already_added = False
+                            for v_composites in self.composites_videos:
+                                if data.get('slug') == v_composites.get('data', {}).get('slug'):
+                                    already_added = True
+                                    break
+                            if not already_added:
+                                self.composites_videos.append(media)
+                                nb_medias_uploaded += 1
                         else:
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
@@ -123,7 +130,7 @@ class MediaTransfer():
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
 
-            self.download_composites_videos()
+        self.download_composites_videos()
 
         print('')
 
@@ -143,24 +150,23 @@ class MediaTransfer():
         logger.info(f'Downloading composites videos.')
 
         all_ok = False
-        medias_downloaded = 0
+        medias_completed = 0
         videos_downloaded = 0
         for v_composite in self.composites_videos:
             data = v_composite.get('data', {})
-            presentation_id = data.get('external_data', {}).get('id')
+            presentation_id = json.loads(data.get('external_data', {})).get('id')
             logger.debug(f"Downloadind for presentation {presentation_id}")
-
-            urls = data.get('videos_composites_urls', [])
+            urls = data.get('composites_videos_urls', [])
             dl_ok = self.download_videos(urls)
             if dl_ok:
-                medias_downloaded += 1
+                medias_completed += 1
             else:
                 logger.error(f'Failed to download composites videos for presentation {presentation_id}.')
-        all_ok = (medias_downloaded == len(self.composites_videos))
+        all_ok = (medias_completed == len(self.composites_videos))
         if all_ok:
             logger.info(f'Sucessfully downloaded all composites videos for all medias ({len(self.composites_videos)})')
         else:
-            logger.error(f'Failed to download all composites videos: {medias_downloaded} / {len(self.composites_videos)} / ')
+            logger.error(f'Failed to complete all composite medias download: [{medias_completed} / {len(self.composites_videos)}] medias completed | {videos_downloaded} videos downloaded')
         return all_ok
 
     def download_videos(self, videos_urls):
@@ -168,7 +174,10 @@ class MediaTransfer():
             self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
 
         dl_ok = False
-        dl_ok = self.compositor.download(videos_urls)
+        for url in videos_urls:
+            dl_ok = self.compositor.download(url)
+            if not dl_ok:
+                break
 
         return dl_ok
 
