@@ -1,2 +1,4 @@
 mediasite_data.json filter=lfs diff=lfs merge=lfs -text
 tests/samples/MEDIA_6086d33c1bcb1a002937754d_826285.mp4 filter=lfs diff=lfs merge=lfs -text
+tests/samples/MADIA_NOSOUND.mp4 filter=lfs diff=lfs merge=lfs -text
+tests/samples/MEDIA_WITHSOUND.mp4 filter=lfs diff=lfs merge=lfs -text
