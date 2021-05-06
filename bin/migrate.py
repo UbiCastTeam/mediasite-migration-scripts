@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
 
-    keep_resources = input('Do you want to keep resources files (videos, slides) downloaded for migration ? [y/N]')
+    keep_resources = input('Do you want to keep resources files (videos, slides) downloaded for migration ? [y/N] ')
     if keep_resources != 'y' or keep_resources != 'yes':
         shutil.rmtree('/tmp/mediasite_files/', ignore_errors=True)
 

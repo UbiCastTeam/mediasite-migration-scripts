@@ -81,6 +81,14 @@ if __name__ == '__main__':
             if returncode != 0:
                 logging.error('Failed to import data')
                 sys.exit(1)
+            else:
+                try:
+                    with open(mediasite_data_file) as f:
+                        data = json.load(f)
+                except Exception as e:
+                    logging.info(f'Data file {options.mediasite_file} seems corrupted')
+                    logging.debug(e)
+                    sys.exit(1)
         else:
             logger.info('--------- Aborted ---------')
             sys.exit(1)

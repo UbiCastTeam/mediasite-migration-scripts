@@ -44,8 +44,9 @@ class DataAnalyzer():
                 layout_stats['mono + slides'] += 1
             else:
                 layout_stats['mono'] += 1
-        for stat, count in layout_stats.items():
-            layout_stats[stat] = round((count / len(self.presentations) * 100))
+        if self.presentations:
+            for stat, count in layout_stats.items():
+                layout_stats[stat] = round((count / len(self.presentations) * 100))
 
         return layout_stats
 
@@ -319,7 +320,7 @@ class DataAnalyzer():
             if whitelist:
                 skip = True
                 for w in whitelist:
-                    if folder['path'].startswith(w):
+                    if w in folder['path']:
                         skip = False
             for p in folder['presentations']:
                 if not skip:
