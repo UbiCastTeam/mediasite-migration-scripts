@@ -2,9 +2,8 @@ import logging
 import json
 import os
 import requests
-import shutil
 import sys
-
+from pathlib import Path
 
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
 from mediasite_migration_scripts.utils import common as utils
@@ -19,12 +18,6 @@ class MediaTransfer():
 
     def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
-        self.mediasite_data = mediasite_data
-
-        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
-        self.dl_session = None
-        self.compositor = None
-
         self.e2e_test = e2e_test
         self.unit_test = unit_test
         if self.unit_test:
@@ -48,9 +41,16 @@ class MediaTransfer():
         self.slide_annot_type = None
         self.chapters_annot_type = None
 
+        self.mediasite_data = mediasite_data
+        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
+
         self.mediaserver_data = self.to_mediaserver_keys()
         self.users = self.to_mediaserver_users(mediasite_users)
+        self.compositor = None
         self.composites_videos = list()
+        self.download_folder = Path('/tmp/mediasite_files/composition')
+        self.medias_folders = list()
+        self.dl_session = None
 
     def upload_medias(self, max_videos=None):
         total_medias = len(self.mediaserver_data)
@@ -111,7 +111,8 @@ class MediaTransfer():
                             if result.get('success'):
                                 media['ref']['media_oid'] = result.get('oid')
                                 media['ref']['slug'] = result.get('slug')
-                                del data['api_key']
+                                if data.get('api_key'):
+                                    del data['api_key']
 
                                 self.migrate_slides(media)
 
@@ -131,6 +132,31 @@ class MediaTransfer():
                         continue
 
         self.download_composites_videos()
+        logger.info('Merging and uploading composites medias.')
+        nb_composites_medias_uploaded = 0
+        for v in self.composites_videos:
+            print(f'Uploading: [{nb_composites_medias_uploaded} / {len(self.composites_videos)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
+
+            presentation_id = json.loads(data.get('external_data', {})).get('id')
+            media_folder = self.download_folder / presentation_id
+            merge_ok = self.compositor.merge(media_folder)
+            if merge_ok:
+                file_path = media_folder / 'composite.mp4'
+                result = self.upload_local_file(file_path.__str__(), v.get('data'))
+                if result.get('success'):
+                    nb_composites_medias_uploaded += 1
+
+                    media['ref']['media_oid'] = result.get('oid')
+                    media['ref']['slug'] = result.get('slug')
+                    if data.get('api_key'):
+                        del data['api_key']
+
+                    if len(data.get('chapters')) > 0:
+                        self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
+                else:
+                    logger.error(f"Failed to upload media: {data['title']}")
+            else:
+                logger.error(f'Failed to merge videos for presentation {presentation_id}')
 
         print('')
 
@@ -147,7 +173,10 @@ class MediaTransfer():
         return media_path
 
     def download_composites_videos(self):
-        logger.info(f'Downloading composites videos.')
+        logger.info('Downloading composites videos.')
+
+        if self.compositor is None:
+            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
 
         all_ok = False
         medias_completed = 0
@@ -155,31 +184,26 @@ class MediaTransfer():
         for v_composite in self.composites_videos:
             data = v_composite.get('data', {})
             presentation_id = json.loads(data.get('external_data', {})).get('id')
-            logger.debug(f"Downloadind for presentation {presentation_id}")
+            logger.debug(f"Downloading for presentation {presentation_id}")
+
             urls = data.get('composites_videos_urls', [])
-            dl_ok = self.download_videos(urls)
+            media_folder = self.download_folder / presentation_id
+            dl_ok = False
+            for url in urls:
+                dl_ok = self.compositor.download(url, media_folder)
+                if not dl_ok:
+                    break
             if dl_ok:
                 medias_completed += 1
             else:
                 logger.error(f'Failed to download composites videos for presentation {presentation_id}.')
+
         all_ok = (medias_completed == len(self.composites_videos))
         if all_ok:
             logger.info(f'Sucessfully downloaded all composites videos for all medias ({len(self.composites_videos)})')
         else:
             logger.error(f'Failed to complete all composite medias download: [{medias_completed} / {len(self.composites_videos)}] medias completed | {videos_downloaded} videos downloaded')
         return all_ok
-
-    def download_videos(self, videos_urls):
-        if self.compositor is None:
-            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
-
-        dl_ok = False
-        for url in videos_urls:
-            dl_ok = self.compositor.download(url)
-            if not dl_ok:
-                break
-
-        return dl_ok
 
     def upload_local_file(self, file_path, data):
         logger.debug(f"Uploading local file (composite video) : {file_path}")

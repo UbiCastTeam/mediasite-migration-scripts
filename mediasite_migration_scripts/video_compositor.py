@@ -40,12 +40,10 @@ class VideoCompositor():
 
         return final_media_path
 
-    def download(self, video_url, media_folder=str()):
+    def download(self, video_url, media_folder):
         logger.debug(f'Downloading video : {video_url}')
         if self.dl_session is None:
             self.dl_session = requests.Session()
-        if not media_folder:
-            media_folder = self.download_folder
 
         video_path = Path()
         with self.dl_session.get(video_url, stream=True) as r:
@@ -72,7 +70,6 @@ class VideoCompositor():
             logger.error(f'Failed to download video: {video_url}')
 
         return r.ok, video_path
-
 
     def merge(self, media_folder):
         logger.debug(f'Merging videos in folder : {media_folder}')
