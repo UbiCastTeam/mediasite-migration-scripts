@@ -57,7 +57,6 @@ def tearDownModule():
         else:
             logger.error(f"Failed to delete user {u} / Error: {result.get('error')}")
 
-    mediatransfer.ms_client.session.close()
     ms_client.session.close()
 
 
@@ -101,7 +100,7 @@ class TestMediaTransferE2E(TestCase):
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters']
+            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters', 'composites_videos_urls']
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))
@@ -137,8 +136,8 @@ class TestMediaTransferE2E(TestCase):
         result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
         if result:
             slides_up = result.get('slides')
-            slides = media['data']['slides']['urls']
-            slides_details = media['data']['slides']['details']
+            slides = media['data']['slides'].get('urls', [])
+            slides_details = media['data']['slides'].get('details', [])
 
             if slides_details:
                 self.assertEqual(len(slides), len(slides_up), msg=f'slides: {len(slides)} / slides_up: {len(slides_up)}')
