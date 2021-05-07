@@ -86,7 +86,7 @@ if __name__ == '__main__':
     print(f'Found {len(presentations)} presentations')
     if presentations:
         for presentation in presentations:
-            pres_id = presentation["id"]
+            pres_id = presentation['id']
             root = Path(args.download_folder) / pres_id
             video_urls = get_video_urls(presentation)
             if video_urls:

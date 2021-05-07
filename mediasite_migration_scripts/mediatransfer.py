@@ -138,34 +138,11 @@ class MediaTransfer():
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
 
-        self.download_composites_videos()
-        logger.info('Merging and uploading composites medias.')
-        nb_composites_medias_uploaded = 0
-        logger.info(f'Composites medias: {self.composites_medias}')
-        for media in self.composites_medias:
-            print(f'Uploading: [{nb_composites_medias_uploaded} / {len(self.composites_medias)}] -- {int(100 * (nb_composites_medias_uploaded / len(self.composites_medias)))}%', end='\r')
-
-            media_data = media.get('data', {})
-            presentation_id = json.loads(media_data.get('external_data', {})).get('id')
-            media_folder = self.download_folder / presentation_id
-            merge_ok = self.compositor.merge(media_folder)
-            if merge_ok:
-                file_path = media_folder / 'composite.mp4'
-                result = self.upload_local_file(file_path.__str__(), media_data)
-                if result.get('success'):
-                    nb_composites_medias_uploaded += 1
-
-                    media['ref']['media_oid'] = result.get('oid')
-                    media['ref']['slug'] = result.get('slug')
-                    if media_data.get('api_key'):
-                        del media_data['api_key']
-
-                    if len(media_data.get('chapters')) > 0:
-                        self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
-                else:
-                    logger.error(f"Failed to upload media: {media_data['title']}")
-            else:
-                logger.error(f'Failed to merge videos for presentation {presentation_id}')
+        composite_ok = self.manage_composite_video()
+        if composite_ok:
+            logger.debug('Successfully migrate composites medias.')
+        else:
+            logger.error('Not all composite medias have been migrated.')
 
         print('')
 
@@ -175,11 +152,41 @@ class MediaTransfer():
 
         return nb_medias_uploaded
 
-    def compose_video(self, videos_urls, presentation_id):
-        if self.compositor is None:
-            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
-        media_path = self.compositor.compose(videos_urls, presentation_id)
-        return media_path
+    def manage_composite_video(self, videos_urls, presentation_id):
+        up_ok = False
+        dl_ok = self.download_composites_videos()
+
+        if dl_ok:
+            logger.info('Merging and uploading composites medias.')
+            nb_composites_medias_uploaded = 0
+            for media in self.composites_medias:
+                print(f'Uploading: [{nb_composites_medias_uploaded} / {len(self.composites_medias)}] -- {int(100 * (nb_composites_medias_uploaded / len(self.composites_medias)))}%', end='\r')
+
+                media_data = media.get('data', {})
+                presentation_id = json.loads(media_data.get('external_data', {})).get('id')
+                media_folder = self.download_folder / presentation_id
+                merge_ok = self.compositor.merge(media_folder)
+                if merge_ok:
+                    file_path = media_folder / 'composite.mp4'
+                    result = self.upload_local_file(file_path.__str__(), media_data)
+                    if result.get('success'):
+                        nb_composites_medias_uploaded += 1
+
+                        media['ref']['media_oid'] = result.get('oid')
+                        media['ref']['slug'] = result.get('slug')
+                        if media_data.get('api_key'):
+                            del media_data['api_key']
+
+                        if len(media_data.get('chapters')) > 0:
+                            self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
+                    else:
+                        logger.error(f"Failed to upload media: {media_data['title']}")
+                else:
+                    logger.error(f'Failed to merge videos for presentation {presentation_id}')
+
+            all_ok = (len(nb_composites_medias_uploaded == len(self.composites_medias)))
+
+        return all_ok
 
     def download_composites_videos(self):
         logger.info('Downloading composites videos.')
@@ -215,7 +222,7 @@ class MediaTransfer():
         return all_ok
 
     def upload_local_file(self, file_path, data):
-        logger.debug(f"Uploading local file (composite video) : {file_path}")
+        logger.debug(f'Uploading local file (composite video) : {file_path}')
 
         result = self.ms_client.add_media(file_path=file_path, **data)
         return result
@@ -537,8 +544,8 @@ class MediaTransfer():
                                 'external_data': json.dumps(ext_data, indent=2, sort_keys=True),
                                 'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
-                                'detect_slides': 'yes' if v_type == 'computer_slides' or v_type == 'composite_slides' else 'no',
-                                'layout': 'webinar' if v_type == 'video_slides' or v_type == 'composite_slides' else 'video',
+                                'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
+                                'layout': 'webinar' if v_type in ['video_slides', 'composite_slides'] else 'video',
                                 'slides': presentation.get('slides'),
                                 'chapters': presentation.get('timed_events'),
                                 'video_type': v_type,
@@ -601,12 +608,12 @@ class MediaTransfer():
 
     def _find_file_to_upload(self, video_files):
         video_url = str()
-        for f in video_files:
-            if f.get('format') == 'video/mp4':
-                video_url = f['url']
+        for file in video_files:
+            if file.get('format') == 'video/mp4':
+                video_url = file['url']
                 break
-            elif self.formats_allowed.get(f.get('format')):
-                video_url = f['url']
+            elif self.formats_allowed.get(file.get('format')):
+                video_url = file['url']
                 break
 
         return video_url
