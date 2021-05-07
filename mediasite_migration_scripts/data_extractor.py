@@ -353,37 +353,25 @@ class DataExtractor():
         if type(slides) == list and len(slides) > 0:
             slides = slides[0]
         if slides:
-            is_useless_slides = self._is_useless_slides(slides.get('ContentEncodingSettingsId', ''))
-            if not is_useless_slides:
-                content_server_id = slides.get('ContentServerId', '')
-                content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
-                content_server_url = content_server.get('Url', '')
-                presentation_id = slides.get('ParentResourceId', '')
+            content_server_id = slides.get('ContentServerId', '')
+            content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
+            content_server_url = content_server.get('Url', '')
+            presentation_id = slides.get('ParentResourceId', '')
 
-                slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
-                slides_urls = []
-                slides_files_names = slides.get('FileNameWithExtension', '')
-                for i in range(int(slides.get('Length', '0'))):
-                    # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
-                    file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
-                    link = f'{slides_base_url}/{file_name}'
-                    slides_urls.append(link)
+            slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
+            slides_urls = []
+            slides_files_names = slides.get('FileNameWithExtension', '')
+            for i in range(int(slides.get('Length', '0'))):
+                # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
+                file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
+                link = f'{slides_base_url}/{file_name}'
+                slides_urls.append(link)
 
-                slides_infos['stream_type'] = slides.get('StreamType', '')
-                slides_infos['urls'] = slides_urls
-                slides_infos['details'] = slides.get('SlideDetails') if details else None
+            slides_infos['stream_type'] = slides.get('StreamType', '')
+            slides_infos['urls'] = slides_urls
+            slides_infos['details'] = slides.get('SlideDetails') if details else None
 
         return slides_infos
-
-    def _is_useless_slides(self, slides_settings_id):
-        is_useless = False
-        encoding_settings = self.mediasite.content.get_content_encoding_settings(slides_settings_id)
-
-        if encoding_settings:
-            source = encoding_settings.get('Name', '')
-            is_useless = (source == '[Default] Use Recorder\'s Settings')
-
-        return is_useless
 
     def get_timed_events(self, presentation_id):
         chapters = []
