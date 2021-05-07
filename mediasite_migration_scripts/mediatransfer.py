@@ -80,7 +80,6 @@ class MediaTransfer():
                 if max_videos and index >= max_videos:
                     break
 
-                progress_dots = ''
                 if not media.get('ref', {}).get('media_oid'):
                     try:
                         data = media.get('data', {})
@@ -91,8 +90,6 @@ class MediaTransfer():
                             channel_oid = self.get_user_channel(data.get('speaker_email', ''))
                         else:
                             channel_oid = self.create_channels(channel_path, is_unlisted=data['channel_unlisted'])[-1]
-
-                        print(progress_dots + '.', end='\r')
 
                         if not channel_oid:
                             data['channel'] = self.root_channel.get('oid')
@@ -111,7 +108,6 @@ class MediaTransfer():
                             if not already_added:
                                 self.composites_medias.append(media)
                                 nb_medias_uploaded += 1
-                            print(progress_dots + '.', end='\r')
                         else:
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
@@ -131,7 +127,6 @@ class MediaTransfer():
                                     self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
 
                                 nb_medias_uploaded += 1
-                                print(progress_dots + '.', end='\r')
                             else:
                                 logger.error(f"Failed to upload media: {data['title']}")
                     except requests.exceptions.ReadTimeout:
