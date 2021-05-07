@@ -186,9 +186,9 @@ class MediaTransfer():
                 else:
                     logger.error(f'Failed to merge videos for presentation {presentation_id}')
 
-            all_ok = (nb_composites_medias_uploaded == len(self.composites_medias))
+            up_ok = (nb_composites_medias_uploaded == len(self.composites_medias))
 
-        return all_ok
+        return up_ok
 
     def download_composites_videos(self):
         logger.info('Downloading composites videos.')

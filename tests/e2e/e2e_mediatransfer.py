@@ -58,6 +58,7 @@ except Exception as e:
     logger.error('Test data corrupted')
     exit(1)
 
+
 def setUpModule():
     print('-> ', __name__, 50 * '-')
 
