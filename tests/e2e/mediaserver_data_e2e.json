@@ -67,7 +67,7 @@
                 ]
             },
             "video_type": "video_slides",
-            "file_url": "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_720_0t4Q5Qjsx2.mp4?st=KByRuXDrDzb141gzlBMl9w&e=1620304707&usage=download"
+            "file_url": ""
         },
         "ref": {
             "channel_path": "/E2E"
@@ -102,7 +102,7 @@
                 "details": []
             },
             "video_type": "computer_slides",
-            "file_url": "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_720_0t4Q5Qjsx2.mp4?st=KByRuXDrDzb141gzlBMl9w&e=1620304707&usage=download"
+            "file_url": ""
         },
         "ref": {
             "channel_path": "/Mediasite Users/Ubicast_Admin"
@@ -131,8 +131,8 @@
             "video_type": "composite_video",
             "file_url": "composites_files",
             "composites_videos_urls": [
-                "https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_720_0t4Q5Qjsx2.mp4?st=KByRuXDrDzb141gzlBMl9w&e=1620304707&usage=download",
-                "https://beta.ubicast.net/resources/r1261a00932585xarjhhs3c4fumyrd/media_720_jAYVHv7bZ7.mp4?st=JVnNxTI2XHMj4aUleuRnTA&e=1620305424&usage=download"
+                "",
+                ""
             ]
         },
         "ref": {

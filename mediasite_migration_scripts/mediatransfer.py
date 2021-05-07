@@ -144,6 +144,8 @@ class MediaTransfer():
         else:
             logger.error('Not all composite medias have been migrated.')
 
+        self.manage_composite_video()
+
         print('')
 
         self.ms_client.session.close()
@@ -152,7 +154,7 @@ class MediaTransfer():
 
         return nb_medias_uploaded
 
-    def manage_composite_video(self, videos_urls, presentation_id):
+    def manage_composite_video(self):
         up_ok = False
         dl_ok = self.download_composites_videos()
 
@@ -184,7 +186,7 @@ class MediaTransfer():
                 else:
                     logger.error(f'Failed to merge videos for presentation {presentation_id}')
 
-            all_ok = (len(nb_composites_medias_uploaded == len(self.composites_medias)))
+            all_ok = (nb_composites_medias_uploaded == len(self.composites_medias))
 
         return all_ok
 
