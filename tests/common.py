@@ -31,11 +31,19 @@ def set_test_users():
 
     file = MEDIASITE_USERS_FILE
     for media in data:
-        users.append({
-            "mail": media.get('data', {}).get('speaker_email'),
-            "username": media.get('data', {}).get('speaker_name'),
-            "display_name": media.get('data', {}).get('speaker_id')
-        })
+        media_data = media.get('data', {})
+        already_added = False
+        for u in users:
+            if media_data.get('speaker_email') == u.get('mail'):
+                already_added = True
+                break
+        if not already_added:
+            users.append({
+                "mail": media_data.get('speaker_email'),
+                "username": media_data.get('speaker_name'),
+                "display_name": media_data.get('speaker_id')
+            })
+
     with open(file, 'w') as f:
         json.dump(users, f)
 

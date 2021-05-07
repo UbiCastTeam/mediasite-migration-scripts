@@ -78,13 +78,15 @@ class DataExtractor():
 
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
                     if catalogs:
-                        most_recent = datetime.strptime('0001-12-25T00:00:00', '%Y-%m-%dT%H:%M:%S')
+                        most_recent_time = datetime.strptime('0001-12-25T00:00:00', '%Y-%m-%dT%H:%M:%S')
                         for c in catalogs:
                             tmp = datetime.strptime(c.get('creation_date'), '%Y-%m-%dT%H:%M:%S')
-                            if tmp > most_recent:
-                                most_recent = tmp
-                        folder['name'] = c.get('name')
-                        folder['linked_catalog_id'] = c.get('id')
+                            if tmp > most_recent_time:
+                                most_recent_time = tmp
+                                most_recent_channel = c
+
+                        folder['name'] = most_recent_channel.get('name')
+                        folder['linked_catalog_id'] = most_recent_channel.get('id')
 
                     presentations_folders.append({**folder,
                                                   'catalogs': catalogs,

@@ -43,22 +43,20 @@ class TestMediaTransfer(TestCase):
                 for media in self.mediaserver_data:
                     data = media.get('data', {})
                     if data['slug'] == 'mediasite-' + presentation['id']:
-                        self.assertEqual(data['title'], presentation['title'])
-
                         has_catalog = len(folder.get('catalogs', [])) > 0
                         channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
                         self.assertEqual(data['channel_title'], channel_name)
                         self.assertIn('channel_unlisted', data)
                         self.assertNotEqual(data['channel_unlisted'], has_catalog)
-
                         if has_catalog:
                             channel_path_splitted = folder['path'].split('/')
                             channel_path_splitted[-1] = channel_name
                             path = '/'.join(channel_path_splitted)
                         else:
                             path = folder['path']
-                        self.assertEqual(media.get('ref', {}).get('channel_path'), path)
+                        self.assertEqual(media['ref']['channel_path'], path)
 
+                        self.assertEqual(data['title'], presentation['title'])
                         self.assertEqual(data['creation'], presentation['creation_date'])
                         self.assertEqual(data['speaker_id'], presentation['owner_username'])
                         self.assertEqual(data['speaker_name'], presentation['owner_display_name'])
@@ -70,8 +68,11 @@ class TestMediaTransfer(TestCase):
                                          msg='Audio only medias must be transcoded')
                         self.assertEqual(data['detect_slides'], 'yes' if data['video_type'] == 'computer_slides' or data['video_type'] == 'composite_slides' else 'no',
                                          msg='Slide detection must be on if the media is "computer_slides" or "composites_slides" type')
-                        self.assertEqual(data['layout'], 'webinar' if data['video_type'] == 'video_slides' else 'video',)
-                        self.assertIsNotNone(data['file_url'])
+                        self.assertEqual(data['layout'], 'webinar' if data['video_type'] in ['video_slides', 'composite_slides'] else 'video')
                         self.assertEqual(data['chapters'], presentation['timed_events'])
+
+                        self.assertTrue(data['file_url'])
+                        if data['file_url'] == 'local_files_to_compose':
+                            self.assertTrue(data['videos_composites_urls'])
 
         self.assertEqual(len_presentations, len(self.mediaserver_data))

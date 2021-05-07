@@ -32,6 +32,32 @@ mediasite_users = common.set_test_users()
 mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users, e2e_test=True, root_channel_oid=test_channel.get('oid'))
 ms_client = mediatransfer.ms_client
 
+mediaserver_data = list()
+try:
+    with open('tests/e2e/mediaserver_data_e2e.json') as f:
+        mediaserver_data = json.load(f)
+
+    media_samples_infos = [
+        {'oid': 'v12619b7260509beg5up', 'url': 'https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4'},
+        {'oid': 'v1261a0093258f6zu85m', 'url': 'https://beta.ubicast.net/resources/r1261a00932585xarjhhs3c4fumyrd/media_nosound_clean.mp4'}
+    ]
+    medias_samples = [ms_client.api('download', method='get', params={'oid': media['oid'], 'url': media['url'], 'redirect': 'no'})
+                      for media in media_samples_infos]
+    for s in medias_samples:
+        if not s.get('success'):
+            logger.error('Failed to get urls for medias samples from Mediaserver')
+
+    for media in mediaserver_data:
+        m_data = media.get('data', {})
+        if m_data.get('video_type') == "composite_video":
+            m_data['composites_videos_urls'] = [s.get('url') for s in medias_samples][:2]
+        else:
+            m_data['file_url'] = medias_samples[0]
+except Exception as e:
+    logger.debug(e)
+    logger.error('Test data corrupted')
+    exit(1)
+
 
 def setUpModule():
     print('-> ', __name__, 50 * '-')
@@ -66,21 +92,13 @@ class TestMediaTransferE2E(TestCase):
         super().setUp()
         self.mediatransfer = mediatransfer
         self.ms_client = ms_client
-
-        try:
-            with open('tests/e2e/mediaserver_data_e2e.json') as f:
-                self.mediaserver_data = json.load(f)
-            self.mediatransfer.mediaserver_data = self.mediaserver_data
-        except Exception as e:
-            logger.debug(e)
-            logger.error('Test data corrupted')
-            exit(1)
+        self.mediatransfer.mediaserver_data = mediaserver_data
 
     def tearDown(self):
         super().tearDown()
         try:
             with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
-                json.dump(self.mediaserver_data, f)
+                json.dump(self.mediatransfer.mediaserver_data, f)
             with open(common.MEDIASERVER_USERS_FILE, 'w') as f:
                 json.dump(self.mediatransfer.users, f)
         except Exception as e:
@@ -90,7 +108,7 @@ class TestMediaTransferE2E(TestCase):
 
     def test_upload_medias(self):
         print('-> test_upload_medias', 20 * '-')
-        medias_examples = self.mediaserver_data
+        medias_examples = self.mediatransfer.mediaserver_data
         self.mediatransfer.upload_medias()
 
         for u in self.mediatransfer.users:
@@ -101,7 +119,7 @@ class TestMediaTransferE2E(TestCase):
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters']
+            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters', 'composites_videos_urls']
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))
@@ -137,8 +155,8 @@ class TestMediaTransferE2E(TestCase):
         result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
         if result:
             slides_up = result.get('slides')
-            slides = media['data']['slides']['urls']
-            slides_details = media['data']['slides']['details']
+            slides = media['data']['slides'].get('urls', [])
+            slides_details = media['data']['slides'].get('details')
 
             if slides_details:
                 self.assertEqual(len(slides), len(slides_up), msg=f'slides: {len(slides)} / slides_up: {len(slides_up)}')
