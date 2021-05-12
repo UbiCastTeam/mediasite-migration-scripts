@@ -498,8 +498,8 @@ class MediaTransfer():
 
                         description_text = presentation.get('description', '')
                         description_text = description_text if description_text else ''
-                        presenters = f'Presenters: {presenters}' if presenters else ''
-                        description = f'[{presenters}] \n<br/>{description_text}'
+                        presenters = f'[Presenters: {presenters}] \n<br/>' if presenters else ''
+                        description = f'{presenters}{description_text}'
 
                         v_composites_urls = list()
                         v_files = list()
