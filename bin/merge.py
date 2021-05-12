@@ -33,7 +33,7 @@ def is_media_folder(path):
     return len(list(path.glob('*.mp4'))) != 0
 
 
-TIMEOUT_MS = 10000
+TIMEOUT_MS = 60000
 
 
 class Merger:
@@ -137,8 +137,9 @@ class Merger:
                 video_name == 'Slides.mp4',
                 False,
             ))
-            compositor_options += '{pad}::xpos={x} {pad}::ypos={y} {pad}::width={width} {pad}::height={height} '.format(**pad_data)
-            pipeline_desc += f' filesrc location={video_info["path"]} ! qtdemux name=demux_{index} ! queue name=qh264dec_{index} ! avdec_h264 ! vmix. '
+            compositor_options += '{pad}::xpos={x} {pad}::ypos={y} '.format(**pad_data)
+            pad_caps = 'video/x-raw, format=(string)I420, width=(int){width}, height=(int){height}'.format(**pad_data)
+            pipeline_desc += f' filesrc location={video_info["path"]} ! qtdemux name=demux_{index} ! queue name=qh264dec_{index} ! avdec_h264 ! queue name=vscale{index} ! videoscale ! {pad_caps} ! queue ! vmix. '
             if video_name != 'Slides.mp4' and not has_audio:
                 pipeline_desc += f' demux_{index}. ! queue name=qaparse ! aacparse ! queue name=amux ! mux. '
                 has_audio = True
@@ -146,7 +147,7 @@ class Merger:
             x_offset = adjusted_width
 
         bitrate = int(math.sqrt(videomixer_width * videomixer_height) * 2)
-        print(f'Encoding at {videomixer_width}x{videomixer_height} {framerate} fps at {bitrate} kbits/s')
+        print(f'Encoding {self.duration_s}s file at {videomixer_width}x{videomixer_height} {framerate} fps at {bitrate} kbits/s')
         x264enc_options = f'speed-preset=faster tune=zerolatency bitrate={bitrate}'
 
         pipeline_desc += f'compositor name=vmix background=black {compositor_options} ! video/x-raw, format=(string)I420, width=(int){videomixer_width}, height=(int){videomixer_height}, framerate=(fraction){framerate}, colorimetry=(string)bt709 ! tee name=tee ! queue name=qvenc ! x264enc {x264enc_options} ! progressreport update-freq=1 silent=true ! queue name=qmux ! mp4mux name=mux ! filesink location={output_file.resolve()}'
@@ -194,8 +195,8 @@ class Merger:
 
     def _on_eos(self, bus, message):
         took = time.time() - self.start_time
-        processing_speed = round(took / self.duration_s, 2)
-        logging.info(f'Finished: {self.output_file} with processing speed: {processing_speed}x')
+        processing_speed = round(self.duration_s / took, 2)
+        logging.info(f'Finished in {int(took)}s: {self.output_file} with processing speed: {processing_speed}x')
         GLib.idle_add(self.cancel_timeout)
         GLib.idle_add(self.cancel_force_eos)
         self.mainloop.quit()
