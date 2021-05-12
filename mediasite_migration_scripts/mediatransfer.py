@@ -529,7 +529,11 @@ class MediaTransfer():
                             logger.debug(f"Found file with handled format for presentation {presentation.get('id')}: {v_url} ")
                             has_catalog = len(folder.get('catalogs', [])) > 0
                             channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
-                            ext_data = presentation if self.config.get('external_data') else {'id': presentation.get('id')}
+
+                            ext_data = presentation if self.config.get('external_data') else {
+                                key: presentation.get(key) for key in ['id', 'creator', 'total_views', 'last_viewed']
+                            }
+
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,

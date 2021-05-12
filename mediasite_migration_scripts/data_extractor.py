@@ -128,6 +128,8 @@ class DataExtractor():
                 if presenter_display_name.startswith('Default Presenter'):
                     presenter_display_name = None
 
+                presentation_analytics = self.mediasite.presentation.get_analytics(presentation.get('Id', ''))
+
                 infos = {
                     'id': presentation.get('Id', ''),
                     'title': presentation.get('Title', ''),
@@ -144,6 +146,8 @@ class DataExtractor():
                     'description': presentation.get('Description', ''),
                     'tags': presentation.get('TagList', ''),
                     'timed_events': self.get_timed_events(presentation.get('Id', '')),
+                    'total_views': presentation_analytics.get('TotalViews', ''),
+                    'last_viewed': presentation_analytics.get('LastWatched', ''),
                     'url': presentation.get('#Play').get('target', ''),
                 }
                 infos['videos'] = self.get_videos_infos(presentation.get('Id'))

@@ -91,6 +91,8 @@ class TestDataExtractorE2E(TestCase):
             'description',
             'tags',
             'timed_events',
+            'total_views',
+            'last_viewed',
             'url',
             'videos',
             'slides'
