@@ -9,6 +9,7 @@ import requests
 
 def get_video_urls(presentation):
     videos = dict()
+    duration_s = 0
     slides_stream_type = presentation.get('slides', {}).get('stream_type')
     for video in presentation['videos']:
         name = video['stream_type']
@@ -17,8 +18,9 @@ def get_video_urls(presentation):
         for f in video['files']:
             if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
                 videos[name] = f['url']
+                duration_s = max(duration_s, int(f["duration_ms"] / 1000))
                 break
-    return videos
+    return videos, duration_s
 
 
 if __name__ == '__main__':
@@ -88,10 +90,10 @@ if __name__ == '__main__':
         for presentation in presentations:
             pres_id = presentation['id']
             root = Path(args.download_folder) / pres_id
-            video_urls = get_video_urls(presentation)
+            video_urls, duration_s = get_video_urls(presentation)
             if video_urls:
                 if not args.download:
-                    print(f'Playing {pres_id}')
+                    print(f'Playing {duration_s}s presentation with id {pres_id}')
                     cmd = 'gst-launch-1.0'
                     if root.is_dir():
                         print(f'Found existing folder {root}, playing from local folder')
