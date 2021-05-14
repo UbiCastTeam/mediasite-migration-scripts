@@ -26,6 +26,7 @@ class DataExtractor():
             'whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
+        self.mediasite_format_date = '%Y-%m-%dT%H:%M:%S'
 
         self.presentations = None
         self.folders = self.get_all_folders_infos()
@@ -78,9 +79,9 @@ class DataExtractor():
 
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
                     if catalogs:
-                        most_recent_time = datetime.strptime('0001-12-25T00:00:00', '%Y-%m-%dT%H:%M:%S')
+                        most_recent_time = datetime.strptime('0001-12-25T00:00:00', self.mediasite_format_date)
                         for c in catalogs:
-                            tmp = datetime.strptime(c.get('creation_date'), '%Y-%m-%dT%H:%M:%S')
+                            tmp = datetime.strptime(c.get('creation_date'), self.mediasite_format_date)
                             if tmp > most_recent_time:
                                 most_recent_time = tmp
                                 most_recent_channel = c
@@ -116,6 +117,7 @@ class DataExtractor():
             if presentation.get('ParentFolderId') == folder_id:
                 logger.debug('-' * 50)
                 logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
+
                 has_slides_details = False
                 for stream_type in presentation.get('Streams'):
                     if stream_type.get('StreamType') == 'Slide':
@@ -130,10 +132,15 @@ class DataExtractor():
 
                 presentation_analytics = self.mediasite.presentation.get_analytics(presentation.get('Id', ''))
 
+                creation_date = creation_date = datetime.strptime(presentation.get('CreationDate', '0001-12-25T00:00:00'), self.mediasite_format_date)
+                if presentation.get('RecordDate', ''):
+                    record_date = datetime.strptime(presentation['RecordDate'], self.mediasite_format_date)
+                    creation_date = min([creation_date, record_date])
+
                 infos = {
                     'id': presentation.get('Id', ''),
                     'title': presentation.get('Title', ''),
-                    'creation_date': presentation.get('CreationDate', ''),
+                    'creation_date': creation_date,
                     'presenter_display_name': presenter_display_name,
                     'owner_username': owner_infos.get('username', ''),
                     'owner_display_name': owner_infos.get('display_name', ''),
