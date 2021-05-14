@@ -132,9 +132,12 @@ class DataExtractor():
 
                 presentation_analytics = self.mediasite.presentation.get_analytics(presentation.get('Id', ''))
 
-                creation_date = creation_date = datetime.strptime(presentation.get('CreationDate', '0001-12-25T00:00:00'), self.mediasite_format_date)
+                # we split at '.' to pop out millisesonds, and remove 'Z' tag
+                creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
+                creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
                 if presentation.get('RecordDate', ''):
-                    record_date = datetime.strptime(presentation['RecordDate'], self.mediasite_format_date)
+                    record_date_str = presentation['RecordDate'].split('.')[0].replace('Z', '')
+                    record_date = datetime.strptime(record_date_str, self.mediasite_format_date)
                     creation_date = min([creation_date, record_date])
 
                 infos = {
@@ -188,7 +191,7 @@ class DataExtractor():
                          'description': catalog.get('Description', ''),
                          'url': catalog.get('CatalogUrl', ''),
                          'owner_username': catalog.get('Owner', ''),
-                         'creation_date': catalog.get('CreationDate', '')
+                         'creation_date': catalog.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
                          }
                 folder_catalogs.append(infos)
         return folder_catalogs
