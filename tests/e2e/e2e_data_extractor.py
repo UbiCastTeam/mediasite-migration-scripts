@@ -107,3 +107,10 @@ class TestDataExtractorE2E(TestCase):
             self.assertIn(u, usernames)
             usernames.pop(i)
             self.assertNotIn(u, usernames)
+
+        try:
+            with open('test.json') as f:
+                json.dumps(self.extractor.all_data, f)
+        except Exception as e:
+            logger.error(e)
+            raise AssertionError
