@@ -62,7 +62,8 @@ class VideoCompositor():
                     # If you have chunk encoded response uncomment if
                     # and set chunk_size parameter to None.
                     #if chunk:
-                    print(f'{int(100 * downloaded/total_length)}%', end='\r')
+                    print(f'Downloading: {int(100 * downloaded/total_length)}%', end='\r')
+                    print(' ' * 50, end='\r')
                     f.write(chunk)
             self.nb_folders += 1
 

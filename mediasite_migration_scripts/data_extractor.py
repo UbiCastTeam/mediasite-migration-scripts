@@ -134,16 +134,16 @@ class DataExtractor():
 
                 # we split at '.' to pop out millisesonds, and remove 'Z' tag
                 creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
-                creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
                 if presentation.get('RecordDate', ''):
                     record_date_str = presentation['RecordDate'].split('.')[0].replace('Z', '')
                     record_date = datetime.strptime(record_date_str, self.mediasite_format_date)
+                    creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
                     creation_date = min([creation_date, record_date])
 
                 infos = {
                     'id': presentation.get('Id', ''),
                     'title': presentation.get('Title', ''),
-                    'creation_date': creation_date,
+                    'creation_date': creation_date.strftime(self.mediasite_format_date),
                     'presenter_display_name': presenter_display_name,
                     'owner_username': owner_infos.get('username', ''),
                     'owner_display_name': owner_infos.get('display_name', ''),
