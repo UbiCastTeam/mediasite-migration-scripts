@@ -67,7 +67,7 @@ class DataExtractor():
             if self.presentations is None:
                 self.presentations = self.mediasite.presentation.get_all_presentations()
 
-            logger.info('Ordering all presentations by folder')
+            logger.info('Extracting and ordering metadata.')
             for i, folder in enumerate(self.folders):
                 if i > 1:
                     print(f'Requesting: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
@@ -366,36 +366,35 @@ class DataExtractor():
         # SlideDetailsContent returns a dict whereas SlideContent return a list (key 'value' in JSON response)
         if type(slides) == list and len(slides) > 0:
             slides = slides[0]
-        if slides:
-            is_useless_slides = self._is_useless_slides(slides.get('ContentEncodingSettingsId', ''))
-            if not is_useless_slides:
-                content_server_id = slides.get('ContentServerId', '')
-                content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
-                content_server_url = content_server.get('Url', '')
-                presentation_id = slides.get('ParentResourceId', '')
 
-                slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
-                slides_urls = []
-                slides_files_names = slides.get('FileNameWithExtension', '')
-                for i in range(int(slides.get('Length', '0'))):
-                    # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
-                    file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
-                    link = f'{slides_base_url}/{file_name}'
-                    slides_urls.append(link)
+        if slides and not self.is_useless_slides(slides):
+            content_server_id = slides.get('ContentServerId', '')
+            content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
+            content_server_url = content_server.get('Url', '')
+            presentation_id = slides.get('ParentResourceId', '')
 
-                slides_infos['stream_type'] = slides.get('StreamType', '')
-                slides_infos['urls'] = slides_urls
-                slides_infos['details'] = slides.get('SlideDetails') if details else None
+            slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
+            slides_urls = []
+            slides_files_names = slides.get('FileNameWithExtension', '')
+            for i in range(int(slides.get('Length', '0'))):
+                # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
+                file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
+                link = f'{slides_base_url}/{file_name}'
+                slides_urls.append(link)
+
+            slides_infos['stream_type'] = slides.get('StreamType', '')
+            slides_infos['urls'] = slides_urls
+            slides_infos['details'] = slides.get('SlideDetails') if details else None
 
         return slides_infos
 
-    def _is_useless_slides(self, slides_settings_id):
+    def _is_useless_slides(self, slides):
         is_useless = False
-        encoding_settings = self.mediasite.content.get_content_encoding_settings(slides_settings_id)
 
+        encoding_settings = self.mediasite.content.get_content_encoding_settings(slides.get('ContentEncodingSettingsId', ''))
         if encoding_settings:
             source = encoding_settings.get('Name', '')
-            is_useless = (source == '[Default] Use Recorder\'s Settings')
+            is_useless = (source == '[Default] Use Recorder\'s Settings' and not slides.get('SlideDetails'))
 
         return is_useless
 
@@ -403,7 +402,6 @@ class DataExtractor():
         chapters = []
         if presentation_id:
             timed_events = self.mediasite.presentation.get_content(presentation_id, resource_content='TimedEvents')
-
             for event in timed_events:
                 if event.get('Payload'):
                     chapter_xml = xml.parseString(event['Payload']).documentElement
