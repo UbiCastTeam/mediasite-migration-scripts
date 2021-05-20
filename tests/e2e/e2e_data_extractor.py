@@ -98,9 +98,11 @@ class TestDataExtractorE2E(TestCase):
             'slides'
         ]
         for folder in self.extractor.all_data:
-            if len(folder.get('presentations')) > 0:
-                self.assertListEqual(presentation_keys, list(folder['presentations'][0].keys()))
-                break
+            presentations = folder.get('presentations', [])
+            if len(presentations) > 0:
+                for p in presentations:
+                    for key in presentation_keys:
+                        self.assertIn(key, list(p.keys()))
 
         self.assertIsInstance(self.extractor.users, list)
 
