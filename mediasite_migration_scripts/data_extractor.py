@@ -367,7 +367,7 @@ class DataExtractor():
         if type(slides) == list and len(slides) > 0:
             slides = slides[0]
 
-        if slides and not self.is_useless_slides(slides):
+        if slides and not self._is_useless_slides(slides):
             content_server_id = slides.get('ContentServerId', '')
             content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
             content_server_url = content_server.get('Url', '')

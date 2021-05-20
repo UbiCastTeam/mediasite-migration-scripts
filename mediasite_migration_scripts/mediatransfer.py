@@ -522,12 +522,20 @@ class MediaTransfer():
 
                         if v_url:
                             logger.debug(f"Found file with handled format for presentation {presentation.get('id')}: {v_url} ")
+
                             has_catalog = len(folder.get('catalogs', [])) > 0
                             channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
 
                             ext_data = presentation if self.config.get('external_data') else {
                                 key: presentation.get(key) for key in ['id', 'creator', 'total_views', 'last_viewed']
                             }
+
+                            if v_type == 'video_slides':
+                                layout = 'webinar'
+                            elif v_type in ['composite_video', 'composite_slides']:
+                                layout = 'composition'
+                            else:
+                                layout = 'video'
 
                             data = {
                                 'title': presentation.get('title'),
@@ -546,7 +554,7 @@ class MediaTransfer():
                                 'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
-                                'layout': 'webinar' if v_type in ['video_slides', 'composite_slides'] else 'video',
+                                'layout': layout,
                                 'slides': presentation.get('slides'),
                                 'chapters': presentation.get('timed_events'),
                                 'video_type': v_type,
