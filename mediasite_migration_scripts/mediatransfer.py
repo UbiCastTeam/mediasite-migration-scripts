@@ -55,7 +55,7 @@ class MediaTransfer():
     def upload_medias(self, max_videos=None):
         total_medias = len(self.mediaserver_data)
         logger.debug(f'{total_medias} medias found for uploading.')
-        logger.debug('Uploading videos')
+        logger.debug('Migrating medias')
         print(' ' * 50, end='\r')
 
         for i, user in enumerate(self.users):
@@ -97,7 +97,7 @@ class MediaTransfer():
                             data['channel'] = channel_oid
 
                         if data.get('video_type') == 'composite_video':
-                            logger.info(f'Presentation {presentation_id} is a composite video.')
+                            logger.debug(f'Presentation {presentation_id} is a composite video.')
 
                             del data['file_url']
                             already_added = False
@@ -133,13 +133,11 @@ class MediaTransfer():
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
 
-        composite_ok = self.manage_composite_video()
+        composite_ok = self.migrate_composites_videos()
         if composite_ok:
             logger.debug('Successfully migrate composites medias.')
         else:
             logger.error('Not all composite medias have been migrated.')
-
-        self.manage_composite_video()
 
         print('')
 
@@ -149,12 +147,13 @@ class MediaTransfer():
 
         return nb_medias_uploaded
 
-    def manage_composite_video(self):
+    def migrate_composites_videos(self):
+        logger.info('Merging and migrating composites videos.')
         up_ok = False
         dl_ok = self.download_composites_videos()
 
         if dl_ok:
-            logger.info('Merging and uploading composites medias.')
+            logger.debug('Merging and uploading')
             nb_composites_medias_uploaded = 0
             for media in self.composites_medias:
                 print(f'Uploading: [{nb_composites_medias_uploaded} / {len(self.composites_medias)}] -- {int(100 * (nb_composites_medias_uploaded / len(self.composites_medias)))}%', end='\r')
@@ -165,6 +164,11 @@ class MediaTransfer():
                 merge_ok = self.compositor.merge(media_folder)
                 if merge_ok:
                     file_path = media_folder / 'composite.mp4'
+                    layout_preset_path = media_folder / 'mediaserver_layout.json'
+                    if layout_preset_path.is_file():
+                        with open(layout_preset_path) as f:
+                            media_data['layout_preset'] = json.load(f)
+
                     result = self.upload_local_file(file_path.__str__(), media_data)
                     if result.get('success'):
                         nb_composites_medias_uploaded += 1
@@ -186,7 +190,7 @@ class MediaTransfer():
         return up_ok
 
     def download_composites_videos(self):
-        logger.info('Downloading composites videos.')
+        logger.debug('Downloading composites videos.')
 
         if self.compositor is None:
             self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
@@ -194,7 +198,9 @@ class MediaTransfer():
         all_ok = False
         medias_completed = 0
         videos_downloaded = 0
-        for v_composite in self.composites_medias:
+        for i, v_composite in enumerate(self.composites_medias):
+            print(f'Downloading: [{i} / {len(self.composites_medias)}] -- {i / len(self.composites_medias)}%', end='\r')
+
             data = v_composite.get('data', {})
             presentation_id = json.loads(data.get('external_data', {})).get('id')
             logger.debug(f"Downloading for presentation {presentation_id}")
