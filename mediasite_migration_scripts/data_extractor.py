@@ -402,17 +402,17 @@ class DataExtractor():
         chapters = []
         if presentation_id:
             timed_events = self.mediasite.presentation.get_content(presentation_id, resource_content='TimedEvents')
-            try:
-                for event in timed_events:
-                    if event.get('Payload'):
+            for event in timed_events:
+                if event.get('Payload'):
+                    try:
                         chapter_xml = xml.parseString(event['Payload']).documentElement
                         chapters.append({
                             'chapter_index': chapter_xml.getElementsByTagName('Number')[0].firstChild.nodeValue,
                             'chapter_title': chapter_xml.getElementsByTagName('Title')[0].firstChild.nodeValue,
                             'chapter_position_ms': event.get('Position', 0)
                         })
-            except Exception as e:
-                logger.warning(f'Failed to get chapters for presentation {presentation_id}. Error: {e}')
+                    except Exception as e:
+                        logger.debug(f'Non valid chapter: {e}')
 
         return chapters
 
