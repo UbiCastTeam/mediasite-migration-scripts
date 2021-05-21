@@ -38,8 +38,8 @@ try:
         mediaserver_data = json.load(f)
 
     media_samples_infos = [
-        {'oid': 'v12619b7260509beg5up', 'url': 'https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_6086d33c1bcb1a002937754d_826285_clean.mp4'},
-        {'oid': 'v1261a0093258f6zu85m', 'url': 'https://beta.ubicast.net/resources/r1261a00932585xarjhhs3c4fumyrd/media_nosound_clean.mp4'}
+        {'oid': 'v12619b7260509beg5up', 'url': 'https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_720_0t4Q5Qjsx2.mp4'},
+        {'oid': 'v1261a0093258f6zu85m', 'url': 'https://beta.ubicast.net/resources/r1261a00932585xarjhhs3c4fumyrd/media_720_jAYVHv7bZ7.mp4'}
     ]
     medias_samples = [ms_client.api('download', method='get', params={'oid': media['oid'], 'url': media['url'], 'redirect': 'no'})
                       for media in media_samples_infos]

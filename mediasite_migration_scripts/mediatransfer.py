@@ -491,6 +491,8 @@ class MediaTransfer():
             logger.debug('No Mediaserver mapping. Generating mapping.')
             for folder in self.mediasite_data:
                 if utils.is_folder_to_add(folder.get('path'), config=self.config):
+                    has_catalog = len(folder.get('catalogs', [])) > 0
+                    is_unlisted_channel = self._is_unlisted_channel(folder, has_catalog)
                     for presentation in folder['presentations']:
                         presenters = str()
                         for p in presentation.get('other_presenters'):
@@ -527,14 +529,13 @@ class MediaTransfer():
 
                         if v_url:
                             logger.debug(f"Found file with handled format for presentation {presentation.get('id')}: {v_url} ")
-                            has_catalog = len(folder.get('catalogs', [])) > 0
                             channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
                             ext_data = presentation if self.config.get('external_data') else {'id': presentation.get('id')}
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
-                                'channel_unlisted': not has_catalog,
-                                'unlisted': 'yes' if not has_catalog else 'no',
+                                'channel_unlisted': is_unlisted_channel,
+                                'unlisted': 'yes' if is_unlisted_channel else 'no',
                                 'creation': presentation.get('creation_date'),
                                 'speaker_id': presentation.get('owner_username'),
                                 'speaker_name': presentation.get('owner_display_name'),
@@ -638,3 +639,13 @@ class MediaTransfer():
             ok = result.get('success', False)
 
         return ok
+
+    def _is_unlisted_channel(self, folder, has_catalog=False):
+        is_unlisted = False
+
+        for parent_folder in self.mediasite_data:
+            if parent_folder.get('id') == folder.get('parent_id'):
+                parent_has_catalog = len(parent_folder.get('catalogs', [])) > 0
+                is_unlisted = not has_catalog or not parent_has_catalog
+
+        return is_unlisted
