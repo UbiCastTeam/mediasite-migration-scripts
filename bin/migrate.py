@@ -30,6 +30,13 @@ if __name__ == '__main__':
         parser.add_argument('-mf', '--mediasite_file',
                             dest='mediasite_file', default=None,
                             help='add custom mediasite data file.')
+        parser.add_argument(
+            '--download-folder',
+            type=str,
+            help='Folder name for downloads',
+            default='downloads',
+        )
+
         return parser.parse_args()
 
     options = manage_opts()
@@ -77,16 +84,16 @@ if __name__ == '__main__':
         logger.error('--------- Aborted ---------')
         sys.exit(1)
 
-    mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users)
+    mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users, download_folder=options.download_folder)
 
     logger.info('Uploading videos...')
     nb_uploaded_medias = mediatransfer.upload_medias(options.max_videos)
 
     logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
 
-    keep_resources = input('Do you want to keep resources files (videos, slides) downloaded for migration ? [y/N] ')
+    keep_resources = input(f'Do you want to keep resources files (videos, slides) downloaded for migration ({options.download_folder})? [y/N] ')
     if keep_resources not in ['y', 'yes']:
-        shutil.rmtree('/tmp/mediasite_files/', ignore_errors=True)
+        shutil.rmtree(options.download_folder, ignore_errors=True)
 
     if options.verbose:
         mediaserver_data = mediatransfer.mediaserver_data

@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 class VideoCompositor():
-    def __init__(self, config=dict(), dl_session=None, mediasite_auth=tuple()):
+    def __init__(self, config=dict(), dl_session=None, mediasite_auth=tuple(), download_folder='/tmp/composite'):
         self.config = config
-        self.download_folder = Path('/tmp/mediasite_files/composition')
+        self.download_folder = download_folder
         self.dl_session = dl_session
         self.mediasite_auth = mediasite_auth
         if not mediasite_auth:
@@ -76,5 +76,5 @@ class VideoCompositor():
 
     def merge(self, media_folder):
         logger.debug(f'Merging videos in folder : {media_folder}')
-        return_code = os.system(f'python3 bin/merge.py {media_folder}')
+        return_code = os.system(f'python3 bin/merge.py --width {self.config.get("composite_width", 1920)} --height {self.config.get("composite_height", 1080)} {media_folder}')
         return (return_code == 0)

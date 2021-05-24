@@ -4,6 +4,7 @@ import os
 import requests
 import sys
 from pathlib import Path
+from functools import lru_cache
 
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
 from mediasite_migration_scripts.utils import common as utils
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
+    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None, download_folder='/tmp'):
         self.config = config
         self.e2e_test = e2e_test
         self.unit_test = unit_test
@@ -48,16 +49,19 @@ class MediaTransfer():
         self.users = self.to_mediaserver_users(mediasite_users)
         self.compositor = None
         self.composites_medias = list()
-        self.download_folder = Path('/tmp/mediasite_files/composition')
+        self.download_folder = dl = Path(download_folder)
+        self.slides_folder = dl / 'slides'
+        self.composites_folder = dl / 'composite'
         self.medias_folders = list()
         self.dl_session = None
 
     def upload_medias(self, max_videos=None):
         total_medias = len(self.mediaserver_data)
-        logger.debug(f'{total_medias} medias found for uploading.')
+        logger.info(f'{total_medias} medias found for uploading.')
         logger.debug('Migrating medias')
         print(' ' * 50, end='\r')
 
+        #self.users = list()  # UNCOMMENT TO SKIP USER CREATION
         for i, user in enumerate(self.users):
             user_id = self.create_user(user)
             user['id'] = user_id
@@ -87,6 +91,7 @@ class MediaTransfer():
 
                         channel_path = media['ref'].get('channel_path')
                         if channel_path.startswith('/Mediasite Users'):
+                            #continue  # UNCOMMENT TO SKIP PERSONAL USER CHANNEL MIGRATION
                             channel_oid = self.get_user_channel(data.get('speaker_email', ''))
                         else:
                             channel_oid = self.create_channels(channel_path, is_unlisted=data['channel_unlisted'])[-1]
@@ -96,10 +101,12 @@ class MediaTransfer():
                         else:
                             data['channel'] = channel_oid
 
-                        if data.get('video_type') == 'composite_video':
+                        if data.get('video_type').startswith('composite_'):
                             logger.debug(f'Presentation {presentation_id} is a composite video.')
 
-                            del data['file_url']
+                            # FIXME why did we do this in the first place ???
+                            #del data['file_url']
+                            data.pop('file_url', None)
                             already_added = False
                             for v_composites in self.composites_medias:
                                 if data.get('slug') == v_composites.get('data', {}).get('slug'):
@@ -109,6 +116,7 @@ class MediaTransfer():
                                 self.composites_medias.append(media)
                                 nb_medias_uploaded += 1
                         else:
+                            #continue  # UNCOMMENT TO SKIP NON-COMPOSITE
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 media['ref']['media_oid'] = result.get('oid')
@@ -148,7 +156,7 @@ class MediaTransfer():
         return nb_medias_uploaded
 
     def migrate_composites_videos(self):
-        logger.info('Merging and migrating composites videos.')
+        logger.info(f'Merging and migrating {len(self.composites_medias)} composite videos.')
         up_ok = False
         dl_ok = self.download_composites_videos()
 
@@ -160,14 +168,16 @@ class MediaTransfer():
 
                 media_data = media.get('data', {})
                 presentation_id = json.loads(media_data.get('external_data', {})).get('id')
-                media_folder = self.download_folder / presentation_id
+                media_folder = self.composites_folder / presentation_id
                 merge_ok = self.compositor.merge(media_folder)
                 if merge_ok:
                     file_path = media_folder / 'composite.mp4'
                     layout_preset_path = media_folder / 'mediaserver_layout.json'
                     if layout_preset_path.is_file():
                         with open(layout_preset_path) as f:
-                            media_data['layout_preset'] = json.load(f)
+                            data = f.read()
+                            # should not be json but text
+                            media_data['layout_preset'] = data
 
                     result = self.upload_local_file(file_path.__str__(), media_data)
                     if result.get('success'):
@@ -190,10 +200,10 @@ class MediaTransfer():
         return up_ok
 
     def download_composites_videos(self):
-        logger.debug('Downloading composites videos.')
+        logger.info(f'Downloading composite videos into {self.composites_folder}.')
 
         if self.compositor is None:
-            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
+            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth, download_folder=self.composites_folder)
 
         all_ok = False
         medias_completed = 0
@@ -206,7 +216,7 @@ class MediaTransfer():
             logger.debug(f"Downloading for presentation {presentation_id}")
 
             urls = data.get('composites_videos_urls', [])
-            media_folder = self.download_folder / presentation_id
+            media_folder = self.composites_folder / presentation_id
             dl_ok = False
             for url in urls:
                 dl_ok = self.compositor.download(url, media_folder)
@@ -215,21 +225,21 @@ class MediaTransfer():
             if dl_ok:
                 medias_completed += 1
             else:
-                logger.error(f'Failed to download composites videos for presentation {presentation_id}.')
+                logger.error(f'Failed to download composite videos for presentation {presentation_id}.')
 
         all_ok = (medias_completed == len(self.composites_medias))
         if all_ok:
-            logger.info(f'Sucessfully downloaded all composites videos for all medias ({len(self.composites_medias)})')
+            logger.info(f'Sucessfully downloaded all composite videos ({len(self.composites_medias)})')
         else:
             logger.error(f'Failed to complete all composite medias download: [{medias_completed} / {len(self.composites_medias)}] medias completed | {videos_downloaded} videos downloaded')
         return all_ok
 
     def upload_local_file(self, file_path, data):
         logger.debug(f'Uploading local file (composite video) : {file_path}')
-
         result = self.ms_client.add_media(file_path=file_path, **data)
         return result
 
+    @lru_cache
     def get_channel(self, oid=None, title=None):
         channel = None
         if oid:
@@ -248,6 +258,7 @@ class MediaTransfer():
 
         return channel
 
+    @lru_cache
     def get_root_channel(self):
         oid = str()
         root_channel = dict()
@@ -266,6 +277,7 @@ class MediaTransfer():
             sys.exit(1)
         return root_channel
 
+    @lru_cache
     def get_user_channel(self, user_email):
         logger.debug(f'Getting user channel for user email {user_email}')
         channel_oid = str()
@@ -324,6 +336,7 @@ class MediaTransfer():
 
         return ms_users
 
+    @lru_cache
     def create_channels(self, channel_path, is_unlisted=False):
         logger.debug(f'Creating channel path: {channel_path}')
 
@@ -350,6 +363,7 @@ class MediaTransfer():
 
         return channels_oids
 
+    @lru_cache
     def _create_channel(self, parent_channel, channel_title, is_unlisted=False):
         logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
@@ -399,7 +413,7 @@ class MediaTransfer():
 
         if media_slides:
             if media_slides.get('stream_type') == 'Slide' and media_slides.get('details'):
-                slides_dir = Path(f'/tmp/mediasite_files/slides/{media_oid}')
+                slides_dir = self.slides_folder / media_oid
                 slides_dir.mkdir(parents=True, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
             else:
@@ -451,9 +465,10 @@ class MediaTransfer():
     def _download_slide(self, media_oid, url):
         ok = False
         filename = url.split('/').pop()
-        path = f'/tmp/mediasite_files/slides/{media_oid}/{filename}'
+        path = self.slides_folder / media_oid / filename
 
         if os.path.exists(path):
+            # do not re-download
             ok = True
         else:
             r = self.dl_session.get(url, auth=self.mediasite_auth)
@@ -461,6 +476,8 @@ class MediaTransfer():
                 with open(path, 'wb') as f:
                     f.write(r.content)
                 ok = r.ok
+            else:
+                logger.error(f'Failed to download {url}')
 
         return ok, path
 
@@ -507,14 +524,9 @@ class MediaTransfer():
                         videos = presentation.get('videos', [])
                         v_type, slides_source = self._find_video_type(presentation)
                         v_url = 'local'
-                        if v_type == 'composite_video':
+                        if v_type in ('composite_video', 'composite_slides'):
                             for v in videos:
                                 v_composites_urls.append(self._find_file_to_upload(v.get('files', [])))
-                        elif v_type == 'composite_slides':
-                            for v in videos:
-                                if v.get('stream_type') != slides_source:
-                                    v_files = v.get('files')
-                                    break
                         else:
                             if slides_source:
                                 for v in videos:
@@ -557,7 +569,7 @@ class MediaTransfer():
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
                                 'external_data': json.dumps(ext_data, indent=2, sort_keys=True),
-                                'transcode': 'yes' if v_type == 'audio_only' else 'no',
+                                'transcode': 'yes' if v_type in ['audio_only', 'composite_slides', 'composite_video'] else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
                                 'layout': layout,

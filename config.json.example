@@ -6,6 +6,8 @@
     "mediaserver_url":"",
     "mediaserver_api_key": "",
     "mediaserver_parent_channel": "",
+    "composite_width": 1920,
+    "composite_height": 1080,
     "whitelist": [],
     "videos_formats_allowed": {
         "video/mp4": true,
