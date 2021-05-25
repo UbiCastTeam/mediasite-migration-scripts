@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None, download_folder='/tmp'):
+    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
         self.e2e_test = e2e_test
         self.unit_test = unit_test
@@ -49,7 +49,7 @@ class MediaTransfer():
         self.users = self.to_mediaserver_users(mediasite_users)
         self.compositor = None
         self.composites_medias = list()
-        self.download_folder = dl = Path(download_folder)
+        self.download_folder = dl = Path(config['download_folder'])
         self.slides_folder = dl / 'slides'
         self.composites_folder = dl / 'composite'
         self.medias_folders = list()
@@ -61,10 +61,10 @@ class MediaTransfer():
         logger.debug('Migrating medias')
         print(' ' * 50, end='\r')
 
-        #self.users = list()  # UNCOMMENT TO SKIP USER CREATION
-        for i, user in enumerate(self.users):
-            user_id = self.create_user(user)
-            user['id'] = user_id
+        if not self.config['skip_userfolders']:
+            for i, user in enumerate(self.users):
+                user_id = self.create_user(user)
+                user['id'] = user_id
 
         nb_medias_uploaded = 0
         attempts = 0
@@ -91,7 +91,8 @@ class MediaTransfer():
 
                         channel_path = media['ref'].get('channel_path')
                         if channel_path.startswith('/Mediasite Users'):
-                            #continue  # UNCOMMENT TO SKIP PERSONAL USER CHANNEL MIGRATION
+                            if self.config['skip_userfolders']:
+                                continue
                             channel_oid = self.get_user_channel(data.get('speaker_email', ''))
                         else:
                             channel_oid = self.create_channels(channel_path, is_unlisted=data['channel_unlisted'])[-1]
@@ -102,6 +103,8 @@ class MediaTransfer():
                             data['channel'] = channel_oid
 
                         if data.get('video_type').startswith('composite_'):
+                            if self.config['skip_composites']:
+                                continue
                             logger.debug(f'Presentation {presentation_id} is a composite video.')
 
                             # FIXME why did we do this in the first place ???
@@ -116,7 +119,8 @@ class MediaTransfer():
                                 self.composites_medias.append(media)
                                 nb_medias_uploaded += 1
                         else:
-                            #continue  # UNCOMMENT TO SKIP NON-COMPOSITE
+                            if self.config['skip_others']:
+                                continue
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 media['ref']['media_oid'] = result.get('oid')
