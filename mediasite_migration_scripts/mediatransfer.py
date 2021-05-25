@@ -110,6 +110,8 @@ class MediaTransfer():
                             # FIXME why did we do this in the first place ???
                             #del data['file_url']
                             data.pop('file_url', None)
+
+                            # FIXME why not if not media in self.composites_medias ?
                             already_added = False
                             for v_composites in self.composites_medias:
                                 if data.get('slug') == v_composites.get('data', {}).get('slug'):
@@ -207,7 +209,7 @@ class MediaTransfer():
         logger.info(f'Downloading composite videos into {self.composites_folder}.')
 
         if self.compositor is None:
-            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth, download_folder=self.composites_folder)
+            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
 
         all_ok = False
         medias_completed = 0
@@ -219,17 +221,14 @@ class MediaTransfer():
             presentation_id = json.loads(data.get('external_data', {})).get('id')
             logger.debug(f"Downloading for presentation {presentation_id}")
 
-            urls = data.get('composites_videos_urls', [])
             media_folder = self.composites_folder / presentation_id
-            dl_ok = False
-            for url in urls:
-                dl_ok = self.compositor.download(url, media_folder)
-                if not dl_ok:
-                    break
-            if dl_ok:
-                medias_completed += 1
-            else:
+            media_folder.mkdir(parents=True, exist_ok=True)
+            urls = data.get('composites_videos_urls', None)
+            if not self.compositor.download_all(urls, media_folder):
                 logger.error(f'Failed to download composite videos for presentation {presentation_id}.')
+                break
+            else:
+                medias_completed += 1
 
         all_ok = (medias_completed == len(self.composites_medias))
         if all_ok:
@@ -524,13 +523,12 @@ class MediaTransfer():
                         description = f'{presenters}{description_text}'
 
                         v_composites_urls = list()
-                        v_files = list()
+                        v_files = None
                         videos = presentation.get('videos', [])
                         v_type, slides_source = self._find_video_type(presentation)
                         v_url = 'local'
                         if v_type in ('composite_video', 'composite_slides'):
-                            for v in videos:
-                                v_composites_urls.append(self._find_file_to_upload(v.get('files', [])))
+                            v_composites_urls = self._get_composite_video_resources(presentation)
                         else:
                             if slides_source:
                                 for v in videos:
@@ -636,6 +634,19 @@ class MediaTransfer():
                     video_type = 'video_only'
 
         return video_type, slides_source
+
+    def _get_composite_video_resources(self, presentation):
+        videos = dict()
+        slides_stream_type = presentation.get('slides', {}).get('stream_type')
+        for video in presentation['videos']:
+            name = video['stream_type']
+            if name == slides_stream_type:
+                name = 'Slides'
+            for f in video['files']:
+                if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
+                    videos[name] = f['url']
+                    break
+        return videos
 
     def _find_file_to_upload(self, video_files):
         video_url = str()
