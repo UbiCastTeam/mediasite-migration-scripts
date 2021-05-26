@@ -50,7 +50,7 @@ try:
     for media in mediaserver_data:
         m_data = media.get('data', {})
         if m_data.get('video_type') == "composite_video":
-            m_data['composites_videos_urls'] = [s.get('url') for s in medias_samples][:2]
+            m_data['composites_videos_urls'] = {'Video1': medias_samples[0].get('url'), 'Video3': medias_samples[1].get('url')}
         else:
             m_data['file_url'] = medias_samples[0]
 except Exception as e:

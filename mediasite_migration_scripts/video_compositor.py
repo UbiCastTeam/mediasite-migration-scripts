@@ -15,11 +15,10 @@ class VideoCompositor:
             logger.error('Mediasite auth missing for video composition.')
         self.nb_folders = 0
 
-    def download_all(self, videos_urls, media_folder):
-        for url in videos_urls:
-            url_with_no_params = url.split('?')[0]
-            fname = url_with_no_params.split('/')[-1]
-            if not self.download(url, media_folder / f'{fname}'):
+    def download_all(self, videos, media_folder):
+        for filename, url in videos.items():
+            ext = url.split('.')[-1]
+            if not self.download(url, media_folder / f'{filename}.{ext}'):
                 return False
         return True
 
@@ -62,12 +61,10 @@ class VideoCompositor:
 
     def merge(self, media_folder):
         logger.debug(f'Merging videos in folder : {media_folder}')
-
         output_file = media_folder / 'composite.mp4'
         if not output_file.is_file() or output_file.stat().st_size == 0:
             return_code = os.system(f'python3 bin/merge.py --width {self.config.get("composite_width", 1920)} --height {self.config.get("composite_height", 1080)} {media_folder}')
         else:
             logger.debug(f'{output_file} already found, skipping merge')
             return_code = 0
-
         return (return_code == 0)

@@ -130,10 +130,7 @@
             "slides": {},
             "video_type": "composite_video",
             "file_url": "composites_files",
-            "composites_videos_urls": [
-                "",
-                ""
-            ]
+            "composites_videos_urls": {}
         },
         "ref": {
             "channel_path": "/E2E/Merge"

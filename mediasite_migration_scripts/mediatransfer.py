@@ -222,7 +222,8 @@ class MediaTransfer():
 
             media_folder = self.composites_folder / presentation_id
             media_folder.mkdir(parents=True, exist_ok=True)
-            urls = data.get('composites_videos_urls', None)
+            urls = data.get('composites_videos_urls', {})
+            logger.info(f'COMPOSITES URLS: {urls}')
             if not self.compositor.download_all(urls, media_folder):
                 logger.error(f'Failed to download composite videos for presentation {presentation_id}.')
                 break
