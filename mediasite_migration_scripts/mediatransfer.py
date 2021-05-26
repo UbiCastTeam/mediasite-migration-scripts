@@ -49,7 +49,7 @@ class MediaTransfer():
         self.users = self.to_mediaserver_users(mediasite_users)
         self.compositor = None
         self.composites_medias = list()
-        self.download_folder = dl = Path(config['download_folder'])
+        self.download_folder = dl = Path(config.get('download_folder', ''))
         self.slides_folder = dl / 'slides'
         self.composites_folder = dl / 'composite'
         self.medias_folders = list()
@@ -61,7 +61,7 @@ class MediaTransfer():
         logger.debug('Migrating medias')
         print(' ' * 50, end='\r')
 
-        if not self.config['skip_userfolders']:
+        if not self.config.get('skip_userfolders'):
             for i, user in enumerate(self.users):
                 user_id = self.create_user(user)
                 user['id'] = user_id
@@ -91,7 +91,7 @@ class MediaTransfer():
 
                         channel_path = media['ref'].get('channel_path')
                         if channel_path.startswith('/Mediasite Users'):
-                            if self.config['skip_userfolders']:
+                            if self.config.get('skip_userfolders'):
                                 continue
                             channel_oid = self.get_user_channel(data.get('speaker_email', ''))
                         else:
@@ -103,15 +103,14 @@ class MediaTransfer():
                             data['channel'] = channel_oid
 
                         if data.get('video_type').startswith('composite_'):
-                            if self.config['skip_composites']:
+                            if self.config.get('skip_composites'):
                                 continue
                             logger.debug(f'Presentation {presentation_id} is a composite video.')
 
-                            # FIXME why did we do this in the first place ???
-                            #del data['file_url']
+                            # do not provide url to MS, file will be treated locally, we'll add it later
                             data.pop('file_url', None)
 
-                            # FIXME why not if not media in self.composites_medias ?
+                            # we store composites medias infos, to migrate them later
                             already_added = False
                             for v_composites in self.composites_medias:
                                 if data.get('slug') == v_composites.get('data', {}).get('slug'):
@@ -121,7 +120,7 @@ class MediaTransfer():
                                 self.composites_medias.append(media)
                                 nb_medias_uploaded += 1
                         else:
-                            if self.config['skip_others']:
+                            if self.config.get('skip_others'):
                                 continue
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
@@ -181,9 +180,9 @@ class MediaTransfer():
                     layout_preset_path = media_folder / 'mediaserver_layout.json'
                     if layout_preset_path.is_file():
                         with open(layout_preset_path) as f:
-                            data = f.read()
-                            # should not be json but text
-                            media_data['layout_preset'] = data
+                            layout_preset = json.load(f)
+                            # should be json string / text
+                            media_data['layout_preset'] = json.dumps(layout_preset, indent=4)
 
                     result = self.upload_local_file(file_path.__str__(), media_data)
                     if result.get('success'):
@@ -257,7 +256,7 @@ class MediaTransfer():
         if channel and channel.get('success'):
             channel = channel.get('info')
         else:
-            logger.error(f'Channel {oid} does not exist.')
+            logger.error(f'Channel {params.values()} does not exist.')
 
         return channel
 
@@ -272,7 +271,7 @@ class MediaTransfer():
         except Exception as e:
             logger.error('No parent channel configured. See in config.json.')
             logger.debug(e)
-            exit(1)
+            sys.exit(1)
 
         root_channel = self.get_channel(oid)
         if not root_channel:
