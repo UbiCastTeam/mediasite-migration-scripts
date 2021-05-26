@@ -44,7 +44,7 @@ if __name__ == '__main__':
         '--download-folder',
         type=str,
         help='Folder name for downloads',
-        default='downloads',
+        default='downloads/composite',
     )
 
     parser.add_argument(
