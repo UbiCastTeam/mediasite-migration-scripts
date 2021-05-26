@@ -182,7 +182,7 @@ class MediaTransfer():
                         with open(layout_preset_path) as f:
                             layout_preset = json.load(f)
                             # should be json string / text
-                            media_data['layout_preset'] = json.dumps(layout_preset, indent=4)
+                            media_data['layout_preset'] = json.dumps(layout_preset)
 
                     result = self.upload_local_file(file_path.__str__(), media_data)
                     if result.get('success'):
@@ -223,7 +223,6 @@ class MediaTransfer():
             media_folder = self.composites_folder / presentation_id
             media_folder.mkdir(parents=True, exist_ok=True)
             urls = data.get('composites_videos_urls', {})
-            logger.info(f'COMPOSITES URLS: {urls}')
             if not self.compositor.download_all(urls, media_folder):
                 logger.error(f'Failed to download composite videos for presentation {presentation_id}.')
                 break
