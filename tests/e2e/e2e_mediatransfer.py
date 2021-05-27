@@ -50,7 +50,7 @@ try:
     for media in mediaserver_data:
         m_data = media.get('data', {})
         if m_data.get('video_type') == "composite_video":
-            m_data['composites_videos_urls'] = [s.get('url') for s in medias_samples][:2]
+            m_data['composites_videos_urls'] = {'Video1': medias_samples[0].get('url'), 'Video3': medias_samples[1].get('url')}
         else:
             m_data['file_url'] = medias_samples[0]
 except Exception as e:
@@ -119,7 +119,19 @@ class TestMediaTransferE2E(TestCase):
             result = self.ms_client.api('medias/get', method='get', params={'oid': m['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get("success"))
             m_uploaded = result.get('info')
-            keys_to_skip = ['file_url', 'creation', 'slug', 'api_key', 'slides', 'transcode', 'detect_slides', 'video_type', 'chapters', 'composites_videos_urls']
+            keys_to_skip = [
+                'file_url',
+                'creation',
+                'slug',
+                'api_key',
+                'slides',
+                'transcode',
+                'detect_slides',
+                'video_type',
+                'chapters',
+                'composites_videos_urls',
+                'layout_preset'
+            ]
             for key in data.keys():
                 try:
                     self.assertEqual(data[key], m_uploaded.get(key))

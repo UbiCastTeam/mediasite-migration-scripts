@@ -18,6 +18,7 @@ First of all, you need to set up the connection with the Mediasite API and Media
 ```
 $ git clone https://github.com/UbiCastTeam/mediasite-migration-scripts
 $ git submodule update --init
+$ git lfs init && git lfs pull
 ```
 
 You have to fill some credentials to config.json. Also, some parameters can be provided for migration.

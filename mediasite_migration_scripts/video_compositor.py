@@ -1,55 +1,40 @@
+#!/usr/bin/env python3
 import logging
 import os
-from pathlib import Path
 import requests
 
 logger = logging.getLogger(__name__)
 
 
-class VideoCompositor():
+class VideoCompositor:
     def __init__(self, config=dict(), dl_session=None, mediasite_auth=tuple()):
         self.config = config
-        self.download_folder = Path('/tmp/mediasite_files/composition')
         self.dl_session = dl_session
         self.mediasite_auth = mediasite_auth
         if not mediasite_auth:
             logger.error('Mediasite auth missing for video composition.')
-
         self.nb_folders = 0
 
-    def compose(self, videos_urls, presentation_id=str()):
-        logger.debug('Composing videos files')
+    def download_all(self, videos, media_folder):
+        for filename, url in videos.items():
+            ext = url.split('.')[-1]
+            if not self.download(url, media_folder / f'{filename}.{ext}'):
+                return False
+        return True
 
-        video_path = Path()
-        final_media_path = Path()
-        dl_ok = False
-        folder_name = presentation_id if presentation_id else str(self.nb_folders + 1)
-        media_folder = self.download_folder / folder_name
-
-        for url in videos_urls:
-            video_path = self.download(url, media_folder)
-            dl_ok = video_path.is_file()
-            if not dl_ok:
-                break
-        if dl_ok:
-            merge_ok = self.merge(media_folder)
-            if merge_ok:
-                final_media_path = media_folder / 'composite.mp4'
-            else:
-                logger.error(f'Failed to merge videos files in folder: {media_folder}')
-
-        return final_media_path
-
-    def download(self, video_url, media_folder):
+    def download(self, video_url, video_path=None):
         logger.debug(f'Requesting video download : {video_url}')
+
         if self.dl_session is None:
             self.dl_session = requests.Session()
 
-        video_path = Path()
         with self.dl_session.get(video_url, stream=True) as request:
-            media_folder.mkdir(parents=True, exist_ok=True)
-            file_name = video_url.split('/')[-1].split('?')[0]
-            video_path = media_folder / file_name
+            if video_path.is_file():
+                remote_size = int(request.headers['Content-Length'])
+                local_size = video_path.stat().st_size
+                if remote_size == local_size:
+                    logger.debug(f'Already downloaded {video_url}, skipping')
+                    return True
 
             request.raise_for_status()
             with open(video_path, 'wb') as f:
@@ -72,9 +57,14 @@ class VideoCompositor():
         else:
             logger.error(f'Failed to download video: {video_url}')
 
-        return request.ok, video_path
+        return request.ok
 
     def merge(self, media_folder):
         logger.debug(f'Merging videos in folder : {media_folder}')
-        return_code = os.system(f'python3 bin/merge.py {media_folder}')
+        output_file = media_folder / 'composite.mp4'
+        if not output_file.is_file() or output_file.stat().st_size == 0:
+            return_code = os.system(f'python3 bin/merge.py --width {self.config.get("composite_width", 1920)} --height {self.config.get("composite_height", 1080)} {media_folder}')
+        else:
+            logger.debug(f'{output_file} already found, skipping merge')
+            return_code = 0
         return (return_code == 0)

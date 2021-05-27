@@ -49,6 +49,8 @@ def parse_mediasite_date(date_str):
         # some media have msec included
         #2016-12-07T13:07:27.58Z
         date_str = date_str.split('.')[0] + 'Z'
+    if not date_str.endswith('Z'):
+        date_str += 'Z'
     return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
 
 

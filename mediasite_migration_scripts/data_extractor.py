@@ -404,12 +404,15 @@ class DataExtractor():
             timed_events = self.mediasite.presentation.get_content(presentation_id, resource_content='TimedEvents')
             for event in timed_events:
                 if event.get('Payload'):
-                    chapter_xml = xml.parseString(event['Payload']).documentElement
-                    chapters.append({
-                        'chapter_index': chapter_xml.getElementsByTagName('Number')[0].firstChild.nodeValue,
-                        'chapter_title': chapter_xml.getElementsByTagName('Title')[0].firstChild.nodeValue,
-                        'chapter_position_ms': event.get('Position', 0)
-                    })
+                    try:
+                        chapter_xml = xml.parseString(event['Payload']).documentElement
+                        chapters.append({
+                            'chapter_index': chapter_xml.getElementsByTagName('Number')[0].firstChild.nodeValue,
+                            'chapter_title': chapter_xml.getElementsByTagName('Title')[0].firstChild.nodeValue,
+                            'chapter_position_ms': event.get('Position', 0)
+                        })
+                    except Exception as e:
+                        logger.debug(f'Non valid chapter: {e}')
 
         return chapters
 
