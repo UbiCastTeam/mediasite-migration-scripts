@@ -26,6 +26,7 @@ class DataExtractor():
             'whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
+        self.mediasite_format_date = '%Y-%m-%dT%H:%M:%S'
 
         self.presentations = None
         self.folders = self.get_all_folders_infos()
@@ -66,7 +67,7 @@ class DataExtractor():
             if self.presentations is None:
                 self.presentations = self.mediasite.presentation.get_all_presentations()
 
-            logger.info('Ordering all presentations by folder')
+            logger.info('Extracting and ordering metadata.')
             for i, folder in enumerate(self.folders):
                 if i > 1:
                     print(f'Requesting: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
@@ -78,9 +79,9 @@ class DataExtractor():
 
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
                     if catalogs:
-                        most_recent_time = datetime.strptime('0001-12-25T00:00:00', '%Y-%m-%dT%H:%M:%S')
+                        most_recent_time = datetime.strptime('0001-12-25T00:00:00', self.mediasite_format_date)
                         for c in catalogs:
-                            tmp = datetime.strptime(c.get('creation_date'), '%Y-%m-%dT%H:%M:%S')
+                            tmp = datetime.strptime(c.get('creation_date'), self.mediasite_format_date)
                             if tmp > most_recent_time:
                                 most_recent_time = tmp
                                 most_recent_channel = c
@@ -116,6 +117,7 @@ class DataExtractor():
             if presentation.get('ParentFolderId') == folder_id:
                 logger.debug('-' * 50)
                 logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
+
                 has_slides_details = False
                 for stream_type in presentation.get('Streams'):
                     if stream_type.get('StreamType') == 'Slide':
@@ -128,10 +130,20 @@ class DataExtractor():
                 if presenter_display_name.startswith('Default Presenter'):
                     presenter_display_name = None
 
+                presentation_analytics = self.mediasite.presentation.get_analytics(presentation.get('Id', ''))
+
+                # we split at '.' to pop out millisesonds, and remove 'Z' tag
+                creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
+                if presentation.get('RecordDate', ''):
+                    record_date_str = presentation['RecordDate'].split('.')[0].replace('Z', '')
+                    record_date = datetime.strptime(record_date_str, self.mediasite_format_date)
+                    creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
+                    creation_date = min([creation_date, record_date])
+
                 infos = {
                     'id': presentation.get('Id', ''),
                     'title': presentation.get('Title', ''),
-                    'creation_date': presentation.get('CreationDate', ''),
+                    'creation_date': creation_date.strftime(self.mediasite_format_date),
                     'presenter_display_name': presenter_display_name,
                     'owner_username': owner_infos.get('username', ''),
                     'owner_display_name': owner_infos.get('display_name', ''),
@@ -144,6 +156,8 @@ class DataExtractor():
                     'description': presentation.get('Description', ''),
                     'tags': presentation.get('TagList', ''),
                     'timed_events': self.get_timed_events(presentation.get('Id', '')),
+                    'total_views': presentation_analytics.get('TotalViews', ''),
+                    'last_viewed': presentation_analytics.get('LastWatched', ''),
                     'url': presentation.get('#Play').get('target', ''),
                 }
                 infos['videos'] = self.get_videos_infos(presentation.get('Id'))
@@ -177,7 +191,7 @@ class DataExtractor():
                          'description': catalog.get('Description', ''),
                          'url': catalog.get('CatalogUrl', ''),
                          'owner_username': catalog.get('Owner', ''),
-                         'creation_date': catalog.get('CreationDate', '')
+                         'creation_date': catalog.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
                          }
                 folder_catalogs.append(infos)
         return folder_catalogs
@@ -352,36 +366,35 @@ class DataExtractor():
         # SlideDetailsContent returns a dict whereas SlideContent return a list (key 'value' in JSON response)
         if type(slides) == list and len(slides) > 0:
             slides = slides[0]
-        if slides:
-            is_useless_slides = self._is_useless_slides(slides.get('ContentEncodingSettingsId', ''))
-            if not is_useless_slides:
-                content_server_id = slides.get('ContentServerId', '')
-                content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
-                content_server_url = content_server.get('Url', '')
-                presentation_id = slides.get('ParentResourceId', '')
 
-                slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
-                slides_urls = []
-                slides_files_names = slides.get('FileNameWithExtension', '')
-                for i in range(int(slides.get('Length', '0'))):
-                    # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
-                    file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
-                    link = f'{slides_base_url}/{file_name}'
-                    slides_urls.append(link)
+        if slides and not self._is_useless_slides(slides):
+            content_server_id = slides.get('ContentServerId', '')
+            content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
+            content_server_url = content_server.get('Url', '')
+            presentation_id = slides.get('ParentResourceId', '')
 
-                slides_infos['stream_type'] = slides.get('StreamType', '')
-                slides_infos['urls'] = slides_urls
-                slides_infos['details'] = slides.get('SlideDetails') if details else None
+            slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
+            slides_urls = []
+            slides_files_names = slides.get('FileNameWithExtension', '')
+            for i in range(int(slides.get('Length', '0'))):
+                # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
+                file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
+                link = f'{slides_base_url}/{file_name}'
+                slides_urls.append(link)
+
+            slides_infos['stream_type'] = slides.get('StreamType', '')
+            slides_infos['urls'] = slides_urls
+            slides_infos['details'] = slides.get('SlideDetails') if details else None
 
         return slides_infos
 
-    def _is_useless_slides(self, slides_settings_id):
+    def _is_useless_slides(self, slides):
         is_useless = False
-        encoding_settings = self.mediasite.content.get_content_encoding_settings(slides_settings_id)
 
+        encoding_settings = self.mediasite.content.get_content_encoding_settings(slides.get('ContentEncodingSettingsId', ''))
         if encoding_settings:
             source = encoding_settings.get('Name', '')
-            is_useless = (source == '[Default] Use Recorder\'s Settings')
+            is_useless = (source == '[Default] Use Recorder\'s Settings' and not slides.get('SlideDetails'))
 
         return is_useless
 
@@ -389,7 +402,6 @@ class DataExtractor():
         chapters = []
         if presentation_id:
             timed_events = self.mediasite.presentation.get_content(presentation_id, resource_content='TimedEvents')
-
             for event in timed_events:
                 if event.get('Payload'):
                     chapter_xml = xml.parseString(event['Payload']).documentElement

@@ -80,7 +80,6 @@ class MediaTransfer():
                 if max_videos and index >= max_videos:
                     break
 
-                progress_dots = ''
                 if not media.get('ref', {}).get('media_oid'):
                     try:
                         data = media.get('data', {})
@@ -91,8 +90,6 @@ class MediaTransfer():
                             channel_oid = self.get_user_channel(data.get('speaker_email', ''))
                         else:
                             channel_oid = self.create_channels(channel_path, is_unlisted=data['channel_unlisted'])[-1]
-
-                        print(progress_dots + '.', end='\r')
 
                         if not channel_oid:
                             data['channel'] = self.root_channel.get('oid')
@@ -111,7 +108,6 @@ class MediaTransfer():
                             if not already_added:
                                 self.composites_medias.append(media)
                                 nb_medias_uploaded += 1
-                            print(progress_dots + '.', end='\r')
                         else:
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
@@ -131,7 +127,6 @@ class MediaTransfer():
                                     self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
 
                                 nb_medias_uploaded += 1
-                                print(progress_dots + '.', end='\r')
                             else:
                                 logger.error(f"Failed to upload media: {data['title']}")
                     except requests.exceptions.ReadTimeout:
@@ -498,8 +493,8 @@ class MediaTransfer():
 
                         description_text = presentation.get('description', '')
                         description_text = description_text if description_text else ''
-                        presenters = f'Presenters: {presenters}' if presenters else ''
-                        description = f'[{presenters}] \n<br/>{description_text}'
+                        presenters = f'[Presenters: {presenters}] \n<br/>' if presenters else ''
+                        description = f'{presenters}{description_text}'
 
                         v_composites_urls = list()
                         v_files = list()
@@ -527,9 +522,21 @@ class MediaTransfer():
 
                         if v_url:
                             logger.debug(f"Found file with handled format for presentation {presentation.get('id')}: {v_url} ")
+
                             has_catalog = len(folder.get('catalogs', [])) > 0
                             channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
-                            ext_data = presentation if self.config.get('external_data') else {'id': presentation.get('id')}
+
+                            ext_data = presentation if self.config.get('external_data') else {
+                                key: presentation.get(key) for key in ['id', 'creator', 'total_views', 'last_viewed']
+                            }
+
+                            if v_type == 'video_slides':
+                                layout = 'webinar'
+                            elif v_type in ['composite_video', 'composite_slides']:
+                                layout = 'composition'
+                            else:
+                                layout = 'video'
+
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
@@ -547,7 +554,7 @@ class MediaTransfer():
                                 'transcode': 'yes' if v_type == 'audio_only' else 'no',
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
-                                'layout': 'webinar' if v_type in ['video_slides', 'composite_slides'] else 'video',
+                                'layout': layout,
                                 'slides': presentation.get('slides'),
                                 'chapters': presentation.get('timed_events'),
                                 'video_type': v_type,

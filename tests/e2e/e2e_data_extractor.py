@@ -91,14 +91,18 @@ class TestDataExtractorE2E(TestCase):
             'description',
             'tags',
             'timed_events',
+            'total_views',
+            'last_viewed',
             'url',
             'videos',
             'slides'
         ]
         for folder in self.extractor.all_data:
-            if len(folder.get('presentations')) > 0:
-                self.assertListEqual(presentation_keys, list(folder['presentations'][0].keys()))
-                break
+            presentations = folder.get('presentations', [])
+            if len(presentations) > 0:
+                for p in presentations:
+                    for key in presentation_keys:
+                        self.assertIn(key, list(p.keys()))
 
         self.assertIsInstance(self.extractor.users, list)
 
@@ -107,3 +111,10 @@ class TestDataExtractorE2E(TestCase):
             self.assertIn(u, usernames)
             usernames.pop(i)
             self.assertNotIn(u, usernames)
+
+        try:
+            with open('test.json', 'w') as f:
+                json.dump(self.extractor.all_data, f)
+        except Exception as e:
+            logger.error(e)
+            raise AssertionError
