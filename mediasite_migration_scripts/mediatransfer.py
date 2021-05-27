@@ -180,9 +180,7 @@ class MediaTransfer():
                     layout_preset_path = media_folder / 'mediaserver_layout.json'
                     if layout_preset_path.is_file():
                         with open(layout_preset_path) as f:
-                            layout_preset = json.load(f)
-                            # should be json string / text
-                            media_data['layout_preset'] = json.dumps(layout_preset)
+                            media_data['layout_preset'] = f.read()
 
                     result = self.upload_local_file(file_path.__str__(), media_data)
                     if result.get('success'):
