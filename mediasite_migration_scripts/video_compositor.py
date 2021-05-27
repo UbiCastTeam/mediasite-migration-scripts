@@ -62,9 +62,13 @@ class VideoCompositor:
     def merge(self, media_folder):
         logger.debug(f'Merging videos in folder : {media_folder}')
         output_file = media_folder / 'composite.mp4'
-        if not output_file.is_file() or output_file.stat().st_size == 0:
+        layout_file = media_folder / 'mediaserver_layout.json'
+        if not output_file.is_file() or output_file.stat().st_size == 0 or not layout_file.is_file():
             return_code = os.system(f'python3 bin/merge.py --width {self.config.get("composite_width", 1920)} --height {self.config.get("composite_height", 1080)} {media_folder}')
+            return return_code == 0
+        elif output_file.is_file() and not layout_file.is_file():
+            logger.warning(f'{output_file} probably rendering, skipping')
+            return False
         else:
-            logger.debug(f'{output_file} already found, skipping merge')
-            return_code = 0
-        return (return_code == 0)
+            logger.debug(f'{output_file} and {layout_file} already found, skipping merge')
+            return True
