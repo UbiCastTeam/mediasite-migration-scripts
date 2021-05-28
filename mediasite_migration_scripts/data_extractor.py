@@ -18,6 +18,7 @@ class DataExtractor():
     def __init__(self, config=dict(), max_folders=None, e2e_tests=False):
         logger.info('Connecting...')
         self.session = None
+        self.max_folders = max_folders
         self.e2e_tests = e2e_tests
         self.config = {
             'mediasite_base_url': config.get('mediasite_api_url'),
@@ -31,15 +32,38 @@ class DataExtractor():
 
         self.presentations = None
         self.failed_presentations = list()
-
-        self.folders = self.get_all_folders_infos()
-        self.all_catalogs = self.mediasite.catalog.get_all_catalogs()
-
         self.users = list()
         self.linked_catalogs = list()
-        self.all_data = self.extract_mediasite_data(max_folders=max_folders)
+        self.timeit(self.run)
 
-    def extract_mediasite_data(self, parent_id=None, max_folders=None):
+    def run(self):
+        self.folders = self.timeit(self.get_all_folders_infos)
+        self.all_catalogs = self.timeit(self.get_all_catalogs)
+        self.all_data = self.timeit(self.extract_mediasite_data)
+
+    def timeit(self, method):
+        before = time.time()
+        results = method()
+        took_s = int(time.time() - before)
+        took_min = int(took_s / 60)
+
+        if results:
+            result_count = len(results)
+            seconds_per_result = int(took_s / result_count)
+            logger.info(f'{method} took {took_min} minutes, found {result_count} items, {seconds_per_result}s per item')
+        else:
+            logger.info(f'{method} took {took_min} minutes')
+        return results
+
+    def get_all_presentations(self):
+        presentations = self.timeit(self.mediasite.presentation.get_all_presentations)
+        return presentations
+
+    def get_all_catalogs(self):
+        all_catalogs = self.timeit(self.mediasite.catalog.get_all_catalogs)
+        return all_catalogs
+
+    def extract_mediasite_data(self, parent_id=None):
         '''
         Collect all data from Mediasite platform ordered by folder
 
@@ -50,7 +74,6 @@ class DataExtractor():
                 list of items containing presentations' infos and
                     list of items containing videos and slides metadata
         '''
-
         presentations_folders = list()
 
         if parent_id is None:
@@ -68,12 +91,12 @@ class DataExtractor():
                 logger.debug(e)
         else:
             if self.presentations is None:
-                self.presentations = self.mediasite.presentation.get_all_presentations()
+                self.presentations = self.get_all_presentations()
 
             logger.info('Extracting and ordering metadata.')
             for i, folder in enumerate(self.folders):
                 if i > 1:
-                    print(f'Requesting: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
+                    print(f'Requesting folders: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
 
                 path = self._find_folder_path(folder['id'], self.folders)
                 if utils.is_folder_to_add(path, config=self.config):
@@ -103,7 +126,7 @@ class DataExtractor():
                     if catalogs:
                         self.linked_catalogs.extend(catalogs)
 
-                    if max_folders and i >= max_folders:
+                    if self.max_folders and i >= self.max_folders:
                         break
 
         return presentations_folders
@@ -117,13 +140,13 @@ class DataExtractor():
         return ''
 
     def get_folder_presentations_infos(self, folder_id):
-        logger.debug(f'Gettings presentations infos for folder: {folder_id}')
         presentations_infos = list()
-
         children_presentations = list()
+        # find presentations in folder
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
                 children_presentations.append(presentation)
+        logger.debug(f'Gettings {len(children_presentations)} presentations infos for folder: {folder_id}')
 
         for p in children_presentations:
             try:
@@ -131,13 +154,13 @@ class DataExtractor():
                 presentations_infos.append(infos)
             except Exception:
                 pid = p.get("Id")
-                logger.warning(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
+                logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
                 time.sleep(5 * 60)
                 try:
                     infos = self.get_presentation_infos(p)
                     presentations_infos.append(infos)
                 except Exception as e:
-                    logger.warning(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
+                    logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
                     self.failed_presentations.append(pid)
 
         return presentations_infos
@@ -364,13 +387,13 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logger.debug(f'File is not a video: {video_url}')
         except Exception as e:
-            logger.warning(f'Failed to get media info for {video_url}. Error: {e}')
+            logger.debug(f'Failed to get media info for {video_url}. Error: {e}')
             try:
                 if self.session is None:
                     self.session = requests.Session()
                 response = self.session.head(video_url)
                 if not response.ok:
-                    logger.warning(f'Video {video_url} not reachable: {response.status_code}, content: {response.text}')
+                    logger.debug(f'Video {video_url} not reachable: {response.status_code}, content: {response.text}')
             except Exception as e:
                 logger.debug(e)
 

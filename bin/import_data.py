@@ -72,10 +72,10 @@ if __name__ == '__main__':
             with open('mediasite_users.json', 'w') as f:
                 json.dump(extractor.users, f)
 
-            print('--------- Data collection finished --------- ')
+            logger.info('--------- Data collection finished --------- ')
             failed_count = len(extractor.failed_presentations)
             if failed_count:
-                print(f'Failed to collect {failed_count} presentations:')
+                logger.info(f'Failed to collect {failed_count} presentations:')
                 print('\n\t'.join(extractor.failed_presentations))
         except Exception as e:
             logger.error(f'Import data failed: {e}')
