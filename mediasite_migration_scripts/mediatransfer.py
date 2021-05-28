@@ -41,6 +41,7 @@ class MediaTransfer():
         self.channels_created = list()
         self.slide_annot_type = None
         self.chapters_annot_type = None
+        self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
 
         self.mediasite_data = mediasite_data
         self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
@@ -56,9 +57,7 @@ class MediaTransfer():
         self.dl_session = None
 
     def upload_medias(self, max_videos=None):
-        total_medias = len(self.mediaserver_data)
-        logger.info(f'{total_medias} medias found for uploading.')
-        logger.debug('Migrating medias')
+        logger.debug('Uploading videos')
         print(' ' * 50, end='\r')
 
         if not self.config.get('skip_userfolders'):
@@ -66,16 +65,25 @@ class MediaTransfer():
                 user_id = self.create_user(user)
                 user['id'] = user_id
 
+        if max_videos:
+            try:
+                max_videos = int(max_videos)
+                total_medias_uploaded = max_videos
+            except Exception as e:
+                logger.error(f'{max_videos} is not a valid number for videos maximum.')
+                logger.debug(e)
+        else:
+            total_medias_uploaded = len(self.mediaserver_data)
+
+        logger.debug(f'{total_medias_uploaded} medias found for uploading.')
+
         nb_medias_uploaded = 0
         attempts = 0
-        while nb_medias_uploaded != total_medias and attempts < 10:
+        while nb_medias_uploaded != total_medias_uploaded and attempts < 10:
             attempts += 1
-            if max_videos:
-                total_medias = max_videos
-
             logger.debug(f'Attempt {attempts} for uploading medias.')
             if attempts > 1:
-                nb_medias_left = total_medias - nb_medias_uploaded
+                nb_medias_left = total_medias_uploaded - nb_medias_uploaded
                 logger.debug(f'{nb_medias_left} medias left to upload.')
 
             for index, media in enumerate(self.mediaserver_data):
@@ -509,6 +517,14 @@ class MediaTransfer():
             logger.debug('No Mediaserver mapping. Generating mapping.')
             for folder in self.mediasite_data:
                 if utils.is_folder_to_add(folder.get('path'), config=self.config):
+                    has_catalog = (len(folder.get('catalogs', [])) > 0)
+
+                    is_unlisted_channel = not has_catalog
+                    for p in self.public_paths:
+                        if folder['path'].startswith(p):
+                            is_unlisted_channel = False
+                            break
+
                     for presentation in folder['presentations']:
                         presenters = str()
                         for p in presentation.get('other_presenters'):
@@ -557,8 +573,8 @@ class MediaTransfer():
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
-                                'channel_unlisted': not has_catalog,
-                                'unlisted': 'yes' if not has_catalog else 'no',
+                                'channel_unlisted': is_unlisted_channel,
+                                'unlisted': 'yes' if is_unlisted_channel else 'no',
                                 'creation': presentation.get('creation_date'),
                                 'speaker_id': presentation.get('owner_username'),
                                 'speaker_name': presentation.get('owner_display_name'),
