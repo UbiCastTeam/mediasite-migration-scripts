@@ -67,8 +67,13 @@ class MediaTransfer():
         attempts = 0
         while nb_medias_uploaded != total_medias and attempts < 10:
             attempts += 1
-            if max_videos:
-                total_medias = max_videos
+            if max_videos is str:
+                try:
+                    total_medias = int(max_videos)
+                except Exception as e:
+                    logger.error(f'{max_videos} is not a valid number for videos maximum.')
+                    logger.debug(e)
+                    sys.exit(1)
 
             logger.debug(f'Attempt {attempts} for uploading medias.')
             if attempts > 1:
