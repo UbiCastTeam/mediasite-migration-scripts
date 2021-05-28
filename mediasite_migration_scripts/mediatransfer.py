@@ -103,7 +103,7 @@ class MediaTransfer():
                                 continue
                             channel_oid = self.get_user_channel(data.get('speaker_email', ''))
                         else:
-                            channel_oid = self.create_channels(channel_path, is_unlisted=data['channel_unlisted'])[-1]
+                            channel_oid = self.create_channels(channel_path)
 
                         if not channel_oid:
                             data['channel'] = self.root_channel.get('oid')
@@ -345,31 +345,51 @@ class MediaTransfer():
         return ms_users
 
     @lru_cache
-    def create_channels(self, channel_path, is_unlisted=False):
+    def has_catalog(self, folder_path):
+        for f in self.mediasite_data:
+            if f.get('path') == folder_path:
+                if len(f.get('catalogs')) > 0:
+                    return True
+                else:
+                    return False
+        return False
+
+    @lru_cache
+    def create_channels(self, channel_path):
         logger.debug(f'Creating channel path: {channel_path}')
 
-        channels_oids = list()
-        tree = channel_path.split('/')
-        # path start with '/' , so tree[0] is a empty string
-        tree.pop(0)
-        channel = self._create_channel(self.root_channel.get('oid'), tree[0], is_unlisted=is_unlisted)
-        channels_oids.append(channel.get('oid'))
+        tree = channel_path.lstrip('/').split('/')
+        tree_list = list()
+        for i in range(len(tree) + 1):
+            if tree:
+                path = '/' + '/'.join(tree)
+                has_catalog = self.has_catalog(path)
+                tree_list.append([path, has_catalog])
+                tree.pop(-1)
 
-        if not channel.get('already_created'):
-            logger.debug(f"Channel oid {channel.get('oid')}")
+        # rule is if a folder has a catalog, all leaf nodes should be listed
+        # we reverse the list to go from top to bottom
+        tree_list.reverse()
+        new_tree_list = list()
 
-        i = 1
-        while channel.get('success') and i < len(tree):
-            last_channel = (i == len(tree) - 1)
-            channel = self._create_channel(parent_channel=channels_oids[i - 1], channel_title=tree[i], is_unlisted=last_channel and is_unlisted)
-            channels_oids.append(channel.get('oid'))
-            logger.debug(f'Channel oid: {channel.get("oid")}')
-            i += 1
+        is_listed = False
+        for leaf, has_catalog in tree_list:
+            if has_catalog:
+                is_listed = True
+            new_tree_list.append([leaf, is_listed])
 
-        if i < len(tree):
-            logger.error('Failed to construct channel path')
+        oid = self.root_channel.get('oid')
+        for leaf, is_listed in new_tree_list:
+            new_oid = self._create_channel(
+                parent_channel=oid,
+                channel_title=leaf.split('/')[-1],
+                is_unlisted=not is_listed
+            ).get('oid')
+            oid = new_oid
 
-        return channels_oids
+        # last item in list is the final channel, return it's oid
+        # because he will be the parent of the video
+        return oid
 
     @lru_cache
     def _create_channel(self, parent_channel, channel_title, is_unlisted=False):
