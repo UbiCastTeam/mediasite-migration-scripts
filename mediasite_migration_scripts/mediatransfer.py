@@ -87,7 +87,7 @@ class MediaTransfer():
                 logger.debug(f'{nb_medias_left} medias left to upload.')
 
             for index, media in enumerate(self.mediaserver_data):
-                print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
+                print(f'Uploading: [{nb_medias_uploaded} / {total_medias_uploaded}] -- {int(100 * (nb_medias_uploaded / total_medias_uploaded))}%', end='\r')
 
                 if max_videos and index >= max_videos:
                     break
