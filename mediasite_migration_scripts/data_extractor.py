@@ -339,16 +339,15 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logger.debug(f'File is not a video: {video_url}')
         except Exception as e:
-            logger.debug(e)
-
-            if self.session is None:
-                self.session = requests.Session()
-
-            response = self.session.head(video_url)
-            if not response.ok:
-                logger.warning(f'Video not found on Mediasite [404]: {video_url}')
-            else:
-                logger.warning(f'Video encoding infos could not be parsed: {video_url} / Request response status : {response.status_code}')
+            logger.warning(f'Failed to get media info for {video_url}. Error: {e}')
+            try:
+                if self.session is None:
+                    self.session = requests.Session()
+                response = self.session.head(video_url)
+                if not response.ok:
+                    logger.warning(f'Video {video_url} not reachable: {response.status_code}, content: {response.text}')
+            except Exception as e:
+                logger.debug(e)
 
         return encoding_infos
 
