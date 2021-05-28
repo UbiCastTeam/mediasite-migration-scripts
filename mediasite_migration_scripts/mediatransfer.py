@@ -67,9 +67,10 @@ class MediaTransfer():
         attempts = 0
         while nb_medias_uploaded != total_medias and attempts < 10:
             attempts += 1
-            if max_videos is str:
+            if max_videos:
                 try:
-                    total_medias = int(max_videos)
+                    max_videos = int(max_videos)
+                    total_medias = max_videos
                 except Exception as e:
                     logger.error(f'{max_videos} is not a valid number for videos maximum.')
                     logger.debug(e)
