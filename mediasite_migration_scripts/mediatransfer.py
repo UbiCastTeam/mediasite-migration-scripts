@@ -40,6 +40,7 @@ class MediaTransfer():
         self.channels_created = list()
         self.slide_annot_type = None
         self.chapters_annot_type = None
+        self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
 
         self.mediasite_data = mediasite_data
         self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
@@ -491,8 +492,14 @@ class MediaTransfer():
             logger.debug('No Mediaserver mapping. Generating mapping.')
             for folder in self.mediasite_data:
                 if utils.is_folder_to_add(folder.get('path'), config=self.config):
-                    has_catalog = len(folder.get('catalogs', [])) > 0
-                    is_unlisted_channel = self._is_unlisted_channel(folder, has_catalog)
+                    has_catalog = (len(folder.get('catalogs', [])) > 0)
+
+                    is_unlisted_channel = not has_catalog
+                    for p in self.public_paths:
+                        if folder['path'].startswith(p):
+                            is_unlisted_channel = False
+                            break
+
                     for presentation in folder['presentations']:
                         presenters = str()
                         for p in presentation.get('other_presenters'):
@@ -559,14 +566,14 @@ class MediaTransfer():
                             if has_catalog:
                                 channel_path_splitted = folder.get('path').split('/')
                                 channel_path_splitted[-1] = channel_name
-                                path = '/'.join(channel_path_splitted)
+                                channel_path = '/'.join(channel_path_splitted)
                             else:
-                                path = folder.get('path')
+                                channel_path = folder.get('path')
 
                             if v_type == 'audio_only':
                                 data['thumb'] = 'mediasite_migration_scripts/files/utils/audio.jpg'
 
-                            mediaserver_data.append({'data': data, 'ref': {'channel_path': path}})
+                            mediaserver_data.append({'data': data, 'ref': {'channel_path': channel_path}})
                         else:
                             logger.warning(f"No valid video for presentation {presentation.get('id')}")
                             continue
@@ -639,13 +646,3 @@ class MediaTransfer():
             ok = result.get('success', False)
 
         return ok
-
-    def _is_unlisted_channel(self, folder, has_catalog=False):
-        is_unlisted = False
-
-        for parent_folder in self.mediasite_data:
-            if parent_folder.get('id') == folder.get('parent_id'):
-                parent_has_catalog = len(parent_folder.get('catalogs', [])) > 0
-                is_unlisted = not has_catalog or not parent_has_catalog
-
-        return is_unlisted
