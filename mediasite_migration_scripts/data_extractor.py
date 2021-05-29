@@ -37,8 +37,8 @@ class DataExtractor():
         self.timeit(self.run)
 
     def run(self):
-        self.folders = self.timeit(self.get_all_folders_infos)
-        self.all_catalogs = self.timeit(self.get_all_catalogs)
+        self.folders = self.get_all_folders_infos()
+        self.all_catalogs = self.get_all_catalogs()
         self.all_data = self.timeit(self.extract_mediasite_data)
 
     def timeit(self, method):
@@ -158,6 +158,7 @@ class DataExtractor():
                 time.sleep(5 * 60)
                 try:
                     infos = self.get_presentation_infos(p)
+                    logger.info(f'Second try for {pid} passed')
                     presentations_infos.append(infos)
                 except Exception as e:
                     logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
