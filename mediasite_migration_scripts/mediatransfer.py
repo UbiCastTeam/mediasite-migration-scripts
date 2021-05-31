@@ -38,7 +38,7 @@ class MediaTransfer():
                 self.root_channel = self.get_root_channel()
 
         self.formats_allowed = self.config.get('videos_formats_allowed', {})
-        self.channels_created = list()
+        self.created_channels = dict()
         self.slide_annot_type = None
         self.chapters_annot_type = None
         self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
@@ -358,32 +358,30 @@ class MediaTransfer():
     def create_channels(self, channel_path):
         logger.debug(f'Creating channel path: {channel_path}')
 
+        # if at least one intermediary folder has a catalog, then the entire tree should be listed:
+        # * any upper channels needs to be listed so that users can discover it in MediaServer
+        # * any leaf chennels needs to be listed too because mediasite publishes subfolders recursively
+        is_unlisted = True
         tree = channel_path.lstrip('/').split('/')
-        tree_list = list()
+        tree_list = list()  # turn path 'a/b/c/d' into list ['/a/b/c/d', '/a/b/c', '/a/b', '/a']
         for i in range(len(tree) + 1):
             if tree:
                 path = '/' + '/'.join(tree)
-                has_catalog = self.has_catalog(path)
-                tree_list.append([path, has_catalog])
+                if self.has_catalog(path):
+                    logger.debug(f'Parent folder {path} has a catalog, making complete path {channel_path} listed')
+                    is_unlisted = False
+                tree_list.append(path)
                 tree.pop(-1)
 
-        # rule is if a folder has a catalog, all leaf nodes should be listed
-        # we reverse the list to go from top to bottom
+        # reverses list into ['/a', '/a/b', '/a/b/c', '/a/b/c/d']
         tree_list.reverse()
-        new_tree_list = list()
-
-        is_listed = False
-        for leaf, has_catalog in tree_list:
-            if has_catalog:
-                is_listed = True
-            new_tree_list.append([leaf, is_listed])
 
         oid = self.root_channel.get('oid')
-        for leaf, is_listed in new_tree_list:
+        for leaf in tree_list:
             new_oid = self._create_channel(
                 parent_channel=oid,
                 channel_title=leaf.split('/')[-1],
-                is_unlisted=not is_listed
+                is_unlisted=is_unlisted,
             ).get('oid')
             oid = new_oid
 
@@ -391,46 +389,61 @@ class MediaTransfer():
         # because he will be the parent of the video
         return oid
 
-    @lru_cache
-    def _create_channel(self, parent_channel, channel_title, is_unlisted=False):
-        logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
+    def _set_channel_unlisted(self, channel_oid, unlisted_bool):
+        data = {'oid': channel_oid}
+        # perms/edit/default/ doc:
+        # "If any value is given, the unlisted setting will be set as enabled on the channel or media, otherwise it will be disabled."
+        # In other terms, calling perms/edit/default/ without unlisted makes it listed
+        if unlisted_bool:
+            data['unlisted'] = 'yes'
+        result = self.ms_client.api('perms/edit/default/', method='post', data=data)
+        if result and not result.get('success'):
+            logger.error(f"Failed to edit channel {channel_oid} / Error: {result.get('error')}")
+        elif not result:
+            logger.error(f'Unknown error when trying to edit channel {channel_oid}: {result}')
+
+    def _create_channel(self, parent_channel, channel_title, is_unlisted):
+        #logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
+        logger.info(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
-        for c in self.channels_created:
-            if channel_title == c.get('title'):
-                logger.debug(f'Channel {channel_title} already created.')
-                channel = c
-                channel['success'] = True
-                channel['already_created'] = True
-                if is_unlisted:
-                    logger.debug(f'Channel edit: {channel_title}')
-                    result = self.ms_client.api('perms/edit/default/', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
-                    if result and not result.get('success'):
-                        logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
-                    elif not result:
-                        logger.error(f'Attempt to edit a channel not created: {channel_title}')
-                break
-
-        if not channel.get('already_created'):
-            data = {'title': channel_title, 'parent': parent_channel, 'unlisted': 'yes' if is_unlisted else 'no'}
+        # identify the channel by combining the parent_channel_oid and the title
+        # (to avoid problems if two channels have the same title)
+        channel_id = f'{parent_channel}/{channel_title}'
+        existing_channel = self.created_channels.get(channel_id)
+        if existing_channel:
+            logger.debug(f'Channel {channel_id} already created.')
+            if existing_channel.get('is_unlisted') is False:
+                # listed takes precedence over unlisted
+                # if it is already listed, it cannot be unlisted
+                return existing_channel
+            elif existing_channel.get('is_unlisted') == is_unlisted:
+                # nothing to do
+                return existing_channel
+            else:
+                channel_oid = existing_channel['oid']
+                logger.debug(f'Setting unlisted on channel {channel_oid} to {is_unlisted}')
+                self._set_channel_unlisted(channel_oid, True)
+        else:
+            logger.debug(f'Creating channel {channel_id}')
+            data = {'title': channel_title, 'parent': parent_channel}
             result = self.ms_client.api('channels/add', method='post', data=data)
 
             if result and not result.get('success'):
                 logger.error(f'Failed to create channel: {channel} / Error: {result.get("error")}')
             elif not result:
-                logger.error(f'No response from API when creating channel: {channel}')
+                logger.error(f'Unknown error when creating channel with {data}')
             else:
                 channel = result
-                self.channels_created.append({'title': channel_title, 'oid': channel.get('oid')})
 
-                if is_unlisted:
-                    logger.debug(f"Channel {channel.get('oid')} unlisted : requesting channel edit")
+                # channels/add does not support unlisted as argument, we must do another request
+                self._set_channel_unlisted(channel['oid'], is_unlisted)
 
-                    result = self.ms_client.api('perms/edit/default/', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
-                    if result and not result.get('success'):
-                        logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
-                    elif not result:
-                        logger.error(f'Attempt to edit a channel not created: {channel_title}')
+                self.created_channels[channel_id] = {
+                    'title': channel_title,
+                    'oid': channel.get('oid'),
+                    'is_unlisted': is_unlisted,
+                }
 
         return channel
 
