@@ -6,6 +6,8 @@ Scripts to import video data from Mediasite to Ubicast Mediaserver
 
 * make
 * docker
+* git
+* git-lfs
 
 ## Usage
 
@@ -18,7 +20,7 @@ First of all, you need to set up the connection with the Mediasite API and Media
 ```
 $ git clone https://github.com/UbiCastTeam/mediasite-migration-scripts
 $ git submodule update --init
-$ git lfs init && git lfs pull
+$ git-lfs install && git-lfs pull
 ```
 
 You have to fill some credentials to config.json. Also, some parameters can be provided for migration.
