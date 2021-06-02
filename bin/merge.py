@@ -163,12 +163,11 @@ class Merger:
         bus.connect('message::error', self._on_error)
         bus.connect('message', self._on_message)
 
-        layout_preset = self.get_layout_preset(videomixer_width, videomixer_height, layers_data)
-        layout_file = folder / 'mediaserver_layout.json'
-        with open(layout_file, 'w') as f:
-            print(f'Wrote {layout_file}')
-            json.dump(layout_preset, f, sort_keys=True, indent=4)
-
+        self.layout_preset = self.get_layout_preset(videomixer_width, videomixer_height, layers_data)
+        self.layout_file = folder / 'mediaserver_layout.json'
+        if self.layout_file.is_file():
+            logging.info(f'Removing existing layout file {self.layout_file}')
+            self.layout_file.unlink()
         GLib.idle_add(self.pipeline.set_state, Gst.State.PLAYING)
         self.start_time = time.time()
         self.timeout_id = GLib.timeout_add(TIMEOUT_MS, self._on_timeout)
@@ -196,10 +195,16 @@ class Merger:
     def _on_eos(self, bus, message):
         took = time.time() - self.start_time
         processing_speed = round(self.duration_s / took, 2)
-        logging.info(f'Finished in {int(took)}s: {self.output_file} with processing speed: {processing_speed}x')
+        logging.info(f'Finished in {int(took)}s: {self.output_file} with processing speed: {processing_speed}x, dumping layout file')
+        self.dump_layout()
         GLib.idle_add(self.cancel_timeout)
         GLib.idle_add(self.cancel_force_eos)
         self.mainloop.quit()
+
+    def dump_layout(self):
+        with open(self.layout_file, 'w') as f:
+            print(f'Wrote {self.layout_file}')
+            json.dump(self.layout_preset, f, sort_keys=True, indent=4)
 
     def cancel_force_eos(self):
         if self.force_eos_id:
