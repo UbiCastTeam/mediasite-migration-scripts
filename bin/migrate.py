@@ -123,8 +123,8 @@ if __name__ == '__main__':
         with open(options.mediasite_users_file) as f:
             mediasite_users = json.load(f)
     except Exception as e:
-        logger.debug(e)
-        logger.error('Failed to parse Mediasite metadata')
+        logger.error(f'Failed to parse Mediasite {mediasite_file}')
+        logger.error(e)
         logger.error('--------- Aborted ---------')
         sys.exit(1)
 

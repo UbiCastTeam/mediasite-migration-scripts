@@ -38,9 +38,10 @@ class MediaTransfer():
                 self.root_channel = self.get_root_channel()
 
         self.formats_allowed = self.config.get('videos_formats_allowed', {})
-        self.channels_created = list()
+        self.created_channels = dict()
         self.slide_annot_type = None
         self.chapters_annot_type = None
+        self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
 
         self.mediasite_data = mediasite_data
         self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
@@ -56,9 +57,7 @@ class MediaTransfer():
         self.dl_session = None
 
     def upload_medias(self, max_videos=None):
-        total_medias = len(self.mediaserver_data)
-        logger.info(f'{total_medias} medias found for uploading.')
-        logger.debug('Migrating medias')
+        logger.debug('Uploading videos')
         print(' ' * 50, end='\r')
 
         if not self.config.get('skip_userfolders'):
@@ -66,20 +65,29 @@ class MediaTransfer():
                 user_id = self.create_user(user)
                 user['id'] = user_id
 
+        if max_videos:
+            try:
+                max_videos = int(max_videos)
+                total_medias_uploaded = max_videos
+            except Exception as e:
+                logger.error(f'{max_videos} is not a valid number for videos maximum.')
+                logger.debug(e)
+        else:
+            total_medias_uploaded = len(self.mediaserver_data)
+
+        logger.debug(f'{total_medias_uploaded} medias found for uploading.')
+
         nb_medias_uploaded = 0
         attempts = 0
-        while nb_medias_uploaded != total_medias and attempts < 10:
+        while nb_medias_uploaded != total_medias_uploaded and attempts < 10:
             attempts += 1
-            if max_videos:
-                total_medias = max_videos
-
             logger.debug(f'Attempt {attempts} for uploading medias.')
             if attempts > 1:
-                nb_medias_left = total_medias - nb_medias_uploaded
+                nb_medias_left = total_medias_uploaded - nb_medias_uploaded
                 logger.debug(f'{nb_medias_left} medias left to upload.')
 
             for index, media in enumerate(self.mediaserver_data):
-                print(f'Uploading: [{nb_medias_uploaded} / {len(self.mediaserver_data)}] -- {int(100 * (nb_medias_uploaded / len(self.mediaserver_data)))}%', end='\r')
+                print(f'Uploading: [{nb_medias_uploaded} / {total_medias_uploaded}] -- {int(100 * (nb_medias_uploaded / total_medias_uploaded))}%', end='\r')
 
                 if max_videos and index >= max_videos:
                     break
@@ -95,7 +103,7 @@ class MediaTransfer():
                                 continue
                             channel_oid = self.get_user_channel(data.get('speaker_email', ''))
                         else:
-                            channel_oid = self.create_channels(channel_path, is_unlisted=data['channel_unlisted'])[-1]
+                            channel_oid = self.create_channels(channel_path)
 
                         if not channel_oid:
                             data['channel'] = self.root_channel.get('oid')
@@ -337,72 +345,105 @@ class MediaTransfer():
         return ms_users
 
     @lru_cache
-    def create_channels(self, channel_path, is_unlisted=False):
-        logger.debug(f'Creating channel path: {channel_path}')
-
-        channels_oids = list()
-        tree = channel_path.split('/')
-        # path start with '/' , so tree[0] is a empty string
-        tree.pop(0)
-        channel = self._create_channel(self.root_channel.get('oid'), tree[0], is_unlisted=is_unlisted)
-        channels_oids.append(channel.get('oid'))
-
-        if not channel.get('already_created'):
-            logger.debug(f"Channel oid {channel.get('oid')}")
-
-        i = 1
-        while channel.get('success') and i < len(tree):
-            last_channel = (i == len(tree) - 1)
-            channel = self._create_channel(parent_channel=channels_oids[i - 1], channel_title=tree[i], is_unlisted=last_channel and is_unlisted)
-            channels_oids.append(channel.get('oid'))
-            logger.debug(f'Channel oid: {channel.get("oid")}')
-            i += 1
-
-        if i < len(tree):
-            logger.error('Failed to construct channel path')
-
-        return channels_oids
+    def has_catalog(self, folder_path):
+        for f in self.mediasite_data:
+            if f.get('path') == folder_path:
+                if len(f.get('catalogs')) > 0:
+                    return True
+                else:
+                    return False
+        return False
 
     @lru_cache
-    def _create_channel(self, parent_channel, channel_title, is_unlisted=False):
-        logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
+    def create_channels(self, channel_path):
+        logger.debug(f'Creating channel path: {channel_path}')
+
+        # if at least one intermediary folder has a catalog, then the entire tree should be listed:
+        # * any upper channels needs to be listed so that users can discover it in MediaServer
+        # * any leaf chennels needs to be listed too because mediasite publishes subfolders recursively
+        is_unlisted = True
+        tree = channel_path.lstrip('/').split('/')
+        tree_list = list()  # turn path 'a/b/c/d' into list ['/a/b/c/d', '/a/b/c', '/a/b', '/a']
+        for i in range(len(tree) + 1):
+            if tree:
+                path = '/' + '/'.join(tree)
+                if self.has_catalog(path):
+                    logger.debug(f'Parent folder {path} has a catalog, making complete path {channel_path} listed')
+                    is_unlisted = False
+                tree_list.append(path)
+                tree.pop(-1)
+
+        # reverses list into ['/a', '/a/b', '/a/b/c', '/a/b/c/d']
+        tree_list.reverse()
+
+        oid = self.root_channel.get('oid')
+        for leaf in tree_list:
+            new_oid = self._create_channel(
+                parent_channel=oid,
+                channel_title=leaf.split('/')[-1],
+                is_unlisted=is_unlisted,
+            ).get('oid')
+            oid = new_oid
+
+        # last item in list is the final channel, return it's oid
+        # because he will be the parent of the video
+        return oid
+
+    def _set_channel_unlisted(self, channel_oid, unlisted_bool):
+        data = {'oid': channel_oid}
+        # perms/edit/default/ doc:
+        # "If any value is given, the unlisted setting will be set as enabled on the channel or media, otherwise it will be disabled."
+        # In other terms, calling perms/edit/default/ without unlisted makes it listed
+        if unlisted_bool:
+            data['unlisted'] = 'yes'
+        result = self.ms_client.api('perms/edit/default/', method='post', data=data)
+        if result and not result.get('success'):
+            logger.error(f"Failed to edit channel {channel_oid} / Error: {result.get('error')}")
+        elif not result:
+            logger.error(f'Unknown error when trying to edit channel {channel_oid}: {result}')
+
+    def _create_channel(self, parent_channel, channel_title, is_unlisted):
+        #logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
+        logger.info(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
-        for c in self.channels_created:
-            if channel_title == c.get('title'):
-                logger.debug(f'Channel {channel_title} already created.')
-                channel = c
-                channel['success'] = True
-                channel['already_created'] = True
-                if is_unlisted:
-                    logger.debug(f'Channel edit: {channel_title}')
-                    result = self.ms_client.api('perms/edit/default/', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
-                    if result and not result.get('success'):
-                        logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
-                    elif not result:
-                        logger.error(f'Attempt to edit a channel not created: {channel_title}')
-                break
-
-        if not channel.get('already_created'):
-            data = {'title': channel_title, 'parent': parent_channel, 'unlisted': 'yes' if is_unlisted else 'no'}
+        # identify the channel by combining the parent_channel_oid and the title
+        # (to avoid problems if two channels have the same title)
+        channel_id = f'{parent_channel}/{channel_title}'
+        existing_channel = self.created_channels.get(channel_id)
+        if existing_channel:
+            logger.debug(f'Channel {channel_id} already created.')
+            if existing_channel.get('is_unlisted') is False:
+                # listed takes precedence over unlisted
+                # if it is already listed, it cannot be unlisted
+                return existing_channel
+            elif existing_channel.get('is_unlisted') == is_unlisted:
+                # nothing to do
+                return existing_channel
+            else:
+                channel_oid = existing_channel['oid']
+                logger.debug(f'Setting unlisted on channel {channel_oid} to {is_unlisted}')
+                self._set_channel_unlisted(channel_oid, True)
+        else:
+            logger.debug(f'Creating channel {channel_id}')
+            data = {'title': channel_title, 'parent': parent_channel}
             result = self.ms_client.api('channels/add', method='post', data=data)
 
             if result and not result.get('success'):
                 logger.error(f'Failed to create channel: {channel} / Error: {result.get("error")}')
             elif not result:
-                logger.error(f'No response from API when creating channel: {channel}')
+                logger.error(f'Unknown error when creating channel with {data}')
             else:
                 channel = result
-                self.channels_created.append({'title': channel_title, 'oid': channel.get('oid')})
 
-                if is_unlisted:
-                    logger.debug(f"Channel {channel.get('oid')} unlisted : requesting channel edit")
+                # channels/add does not support unlisted as argument, we must do another request
+                self._set_channel_unlisted(channel['oid'], is_unlisted)
 
-                    result = self.ms_client.api('perms/edit/default/', method='post', data={'oid': channel.get('oid'), 'unlisted': 'yes'}, ignore_404=True)
-                    if result and not result.get('success'):
-                        logger.error(f"Failed to edit channel {channel.get('oid')} / Error: {result.get('error')}")
-                    elif not result:
-                        logger.error(f'Attempt to edit a channel not created: {channel_title}')
+                self.created_channels[channel_id] = {
+                    'title': channel_title,
+                    'oid': channel.get('oid'),
+                    'is_unlisted': is_unlisted,
+                }
 
         return channel
 
@@ -509,6 +550,14 @@ class MediaTransfer():
             logger.debug('No Mediaserver mapping. Generating mapping.')
             for folder in self.mediasite_data:
                 if utils.is_folder_to_add(folder.get('path'), config=self.config):
+                    has_catalog = (len(folder.get('catalogs', [])) > 0)
+
+                    is_unlisted_channel = not has_catalog
+                    for p in self.public_paths:
+                        if folder['path'].startswith(p):
+                            is_unlisted_channel = False
+                            break
+
                     for presentation in folder['presentations']:
                         presenters = str()
                         for p in presentation.get('other_presenters'):
@@ -557,8 +606,8 @@ class MediaTransfer():
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
-                                'channel_unlisted': not has_catalog,
-                                'unlisted': 'yes' if not has_catalog else 'no',
+                                'channel_unlisted': is_unlisted_channel,
+                                'unlisted': 'yes' if is_unlisted_channel else 'no',
                                 'creation': presentation.get('creation_date'),
                                 'speaker_id': presentation.get('owner_username'),
                                 'speaker_name': presentation.get('owner_display_name'),

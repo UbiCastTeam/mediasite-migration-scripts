@@ -45,9 +45,18 @@ class TestMediaTransfer(TestCase):
                     if data['slug'] == 'mediasite-' + presentation['id']:
                         has_catalog = len(folder.get('catalogs', [])) > 0
                         channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
+
                         self.assertEqual(data['channel_title'], channel_name)
                         self.assertIn('channel_unlisted', data)
-                        self.assertNotEqual(data['channel_unlisted'], has_catalog)
+
+                        has_catalog = (len(folder.get('catalogs', [])) > 0)
+                        is_unlisted_channel = not has_catalog
+                        for p in self.mediatransfer.public_paths:
+                            if folder['path'].startswith(p):
+                                is_unlisted_channel = False
+                                break
+                        self.assertEqual(data['channel_unlisted'], is_unlisted_channel)
+
                         if has_catalog:
                             channel_path_splitted = folder['path'].split('/')
                             channel_path_splitted[-1] = channel_name
