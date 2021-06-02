@@ -131,6 +131,7 @@ class TestMediaTransferE2E(TestCase):
                 'chapters',
                 'composites_videos_urls',
                 'layout_preset'
+                'unlisted'  # TODO find a way top test it with inheritance
             ]
             for key in data.keys():
                 try:
@@ -141,7 +142,7 @@ class TestMediaTransferE2E(TestCase):
                         self.assertEqual(channel_title, m_uploaded.get('parent_title'))
                     elif key == 'speaker_name':
                         self.assertEqual(data['speaker_name'], m_uploaded.get('speaker'))
-                    elif key == 'validated' or key == 'unlisted':
+                    elif key == 'validated':
                         self.assertTrue(m_uploaded.get(key)) if data[key] == 'yes' else self.assertFalse(m_uploaded.get(key))
                     elif key == 'layout' and data['layout'] == 'video':
                         self.assertEqual(m_uploaded.get('layout'), '')
@@ -196,13 +197,10 @@ class TestMediaTransferE2E(TestCase):
 
         paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
         channels_examples_titles = ''.join(paths_examples).split('/')[1:]
-        channels_created_oids = list()
 
-        for p in paths_examples:
-            channels_created_oids.extend(self.mediatransfer.create_channels(p))
-        self.assertEqual(len(channels_created_oids), len(channels_examples_titles))
+        self.assertEqual(len(self.mediatransfer.created_channels), len(channels_examples_titles))
 
-        for oid in channels_created_oids:
+        for oid in self.mediatransfer.created_channels:
             result = self.ms_client.api('channels/get', method='get', params={'oid': oid}, ignore_404=True)
             self.assertIsNotNone(result)
             if result:
@@ -211,7 +209,7 @@ class TestMediaTransferE2E(TestCase):
                 logger.error(f'Channel {oid} not found')
 
         longest_tree = paths_examples[-1].split('/')[1:]
-        parent_oid = channels_created_oids[-len(longest_tree)]
+        parent_oid = self.mediatransfer.created_channels[-len(longest_tree)]
         ms_tree = self.ms_client.api('channels/tree', method='get', params={'parent_oid': parent_oid})
         # we pop the parent channel
         longest_tree.pop(0)
