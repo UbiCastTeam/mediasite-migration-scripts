@@ -382,6 +382,7 @@ class MediaTransfer():
                 parent_channel=oid,
                 channel_title=leaf.split('/')[-1],
                 is_unlisted=is_unlisted,
+                original_path=leaf,
             ).get('oid')
             oid = new_oid
 
@@ -402,17 +403,14 @@ class MediaTransfer():
         elif not result:
             logger.error(f'Unknown error when trying to edit channel {channel_oid}: {result}')
 
-    def _create_channel(self, parent_channel, channel_title, is_unlisted):
+    def _create_channel(self, parent_channel, channel_title, is_unlisted, original_path):
         #logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         logger.info(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
-        # identify the channel by combining the parent_channel_oid and the title
-        # (to avoid problems if two channels have the same title)
-        channel_id = f'{parent_channel}/{channel_title}'
-        existing_channel = self.created_channels.get(channel_id)
+        existing_channel = self.created_channels.get(original_path)
         if existing_channel:
-            logger.debug(f'Channel {channel_id} already created.')
+            logger.debug(f'Channel {original_path} already created.')
             if existing_channel.get('is_unlisted') is False:
                 # listed takes precedence over unlisted
                 # if it is already listed, it cannot be unlisted
@@ -425,7 +423,7 @@ class MediaTransfer():
                 logger.debug(f'Setting unlisted on channel {channel_oid} to {is_unlisted}')
                 self._set_channel_unlisted(channel_oid, True)
         else:
-            logger.debug(f'Creating channel {channel_id}')
+            logger.debug(f'Creating channel {original_path}')
             data = {'title': channel_title, 'parent': parent_channel}
             result = self.ms_client.api('channels/add', method='post', data=data)
 
@@ -439,7 +437,7 @@ class MediaTransfer():
                 # channels/add does not support unlisted as argument, we must do another request
                 self._set_channel_unlisted(channel['oid'], is_unlisted)
 
-                self.created_channels[channel_id] = {
+                self.created_channels[original_path] = {
                     'title': channel_title,
                     'oid': channel.get('oid'),
                     'is_unlisted': is_unlisted,
