@@ -153,7 +153,7 @@ class DataExtractor():
                 infos = self.get_presentation_infos(p)
                 presentations_infos.append(infos)
             except Exception:
-                pid = p.get("Id")
+                pid = p.get('Id')
                 logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
                 time.sleep(5 * 60)
                 try:
