@@ -5,6 +5,7 @@ from pymediainfo import MediaInfo
 import json
 import requests
 from datetime import datetime
+import time
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
 import utils.common as utils
@@ -17,6 +18,7 @@ class DataExtractor():
     def __init__(self, config=dict(), max_folders=None, e2e_tests=False):
         logger.info('Connecting...')
         self.session = None
+        self.max_folders = max_folders
         self.e2e_tests = e2e_tests
         self.config = {
             'mediasite_base_url': config.get('mediasite_api_url'),
@@ -29,14 +31,39 @@ class DataExtractor():
         self.mediasite_format_date = '%Y-%m-%dT%H:%M:%S'
 
         self.presentations = None
-        self.folders = self.get_all_folders_infos()
-        self.all_catalogs = self.mediasite.catalog.get_all_catalogs()
-
+        self.failed_presentations = list()
         self.users = list()
         self.linked_catalogs = list()
-        self.all_data = self.extract_mediasite_data(max_folders=max_folders)
+        self.timeit(self.run)
 
-    def extract_mediasite_data(self, parent_id=None, max_folders=None):
+    def run(self):
+        self.folders = self.get_all_folders_infos()
+        self.all_catalogs = self.get_all_catalogs()
+        self.all_data = self.timeit(self.extract_mediasite_data)
+
+    def timeit(self, method):
+        before = time.time()
+        results = method()
+        took_s = int(time.time() - before)
+        took_min = int(took_s / 60)
+
+        if results:
+            result_count = len(results)
+            seconds_per_result = int(took_s / result_count)
+            logger.info(f'{method} took {took_min} minutes, found {result_count} items, {seconds_per_result}s per item')
+        else:
+            logger.info(f'{method} took {took_min} minutes')
+        return results
+
+    def get_all_presentations(self):
+        presentations = self.timeit(self.mediasite.presentation.get_all_presentations)
+        return presentations
+
+    def get_all_catalogs(self):
+        all_catalogs = self.timeit(self.mediasite.catalog.get_all_catalogs)
+        return all_catalogs
+
+    def extract_mediasite_data(self, parent_id=None):
         '''
         Collect all data from Mediasite platform ordered by folder
 
@@ -47,7 +74,6 @@ class DataExtractor():
                 list of items containing presentations' infos and
                     list of items containing videos and slides metadata
         '''
-
         presentations_folders = list()
 
         if parent_id is None:
@@ -65,12 +91,12 @@ class DataExtractor():
                 logger.debug(e)
         else:
             if self.presentations is None:
-                self.presentations = self.mediasite.presentation.get_all_presentations()
+                self.presentations = self.get_all_presentations()
 
             logger.info('Extracting and ordering metadata.')
             for i, folder in enumerate(self.folders):
                 if i > 1:
-                    print(f'Requesting: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
+                    print(f'Requesting folders: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
 
                 path = self._find_folder_path(folder['id'], self.folders)
                 if utils.is_folder_to_add(path, config=self.config):
@@ -89,14 +115,18 @@ class DataExtractor():
                         folder['name'] = most_recent_channel.get('name')
                         folder['linked_catalog_id'] = most_recent_channel.get('id')
 
-                    presentations_folders.append({**folder,
-                                                  'catalogs': catalogs,
-                                                  'path': path,
-                                                  'presentations': self.get_presentations_infos(folder['id'])})
+                    presentation_infos = self.get_folder_presentations_infos(folder['id'])
+                    presentations_folders.append({
+                        **folder,
+                        'catalogs': catalogs,
+                        'path': path,
+                        'presentations': presentation_infos
+                    })
+
                     if catalogs:
                         self.linked_catalogs.extend(catalogs)
 
-                    if max_folders and i >= max_folders:
+                    if self.max_folders and i >= self.max_folders:
                         break
 
         return presentations_folders
@@ -109,63 +139,82 @@ class DataExtractor():
                 return path
         return ''
 
-    def get_presentations_infos(self, folder_id):
-        logger.debug(f'Gettings presentations infos for folder: {folder_id}')
+    def get_folder_presentations_infos(self, folder_id):
         presentations_infos = list()
-
+        children_presentations = list()
+        # find presentations in folder
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
-                logger.debug('-' * 50)
-                logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
+                children_presentations.append(presentation)
+        logger.debug(f'Gettings {len(children_presentations)} presentations infos for folder: {folder_id}')
 
-                has_slides_details = False
-                for stream_type in presentation.get('Streams'):
-                    if stream_type.get('StreamType') == 'Slide':
-                        has_slides_details = True
-                        break
-
-                owner_infos = self.get_user_infos(username=presentation.get('RootOwner', ''))
-
-                presenter_display_name = presentation.get('PrimaryPresenter', '')
-                if presenter_display_name.startswith('Default Presenter'):
-                    presenter_display_name = None
-
-                presentation_analytics = self.mediasite.presentation.get_analytics(presentation.get('Id', ''))
-
-                # we split at '.' to pop out millisesonds, and remove 'Z' tag
-                creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
-                if presentation.get('RecordDate', ''):
-                    record_date_str = presentation['RecordDate'].split('.')[0].replace('Z', '')
-                    record_date = datetime.strptime(record_date_str, self.mediasite_format_date)
-                    creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
-                    creation_date = min([creation_date, record_date])
-
-                infos = {
-                    'id': presentation.get('Id', ''),
-                    'title': presentation.get('Title', ''),
-                    'creation_date': creation_date.strftime(self.mediasite_format_date),
-                    'presenter_display_name': presenter_display_name,
-                    'owner_username': owner_infos.get('username', ''),
-                    'owner_display_name': owner_infos.get('display_name', ''),
-                    'owner_mail': owner_infos.get('mail', ''),
-                    'creator': presentation.get('Creator', ''),
-                    'other_presenters': self.get_presenters_infos(presentation.get('Id', '')),
-                    'availability': self.mediasite.presentation.get_availability(presentation.get('Id', '')),
-                    'published_status': presentation.get('Status') == 'Viewable',
-                    'has_slides_details': has_slides_details,
-                    'description': presentation.get('Description', ''),
-                    'tags': presentation.get('TagList', ''),
-                    'timed_events': self.get_timed_events(presentation.get('Id', '')),
-                    'total_views': presentation_analytics.get('TotalViews', ''),
-                    'last_viewed': presentation_analytics.get('LastWatched', ''),
-                    'url': presentation.get('#Play').get('target', ''),
-                }
-                infos['videos'] = self.get_videos_infos(presentation.get('Id'))
-                infos['slides'] = self.get_slides_infos(infos, details=True)
-
+        for p in children_presentations:
+            try:
+                infos = self.get_presentation_infos(p)
                 presentations_infos.append(infos)
+            except Exception:
+                pid = p.get('Id')
+                logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
+                time.sleep(5 * 60)
+                try:
+                    infos = self.get_presentation_infos(p)
+                    logger.info(f'Second try for {pid} passed')
+                    presentations_infos.append(infos)
+                except Exception as e:
+                    logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
+                    self.failed_presentations.append(pid)
 
         return presentations_infos
+
+    def get_presentation_infos(self, presentation):
+        logger.debug('-' * 50)
+        logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
+
+        has_slides_details = False
+        for stream_type in presentation.get('Streams'):
+            if stream_type.get('StreamType') == 'Slide':
+                has_slides_details = True
+                break
+
+        owner_infos = self.get_user_infos(username=presentation.get('RootOwner', ''))
+
+        presenter_display_name = presentation.get('PrimaryPresenter', '')
+        if presenter_display_name.startswith('Default Presenter'):
+            presenter_display_name = None
+
+        presentation_analytics = self.mediasite.presentation.get_analytics(presentation.get('Id', ''))
+
+        # we split at '.' to pop out millisesonds, and remove 'Z' tag
+        creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
+        if presentation.get('RecordDate', ''):
+            record_date_str = presentation['RecordDate'].split('.')[0].replace('Z', '')
+            record_date = datetime.strptime(record_date_str, self.mediasite_format_date)
+            creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
+            creation_date = min([creation_date, record_date])
+
+        infos = {
+            'id': presentation.get('Id', ''),
+            'title': presentation.get('Title', ''),
+            'creation_date': creation_date.strftime(self.mediasite_format_date),
+            'presenter_display_name': presenter_display_name,
+            'owner_username': owner_infos.get('username', ''),
+            'owner_display_name': owner_infos.get('display_name', ''),
+            'owner_mail': owner_infos.get('mail', ''),
+            'creator': presentation.get('Creator', ''),
+            'other_presenters': self.get_presenters_infos(presentation.get('Id', '')),
+            'availability': self.mediasite.presentation.get_availability(presentation.get('Id', '')),
+            'published_status': presentation.get('Status') == 'Viewable',
+            'has_slides_details': has_slides_details,
+            'description': presentation.get('Description', ''),
+            'tags': presentation.get('TagList', ''),
+            'timed_events': self.get_timed_events(presentation.get('Id', '')),
+            'total_views': presentation_analytics.get('TotalViews', ''),
+            'last_viewed': presentation_analytics.get('LastWatched', ''),
+            'url': presentation.get('#Play').get('target', ''),
+        }
+        infos['videos'] = self.get_videos_infos(presentation.get('Id'))
+        infos['slides'] = self.get_slides_infos(infos, details=True)
+        return infos
 
     def get_all_folders_infos(self):
         folders_infos = list()
@@ -339,16 +388,15 @@ class DataExtractor():
             if not encoding_infos.get('video_codec'):
                 logger.debug(f'File is not a video: {video_url}')
         except Exception as e:
-            logger.debug(e)
-
-            if self.session is None:
-                self.session = requests.Session()
-
-            response = self.session.head(video_url)
-            if not response.ok:
-                logger.warning(f'Video not found on Mediasite [404]: {video_url}')
-            else:
-                logger.warning(f'Video encoding infos could not be parsed: {video_url} / Request response status : {response.status_code}')
+            logger.debug(f'Failed to get media info for {video_url}. Error: {e}')
+            try:
+                if self.session is None:
+                    self.session = requests.Session()
+                response = self.session.head(video_url)
+                if not response.ok:
+                    logger.debug(f'Video {video_url} not reachable: {response.status_code}, content: {response.text}')
+            except Exception as e:
+                logger.debug(e)
 
         return encoding_infos
 
