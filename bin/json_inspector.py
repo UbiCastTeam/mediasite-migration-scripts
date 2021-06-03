@@ -17,6 +17,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    '--max-results',
+    type=int,
+    help='Maximum results to show, 0 to disable',
+    default=10,
+)
+
+parser.add_argument(
     '--search-fields',
     type=str,
     help='Fields to search into (csv)',
@@ -68,6 +75,8 @@ with open(input_file, 'r') as f:
 
 
 def print_short(items, max_items=10):
+    if max_items == 0:
+        max_items = float("inf")
     if len(items) == 0:
         pass
     elif 0 < len(items) < max_items:
@@ -75,6 +84,7 @@ def print_short(items, max_items=10):
     else:
         print(json.dumps(items[:max_items], indent=2))
         print(f'Truncated to the first {max_items} items')
+    print(f'Finished displaying {len(items)} results')
 
 
 results = [
@@ -87,4 +97,4 @@ print(f'Total: {folders} folders, {presentations} presentations, {catalogs} cata
 if args.search:
     for name, result in results:
         print(f'Found {len(result)} in {name} search results')
-        print_short(result)
+        print_short(result, args.max_results)
