@@ -46,8 +46,12 @@ class MediaTransfer():
         self.mediasite_data = mediasite_data
         self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
 
+        #self.users = self.to_mediaserver_users(mediasite_users)
+        self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
+
         self.mediaserver_data = self.to_mediaserver_keys()
-        self.users = self.to_mediaserver_users(mediasite_users)
+        self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
+
         self.compositor = None
         self.composites_medias = list()
         self.download_folder = dl = Path(config.get('download_folder', ''))
@@ -59,11 +63,6 @@ class MediaTransfer():
     def upload_medias(self, max_videos=None):
         logger.debug('Uploading videos')
         print(' ' * 50, end='\r')
-
-        if not self.config.get('skip_userfolders'):
-            for i, user in enumerate(self.users):
-                user_id = self.create_user(user)
-                user['id'] = user_id
 
         if max_videos:
             try:
@@ -98,17 +97,16 @@ class MediaTransfer():
                         presentation_id = json.loads(data.get('external_data', {})).get('id')
 
                         channel_path = media['ref'].get('channel_path')
-                        if channel_path.startswith('/Mediasite Users'):
+                        if channel_path.startswith(self.mediasite_userfolder):
                             if self.config.get('skip_userfolders'):
                                 continue
-                            channel_oid = self.get_user_channel(data.get('speaker_email', ''))
+                            target_channel = self.get_personal_channel_target(channel_path)
                         else:
-                            channel_oid = self.create_channels(channel_path)
+                            channel_oid = self.create_channels(channel_path) or self.root_channel.get('oid')
+                            target_channel = 'mscid-' + channel_oid
 
-                        if not channel_oid:
-                            data['channel'] = self.root_channel.get('oid')
-                        else:
-                            data['channel'] = channel_oid
+                        logger.debug(f'Will publish {presentation_id} into channel {target_channel}')
+                        data['channel'] = target_channel
 
                         if data.get('video_type').startswith('composite_'):
                             if self.config.get('skip_composites'):
@@ -167,6 +165,43 @@ class MediaTransfer():
             self.dl_session.close()
 
         return nb_medias_uploaded
+
+    @lru_cache
+    def get_personal_channel_target(self, channel_path):
+        logger.debug(f'Get personal channel target for {channel_path}')
+        #"/Mediasite Users/USERNAME/SUBFOLDER"
+        target = ''
+        subfolders = channel_path.split(self.mediasite_userfolder)[1].split('/')
+        # ["USERNAME", "SUBFOLDER"]
+
+        # mediaserver enforces lowercase usernames
+        username = subfolders[0].lower()
+
+        # mediaserver API cannot be queried by username
+        user_id = self._get_user_id(username)
+
+        if self._get_user_id(username):
+            channel_oid = self.get_user_channel_oid(user_id=user_id)
+            if len(subfolders) > 1:
+                # Mediasite Users/USERNAME
+                spath = self.mediasite_userfolder + subfolders[0] + '/'
+                for s in subfolders[1:]:
+                    spath += s + '/'
+                    channel_oid = self._create_channel(channel_oid, s, True, spath)['oid']
+            target = f'mscid-{channel_oid}'
+        else:
+            subfolders_path = "/".join(subfolders)
+            target = f'mscpath-{self.unknown_users_channel_title}/{subfolders_path}'
+        return target
+
+    @lru_cache
+    def _get_user_id(self, username):
+        users = self.ms_client.api('users/', method='get', params={'search': username, 'search_in': 'username'})['users']
+        # this is search, so multiple users may share username perfixes
+        # find the exact match
+        for user in users:
+            if user['username'] == username:
+                return user['id']
 
     def migrate_composites_videos(self):
         logger.info(f'Merging and migrating {len(self.composites_medias)} composite videos.')
@@ -286,17 +321,21 @@ class MediaTransfer():
         return root_channel
 
     @lru_cache
-    def get_user_channel(self, user_email):
-        logger.debug(f'Getting user channel for user email {user_email}')
-        channel_oid = str()
-
-        result = self.ms_client.api('channels/personal/', method='get', params={'email': user_email}, ignore_404=True)
+    def get_user_channel_oid(self, user_email=None, user_id=None):
+        logger.debug(f'Getting user channel for user id {user_id}')
+        params = {'create': 'yes'}
+        if user_email:
+            params['email'] = user_email
+        elif user_id:
+            params['id'] = user_id
+        result = self.ms_client.api('channels/personal/', method='get', params=params)
+        #{"allowed": true, "oid": "c125cf1ed2152ufai5gu", "dbid": 1283, "title": "Antoine Peltier", "slug": "antoine-peltier", "success": true}
+        # {"error": "L'utilisateur \"6516516651\" n'existe pas.", "success": false}
         if result and result.get('success'):
             channel_oid = result.get('oid')
+            return channel_oid
         else:
             logger.error(f"Failed to get user channel for {user_email} / Error: {result.get('error')}")
-
-        return channel_oid
 
     def create_user(self, user):
         logger.debug(f"Creating user {user.get('username')}")
@@ -354,6 +393,10 @@ class MediaTransfer():
 
     @lru_cache
     def create_channels(self, channel_path):
+        '''
+        Creates all intermediary channels and
+        returns the oid of the parent channel
+        '''
         logger.debug(f'Creating channel path: {channel_path}')
 
         # if at least one intermediary folder has a catalog, then the entire tree should be listed:
@@ -410,8 +453,7 @@ class MediaTransfer():
         pass
 
     def _create_channel(self, parent_channel, channel_title, is_unlisted, original_path):
-        #logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
-        logger.info(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
+        logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
         existing_channel = self.created_channels.get(original_path) or self.channel_already_exists(original_path)
@@ -591,8 +633,6 @@ class MediaTransfer():
                             v_url = self._find_file_to_upload(v_files)
 
                         if v_url:
-                            logger.debug(f"Found file with handled format for presentation {presentation.get('id')}: {v_url} ")
-
                             has_catalog = len(folder.get('catalogs', [])) > 0
                             channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
 
