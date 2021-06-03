@@ -223,7 +223,7 @@ class DataExtractor():
             folder_info = {
                 'id': folder.get('Id', ''),
                 'parent_id': folder.get('ParentFolderId', ''),
-                'name': folder.get('Name', ''),
+                'name': folder.get('Name', '').replace('/', '-'),
                 'owner_username': folder.get('Owner', ''),
                 'description': folder.get('Description', '')
             }

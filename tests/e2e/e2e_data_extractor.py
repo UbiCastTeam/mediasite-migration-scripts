@@ -58,6 +58,10 @@ class TestDataExtractorE2E(TestCase):
         for key in folder_keys:
             self.assertIn(key, folder_example.keys())
 
+        for folder in self.extractor.folders:
+            self.assertNotIn('/', folder['name'])
+
+
         catalogs_keys = [
             'id',
             'name',
