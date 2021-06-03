@@ -94,7 +94,7 @@ class MediaTransfer():
 
                 if not media.get('ref', {}).get('media_oid'):
                     try:
-                        data = media.get('data', {})
+                        data = media.get('data', {})  # mediaserver data
                         presentation_id = json.loads(data.get('external_data', {})).get('id')
 
                         channel_path = media['ref'].get('channel_path')
@@ -345,13 +345,11 @@ class MediaTransfer():
         return ms_users
 
     @lru_cache
-    def has_catalog(self, folder_path):
-        for f in self.mediasite_data:
-            if f.get('path') == folder_path:
-                if len(f.get('catalogs')) > 0:
-                    return True
-                else:
-                    return False
+    def channel_has_catalog(self, channel_path):
+        for f in self.mediaserver_data:
+            if f.get('ref').get('channel_path') == channel_path:
+                has_catalog = not f['data']['channel_unlisted']
+                return has_catalog
         return False
 
     @lru_cache
@@ -367,7 +365,7 @@ class MediaTransfer():
         for i in range(len(tree) + 1):
             if tree:
                 path = '/' + '/'.join(tree)
-                if self.has_catalog(path):
+                if self.channel_has_catalog(path):
                     logger.debug(f'Parent folder {path} has a catalog, making complete path {channel_path} listed')
                     is_unlisted = False
                 tree_list.append(path)
@@ -626,17 +624,18 @@ class MediaTransfer():
                                 'composites_videos_urls': v_composites_urls
                             }
 
+                            folder_path = folder.get('path')
                             if has_catalog:
-                                channel_path_splitted = folder.get('path').split('/')
+                                channel_path_splitted = folder_path.split('/')
                                 channel_path_splitted[-1] = channel_name
-                                path = '/'.join(channel_path_splitted)
+                                channel_path = '/'.join(channel_path_splitted)
                             else:
-                                path = folder.get('path')
+                                channel_path = folder_path
 
                             if v_type == 'audio_only':
                                 data['thumb'] = 'mediasite_migration_scripts/files/utils/audio.jpg'
 
-                            mediaserver_data.append({'data': data, 'ref': {'channel_path': path}})
+                            mediaserver_data.append({'data': data, 'ref': {'channel_path': channel_path, 'folder_path': folder_path}})
                         else:
                             logger.warning(f"No valid video for presentation {presentation.get('id')}")
                             continue
