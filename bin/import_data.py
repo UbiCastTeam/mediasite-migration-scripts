@@ -56,9 +56,9 @@ if __name__ == '__main__':
             sys.exit(1)
 
         try:
-            filter_on = input('Do want apply the whitelist filter on metadata import? (for medias, whitelist filter will always be on) [y/N] ').lower()
-            if filter_on != 'y' and filter_on != 'yes':
-                config['whitelist'] = []
+            # all data must be feched in order to avoid skipping important data
+            # lets ignore any whitelist
+            config['whitelist'] = []
 
             extractor = DataExtractor(config=config)
             data = extractor.all_data
