@@ -102,19 +102,7 @@ class DataExtractor():
                 if utils.is_folder_to_add(path, config=self.config):
                     logger.debug('-' * 50)
                     logger.debug('Found folder : ' + path)
-
                     catalogs = self.get_folder_catalogs_infos(folder['id'])
-                    if catalogs:
-                        most_recent_time = datetime.strptime('0001-12-25T00:00:00', self.mediasite_format_date)
-                        for c in catalogs:
-                            tmp = datetime.strptime(c.get('creation_date'), self.mediasite_format_date)
-                            if tmp > most_recent_time:
-                                most_recent_time = tmp
-                                most_recent_channel = c
-
-                        folder['name'] = most_recent_channel.get('name')
-                        folder['linked_catalog_id'] = most_recent_channel.get('id')
-
                     presentation_infos = self.get_folder_presentations_infos(folder['id'])
                     presentations_folders.append({
                         **folder,
