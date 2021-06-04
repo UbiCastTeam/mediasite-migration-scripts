@@ -546,7 +546,7 @@ class MediaTransfer():
         logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
-        existing_channel = self.created_channels.get(original_path) or self.channel_already_exists(original_path)
+        existing_channel = self.created_channels.get(original_path)
         if existing_channel:
             logger.debug(f'Channel {original_path} already created.')
             if existing_channel.get('is_unlisted') is False:
