@@ -442,7 +442,14 @@ class MediaTransfer():
         # * any leaf chennels needs to be listed too because mediasite publishes subfolders recursively
         is_unlisted = True
         tree = channel_path.lstrip('/').split('/')
-        tree_list = list()  # turn path 'a/b/c/d' into list ['/a/b/c/d', '/a/b/c', '/a/b', '/a']
+
+        # remove first item and insert "Mediasite Migration" folder after the second leaf
+        # Presentations II/FACULTY/b/c --> FACULTY/Mediasite Migration/b/c
+        tree.pop(0)
+        tree.insert(1, 'Mediasite Migration')
+
+        tree_list = list()
+        # turn path 'a/b/c/d' into list ['/a/b/c/d', '/a/b/c', '/a/b', '/a']
         for i in range(len(tree) + 1):
             if tree:
                 path = '/' + '/'.join(tree)
