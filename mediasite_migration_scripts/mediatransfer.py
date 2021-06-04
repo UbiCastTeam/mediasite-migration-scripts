@@ -128,28 +128,33 @@ class MediaTransfer():
                         else:
                             if self.config.get('skip_others'):
                                 continue
-                            # store original presentation id to avoid duplicates
-                            data['external_ref'] = presentation_id
-                            result = self.ms_client.api('medias/add', method='post', data=data)
-                            if result.get('success'):
-                                media['ref']['media_oid'] = result.get('oid')
-                                media['ref']['slug'] = result.get('slug')
-                                if data.get('api_key'):
-                                    del data['api_key']
-
-                                self.migrate_slides(media)
-
-                                if data.get('video_type') == 'audio_only':
-                                    thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
-                                    if not thumb_ok:
-                                        logger.warning('Failed to upload audio thumbail for audio presentation')
-
-                                if len(data.get('chapters')) > 0:
-                                    self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
-
-                                nb_medias_uploaded += 1
+                            existing_media = self.get_ms_media_by_ref(presentation_id)
+                            if existing_media:
+                                media_oid = existing_media['oid']
+                                logger.warning(f'Presentation {presentation_id} already present on MediaServer (oid: {media_oid}), not reuploading')
                             else:
-                                logger.error(f"Failed to upload media: {data['title']}")
+                                # store original presentation id to avoid duplicates
+                                data['external_ref'] = presentation_id
+                                result = self.ms_client.api('medias/add', method='post', data=data)
+                                if result.get('success'):
+                                    media['ref']['media_oid'] = result.get('oid')
+                                    media['ref']['slug'] = result.get('slug')
+                                    if data.get('api_key'):
+                                        del data['api_key']
+
+                                    self.migrate_slides(media)
+
+                                    if data.get('video_type') == 'audio_only':
+                                        thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
+                                        if not thumb_ok:
+                                            logger.warning('Failed to upload audio thumbail for audio presentation')
+
+                                    if len(data.get('chapters')) > 0:
+                                        self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
+
+                                    nb_medias_uploaded += 1
+                                else:
+                                    logger.error(f"Failed to upload media: {data['title']}")
                     except requests.exceptions.ReadTimeout:
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
@@ -196,6 +201,30 @@ class MediaTransfer():
             target = f'mscpath-{self.unknown_users_channel_title}/{subfolders_path}'
         return target
 
+    def get_ms_media_by_ref(self, external_ref):
+        return self.search_by_external_ref(external_ref, object_type='media')
+
+    def get_ms_channel_by_ref(self, external_ref):
+        return self.search_by_external_ref(external_ref, object_type='channel')
+
+    @lru_cache
+    def search_by_external_ref(self, external_ref, object_type='channel'):
+        data = {
+            'search': external_ref,
+            'fields': 'extref',
+        }
+        if object_type == 'channel':
+            data['content'] = 'c'
+            rkey = 'channels'
+        elif object_type == 'media':
+            data['content'] = 'v'
+            rkey = 'videos'
+
+        result = self.ms_client.api('search/', method='get', params=data)
+        if result and result['success']:
+            # search does not return the external_ref, so lets take the first result
+            return result[rkey][0]
+
     @lru_cache
     def _get_user_id(self, username):
         users = self.ms_client.api('users/', method='get', params={'search': username, 'search_in': 'username'})['users']
@@ -218,32 +247,40 @@ class MediaTransfer():
 
                 media_data = media.get('data', {})
                 presentation_id = json.loads(media_data.get('external_data', {})).get('id')
-                media_folder = self.composites_folder / presentation_id
-                merge_ok = self.compositor.merge(media_folder)
-                if merge_ok:
-                    file_path = media_folder / 'composite.mp4'
-                    layout_preset_path = media_folder / 'mediaserver_layout.json'
-                    if layout_preset_path.is_file():
-                        with open(layout_preset_path) as f:
-                            media_data['layout_preset'] = f.read()
-
-                    result = self.upload_local_file(file_path.__str__(), media_data)
-                    if result.get('success'):
-                        nb_composites_medias_uploaded += 1
-
-                        media['ref']['media_oid'] = result.get('oid')
-                        media['ref']['slug'] = result.get('slug')
-                        if media_data.get('api_key'):
-                            del media_data['api_key']
-
-                        if len(media_data.get('chapters')) > 0:
-                            self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
-                    else:
-                        logger.error(f"Failed to upload media: {media_data['title']}")
+                existing_media = self.get_ms_media_by_ref(presentation_id)
+                if existing_media:
+                    logger.warning(f'Composite presentation {presentation_id} already found on MediaServer (oid: {existing_media["oid"]}, skipping')
+                    # consider uploaded so that the final condition works
+                    nb_composites_medias_uploaded += 1
                 else:
-                    logger.error(f'Failed to merge videos for presentation {presentation_id}')
+                    # store presentation id in order to skip upload if already present on MS
+                    media_data['external_ref'] = presentation_id
+                    media_folder = self.composites_folder / presentation_id
+                    merge_ok = self.compositor.merge(media_folder)
+                    if merge_ok:
+                        file_path = media_folder / 'composite.mp4'
+                        layout_preset_path = media_folder / 'mediaserver_layout.json'
+                        if layout_preset_path.is_file():
+                            with open(layout_preset_path) as f:
+                                media_data['layout_preset'] = f.read()
 
-            up_ok = (nb_composites_medias_uploaded == len(self.composites_medias))
+                        result = self.upload_local_file(file_path.__str__(), media_data)
+                        if result.get('success'):
+                            nb_composites_medias_uploaded += 1
+
+                            media['ref']['media_oid'] = result.get('oid')
+                            media['ref']['slug'] = result.get('slug')
+                            if media_data.get('api_key'):
+                                del media_data['api_key']
+
+                            if len(media_data.get('chapters')) > 0:
+                                self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
+                        else:
+                            logger.error(f"Failed to upload media: {media_data['title']}")
+                    else:
+                        logger.error(f'Failed to merge videos for presentation {presentation_id}')
+
+                up_ok = (nb_composites_medias_uploaded == len(self.composites_medias))
 
         return up_ok
 
@@ -430,15 +467,21 @@ class MediaTransfer():
                     'name': folder['name'],
                     'catalogs': folder['catalogs']},
                     indent=2)
-            channel_title = self.get_channel_title_by_path(leaf)
-            new_oid = self._create_channel(
-                parent_channel=oid,
-                channel_title=channel_title,
-                is_unlisted=is_unlisted,
-                original_path=leaf,
-                external_ref=folder_id,
-                external_data=external_data,
-            ).get('oid')
+
+            existing_channel = self.get_ms_channel_by_ref(folder_id)
+            if existing_channel:
+                new_oid = existing_channel['oid']
+                logger.warning(f'Channel with external_ref {folder_id} already exists on MediaServer (oid: {new_oid}), skipping creation')
+            else:
+                channel_title = self.get_channel_title_by_path(leaf)
+                new_oid = self._create_channel(
+                    parent_channel=oid,
+                    channel_title=channel_title,
+                    is_unlisted=is_unlisted,
+                    original_path=leaf,
+                    external_ref=folder_id,
+                    external_data=external_data,
+                ).get('oid')
             oid = new_oid
 
         # last item in list is the final channel, return it's oid
@@ -471,14 +514,6 @@ class MediaTransfer():
             logger.error(f"Failed to edit channel perms {channel_oid} with data {data} / Error: {result.get('error')}")
         elif not result:
             logger.error(f'Unknown error when trying to edit channel perms {channel_oid} with data {data}: {result}')
-
-    def channel_already_exists(self, original_path):
-        # TODO: requête
-        #/api/v2/channels/get/ title, parent=parent_oid
-        pass
-
-    def video_already_exists(self):
-        pass
 
     def _create_channel(self, parent_channel, channel_title, is_unlisted, original_path, external_ref=None, external_data=None):
         logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
