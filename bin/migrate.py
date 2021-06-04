@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import argparse
 import json
 import os
 import sys
 import logging
-import shutil
 
 from mediatransfer import MediaTransfer
 import mediasite_migration_scripts.utils.common as utils
@@ -134,10 +132,6 @@ if __name__ == '__main__':
     nb_uploaded_medias = mediatransfer.upload_medias(options.max_videos)
 
     logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
-
-    keep_resources = input(f'Do you want to keep resources files (videos, slides) downloaded for migration ({options.download_folder})? [y/N] ')
-    if keep_resources not in ['y', 'yes']:
-        shutil.rmtree(options.download_folder, ignore_errors=True)
 
     if options.verbose:
         mediaserver_data = mediatransfer.mediaserver_data
