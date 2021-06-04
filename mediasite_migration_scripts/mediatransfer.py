@@ -419,9 +419,10 @@ class MediaTransfer():
 
         oid = self.root_channel.get('oid')
         for leaf in tree_list:
+            channel_title = self.get_channel_title_by_path(leaf)
             new_oid = self._create_channel(
                 parent_channel=oid,
-                channel_title=leaf.split('/')[-1],
+                channel_title=channel_title,
                 is_unlisted=is_unlisted,
                 original_path=leaf,
             ).get('oid')
@@ -634,7 +635,7 @@ class MediaTransfer():
 
                         if v_url:
                             has_catalog = len(folder.get('catalogs', [])) > 0
-                            channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
+                            channel_name = folder.get('name')
 
                             ext_data = presentation if self.config.get('external_data') else {
                                 key: presentation.get(key) for key in ['id', 'creator', 'total_views', 'last_viewed']
@@ -769,3 +770,36 @@ class MediaTransfer():
             ok = result.get('success', False)
 
         return ok
+
+    def get_folder_by_path(self, path):
+        for f in self.mediasite_data:
+            if f['path'] == path:
+                return f
+
+    @lru_cache
+    def get_channel_title_by_path(self, path):
+        folder = self.get_folder_by_path(path)
+        if folder:
+            title = self.get_final_channel_title(folder)
+        else:
+            logger.warning(f'Did not find folder for {path}, falling back to last item')
+            title = path.split('/')[-1]
+        return title
+
+    def get_final_channel_title(self, folder):
+        '''
+        The MediaServer channel title should take the most recent
+        catalog name (if any), otherwise use the folder name.
+        '''
+        name = folder['name']
+        most_recent_time = None
+        most_recent_catalog = None
+        for c in folder['catalogs']:
+            catalog_date = utils.parse_mediasite_date(c['creation_date'])
+            if most_recent_time is None or catalog_date > most_recent_time:
+                most_recent_time = catalog_date
+                most_recent_catalog = c
+        if most_recent_catalog is not None:
+            name = most_recent_catalog['name']
+            logger.debug(f'Overriding channel name with the most recent catalog name {name}')
+        return name
