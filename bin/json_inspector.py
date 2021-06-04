@@ -5,12 +5,15 @@ import argparse
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument(
-    'input',
+    '-i',
+    '--input-file',
     type=str,
     help='Path to json file to analyze',
+    default='mediasite_data.json',
 )
 
 parser.add_argument(
+    '-s',
     '--search',
     type=str,
     help='Word or id to search for',
@@ -31,7 +34,7 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-input_file = args.input
+input_file = args.input_file
 fields = args.search_fields.split(',')
 
 folders = 0
