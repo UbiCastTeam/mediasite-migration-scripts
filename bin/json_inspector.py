@@ -53,20 +53,22 @@ with open(input_file, 'r') as f:
         catalogs += len(f.get('catalogs', []))
 
         if s:
+            # hide content that is too verbose
+            f_copy = dict(f)
+            f_copy['presentations'] = [f'{len(f["presentations"])} presentations (hidden)']
+
             for field in fields:
                 if s in f.get(field, ''):
-                    if f not in search_results_folders:
-                        f_copy = dict(f)
-                        f_copy['presentations'] = [f'{len(f["presentations"])} presentations (hidden)']
+                    if f_copy not in search_results_folders:
                         search_results_folders.append(f_copy)
-                        print(f'Found term "{s}" in field "{field}" of folder {f["id"]}')
+                        print(f'Found term "{s}" in field "{field}" of folder {f_copy["id"]}')
                 for p in f.get('presentations', []):
+                    p_copy = dict(p)
+                    p_copy['slides'] = [f'{len(p["slides"])} slides (hidden)']
                     if s in p.get(field, ''):
-                        if p not in search_results_presentations:
-                            p_copy = dict(p)
-                            p_copy['slides'] = [f'{len(p["slides"])} slides (hidden)']
+                        if p_copy not in search_results_presentations:
                             search_results_presentations.append(p_copy)
-                            print(f'Found term "{s}" in field "{field}" of presentation {p["id"]}')
+                            print(f'Found term "{s}" in field "{field}" of presentation {p_copy["id"]}')
                 for c in f.get('catalogs', []):
                     if s in c.get(field, ''):
                         if c not in search_results_catalogs:
