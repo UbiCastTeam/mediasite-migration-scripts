@@ -63,3 +63,6 @@ merge_shell:
 
 merge_run:
 	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge python3 bin/merge.py $(ARGS)
+
+clean:
+	sudo rm -rf mediasite_*.json presentations_*.txt
