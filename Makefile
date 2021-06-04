@@ -64,12 +64,12 @@ merge_shell:
 merge_run:
 	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge python3 bin/merge.py $(ARGS)
 
-clean_import:
+clean_collect:
 	sudo rm -rf mediasite_*.json presentations_*.txt
 
-clean_downloads:
-	sudo rm -rf downloads
+clean_migrate:
+	sudo rm -rf downloads redirections.json
 
 clean:
-	$(MAKE) clean_import
-	$(MAKE) clean_downloads
+	$(MAKE) clean_collect
+	$(MAKE) clean_migrate
