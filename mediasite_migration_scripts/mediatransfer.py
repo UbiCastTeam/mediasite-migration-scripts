@@ -221,15 +221,14 @@ class MediaTransfer():
             rkey = 'videos'
 
         result = self.ms_client.api('search/', method='get', params=data)
-        if result and result['success']:
+        if result and result['success'] and result.get(rkey):
             # search does not return the external_ref, so lets take the first result
             return result[rkey][0]
 
     @lru_cache
     def _get_user_id(self, username):
         users = self.ms_client.api('users/', method='get', params={'search': username, 'search_in': 'username'})['users']
-        # this is search, so multiple users may share username perfixes
-        # find the exact match
+        # this is search, so multiple users may share username prefixes; find the exact match
         for user in users:
             if user['username'] == username:
                 return user['id']
