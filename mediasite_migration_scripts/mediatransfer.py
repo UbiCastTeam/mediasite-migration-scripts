@@ -21,6 +21,7 @@ class MediaTransfer():
         self.config = config
         self.e2e_test = e2e_test
         self.unit_test = unit_test
+        self.redirections = dict()
         if self.unit_test:
             self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
         else:
@@ -59,6 +60,22 @@ class MediaTransfer():
         self.composites_folder = dl / 'composite'
         self.medias_folders = list()
         self.dl_session = None
+        self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
+
+    def write_redirections_file(self):
+        if self.redirections:
+            if self.redirections_file.is_file():
+                logger.info(f'Reading existing redirections file {self.redirections_file}')
+                with open(self.redirections_file, 'r') as f:
+                    data = json.load(f)
+                    logger.info('Updating redirections file')
+                    data.update(self.redirections)
+            else:
+                data = self.redirections
+
+            logger.info(f'Writing redirections file {self.redirections_file}')
+            with open(self.redirections_file, 'w') as f:
+                json.dump(data, f)
 
     def upload_medias(self, max_videos=None):
         logger.debug('Uploading videos')
@@ -137,7 +154,9 @@ class MediaTransfer():
                                 data['external_ref'] = presentation_id
                                 result = self.ms_client.api('medias/add', method='post', data=data)
                                 if result.get('success'):
-                                    media['ref']['media_oid'] = result.get('oid')
+                                    oid = result['oid']
+                                    self.add_presentation_redirection(presentation_id, oid)
+                                    media['ref']['media_oid'] = oid
                                     media['ref']['slug'] = result.get('slug')
                                     if data.get('api_key'):
                                         del data['api_key']
@@ -159,11 +178,12 @@ class MediaTransfer():
                         logger.warning('Request timeout. Another attempt will be lauched at the end.')
                         continue
 
-        composite_ok = self.migrate_composites_videos()
-        if composite_ok:
-            logger.debug('Successfully migrate composites medias.')
-        else:
-            logger.error('Not all composite medias have been migrated.')
+        if self.composites_medias:
+            composite_ok = self.migrate_composites_videos()
+            if composite_ok:
+                logger.debug('Successfully migrate composites medias.')
+            else:
+                logger.error('Not all composite medias have been migrated.')
 
         print('')
 
@@ -267,7 +287,10 @@ class MediaTransfer():
                         if result.get('success'):
                             nb_composites_medias_uploaded += 1
 
-                            media['ref']['media_oid'] = result.get('oid')
+                            oid = result['oid']
+                            self.add_presentation_redirection(presentation_id, oid)
+
+                            media['ref']['media_oid'] = oid
                             media['ref']['slug'] = result.get('slug')
                             if media_data.get('api_key'):
                                 del media_data['api_key']
@@ -458,6 +481,7 @@ class MediaTransfer():
         oid = self.root_channel.get('oid')
         for leaf in tree_list:
             folder_id = external_data = None
+            urls = list()
             folder = self.get_folder_by_path(leaf)
             if folder:
                 folder_id = folder['id']
@@ -466,6 +490,8 @@ class MediaTransfer():
                     'name': folder['name'],
                     'catalogs': folder['catalogs']},
                     indent=2)
+                for c in folder['catalogs']:
+                    urls.append(c['url'])
 
             existing_channel = self.get_ms_channel_by_ref(folder_id)
             if existing_channel:
@@ -481,6 +507,8 @@ class MediaTransfer():
                     external_ref=folder_id,
                     external_data=external_data,
                 ).get('oid')
+                for url in urls:
+                    self.redirections[url] = f'/permalink/{oid}/iframe/?header=no'
             oid = new_oid
 
         # last item in list is the final channel, return it's oid
@@ -651,6 +679,23 @@ class MediaTransfer():
         result = self.ms_client.api('medias/edit', method='post', data={'oid': media_oid}, files={'thumb': file})
         file.close()
         return result.get('success')
+
+    def add_presentation_redirection(self, presentation_id, oid):
+        mediasite_presentation_url = self.get_presentation_url(presentation_id)
+        if mediasite_presentation_url:
+            self.redirections[mediasite_presentation_url] = f'/permalink/{oid}/iframe/'
+
+    def get_presentation_url(self, presentation_id):
+        presentation = self.get_presentation_by_id(presentation_id)
+        if presentation:
+            return presentation.get('url')
+
+    @lru_cache
+    def get_presentation_by_id(self, presentation_id):
+        for f in self.mediasite_data:
+            for presentation in f['presentations']:
+                if presentation['id'] == presentation_id:
+                    return presentation
 
     def to_mediaserver_keys(self):
         logger.debug('Matching Mediasite data to MediaServer keys mapping.')

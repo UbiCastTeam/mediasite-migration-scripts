@@ -130,8 +130,8 @@ if __name__ == '__main__':
 
     logger.info('Uploading videos...')
     nb_uploaded_medias = mediatransfer.upload_medias(options.max_videos)
-
     logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
+    mediatransfer.write_redirections_file()
 
     if options.verbose:
         mediaserver_data = mediatransfer.mediaserver_data
