@@ -128,6 +128,8 @@ class MediaTransfer():
                         else:
                             if self.config.get('skip_others'):
                                 continue
+                            # store original presentation id to avoid duplicates
+                            data['external_ref'] = presentation_id
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 media['ref']['media_oid'] = result.get('oid')
@@ -419,18 +421,43 @@ class MediaTransfer():
 
         oid = self.root_channel.get('oid')
         for leaf in tree_list:
+            folder_id = external_data = None
+            folder = self.get_folder_by_path(leaf)
+            if folder:
+                folder_id = folder['id']
+                external_data = json.dumps({
+                    'id': folder['id'],
+                    'name': folder['name'],
+                    'catalogs': folder['catalogs']},
+                    indent=2)
             channel_title = self.get_channel_title_by_path(leaf)
             new_oid = self._create_channel(
                 parent_channel=oid,
                 channel_title=channel_title,
                 is_unlisted=is_unlisted,
                 original_path=leaf,
+                external_ref=folder_id,
+                external_data=external_data,
             ).get('oid')
             oid = new_oid
 
         # last item in list is the final channel, return it's oid
         # because he will be the parent of the video
         return oid
+
+    def _update_channel(self, channel_oid, unlisted_bool=True, external_ref=None, external_data=None):
+        data = {'oid': channel_oid}
+        self._set_channel_unlisted(channel_oid, unlisted_bool)
+        if external_ref:
+            data['external_ref'] = external_ref
+        if external_data:
+            data['external_data'] = external_data
+
+        result = self.ms_client.api('channels/edit/', method='post', data=data)
+        if result and not result.get('success'):
+            logger.error(f"Failed to edit channel {channel_oid} with data {data} / Error: {result.get('error')}")
+        elif not result:
+            logger.error(f'Unknown error when trying to edit channel {channel_oid} with data {data}: {result}')
 
     def _set_channel_unlisted(self, channel_oid, unlisted_bool):
         data = {'oid': channel_oid}
@@ -441,9 +468,9 @@ class MediaTransfer():
             data['unlisted'] = 'yes'
         result = self.ms_client.api('perms/edit/default/', method='post', data=data)
         if result and not result.get('success'):
-            logger.error(f"Failed to edit channel {channel_oid} / Error: {result.get('error')}")
+            logger.error(f"Failed to edit channel perms {channel_oid} with data {data} / Error: {result.get('error')}")
         elif not result:
-            logger.error(f'Unknown error when trying to edit channel {channel_oid}: {result}')
+            logger.error(f'Unknown error when trying to edit channel perms {channel_oid} with data {data}: {result}')
 
     def channel_already_exists(self, original_path):
         # TODO: requête
@@ -453,7 +480,7 @@ class MediaTransfer():
     def video_already_exists(self):
         pass
 
-    def _create_channel(self, parent_channel, channel_title, is_unlisted, original_path):
+    def _create_channel(self, parent_channel, channel_title, is_unlisted, original_path, external_ref=None, external_data=None):
         logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
@@ -483,8 +510,13 @@ class MediaTransfer():
             else:
                 channel = result
 
-                # channels/add does not support unlisted as argument, we must do another request
-                self._set_channel_unlisted(channel['oid'], is_unlisted)
+                # channels/add does not support unlisted or external_ref or external_data args, we must do another request
+                self._update_channel(
+                    channel['oid'],
+                    unlisted_bool=is_unlisted,
+                    external_ref=external_ref,
+                    external_data=external_data,
+                )
 
                 self.created_channels[original_path] = {
                     'title': channel_title,
