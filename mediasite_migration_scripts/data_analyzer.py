@@ -283,7 +283,7 @@ class DataAnalyzer():
             'total_video_count': total_video_count,
             'total_importable': total_video_count - videotypes_dict['unsupported_videos'].count,
             'total_duration_h': int(total_duration_h),
-            'total_size_tb': int(total_size_gb / 1000),
+            'total_size_gb': int(total_size_gb),
             'video_stats': video_stats,
             'video_types_stats': types_table_string,
         }
