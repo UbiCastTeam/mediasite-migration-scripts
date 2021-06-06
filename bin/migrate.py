@@ -128,9 +128,14 @@ if __name__ == '__main__':
 
     mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users)
 
-    logger.info('Uploading videos...')
-    nb_uploaded_medias = mediatransfer.upload_medias(options.max_videos)
-    logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
+    logger.info('Uploading videos')
+    try:
+        nb_uploaded_medias = mediatransfer.upload_medias(options.max_videos)
+        logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
+    except Exception as e:
+        logger.error(f'Error during upload: {e}')
+
+    # ensure that we save redirections even if we crashed
     mediatransfer.write_redirections_file()
 
     if options.verbose:

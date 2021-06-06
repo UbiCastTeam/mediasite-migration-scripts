@@ -64,6 +64,7 @@ class MediaTransfer():
 
     def write_redirections_file(self):
         if self.redirections:
+            logger.info(f'Saving {len(self.redirections)} redirections')
             if self.redirections_file.is_file():
                 logger.info(f'Reading existing redirections file {self.redirections_file}')
                 with open(self.redirections_file, 'r') as f:
