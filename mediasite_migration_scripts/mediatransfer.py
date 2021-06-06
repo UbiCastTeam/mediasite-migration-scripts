@@ -118,6 +118,9 @@ class MediaTransfer():
                             if self.config.get('skip_userfolders'):
                                 continue
                             target_channel = self.get_personal_channel_target(channel_path)
+                            if target_channel is None:
+                                logger.warning('Could not find target channel for user, skipping media')
+                                continue
                         else:
                             channel_oid = self.create_channels(channel_path) or self.root_channel.get('oid')
                             target_channel = 'mscid-' + channel_oid
@@ -209,14 +212,19 @@ class MediaTransfer():
 
         if self._get_user_id(username):
             channel_oid = self.get_user_channel_oid(user_id=user_id)
-            if len(subfolders) > 1:
-                # Mediasite Users/USERNAME
-                spath = self.mediasite_userfolder + subfolders[0] + '/'
-                for s in subfolders[1:]:
-                    spath += s + '/'
-                    channel_oid = self._create_channel(channel_oid, s, True, spath)['oid']
-            target = f'mscid-{channel_oid}'
+            if channel_oid:
+                if len(subfolders) > 1:
+                    # Mediasite Users/USERNAME
+                    spath = self.mediasite_userfolder + subfolders[0] + '/'
+                    for s in subfolders[1:]:
+                        spath += s + '/'
+                        channel_oid = self._create_channel(channel_oid, s, True, spath)['oid']
+                target = f'mscid-{channel_oid}'
+            else:
+                logger.warning(f'User {username} is probably not allowed to have a personal channel')
+                return
         else:
+            # user does not exist
             subfolders_path = "/".join(subfolders)
             target = f'mscpath-{self.unknown_users_channel_title}/{subfolders_path}'
         return target
@@ -389,14 +397,16 @@ class MediaTransfer():
             params['email'] = user_email
         elif user_id:
             params['id'] = user_id
-        result = self.ms_client.api('channels/personal/', method='get', params=params)
-        #{"allowed": true, "oid": "c125cf1ed2152ufai5gu", "dbid": 1283, "title": "Antoine Peltier", "slug": "antoine-peltier", "success": true}
-        # {"error": "L'utilisateur \"6516516651\" n'existe pas.", "success": false}
-        if result and result.get('success'):
-            channel_oid = result.get('oid')
-            return channel_oid
-        else:
-            logger.error(f"Failed to get user channel for {user_email} / Error: {result.get('error')}")
+        try:
+            result = self.ms_client.api('channels/personal/', method='get', params=params)
+            if result and result.get('success'):
+                channel_oid = result.get('oid')
+                return channel_oid
+            else:
+                logger.error(f"Failed to get user channel for {user_email} / Error: {result.get('error')}")
+        except Exception as e:
+            # if 403: user is not allowed to own personal channels
+            logger.error(f"Failed to get user channel for {user_email} / Error: {e}")
 
     def create_user(self, user):
         logger.debug(f"Creating user {user.get('username')}")
