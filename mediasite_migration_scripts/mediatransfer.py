@@ -80,8 +80,6 @@ class MediaTransfer():
 
     def upload_medias(self, max_videos=None):
         logger.debug('Uploading videos')
-        print(' ' * 50, end='\r')
-
         if max_videos:
             try:
                 max_videos = int(max_videos)
@@ -94,93 +92,86 @@ class MediaTransfer():
 
         logger.debug(f'{total_medias_uploaded} medias found for uploading.')
 
-        nb_medias_uploaded = 0
-        attempts = 0
-        while nb_medias_uploaded != total_medias_uploaded and attempts < 10:
-            attempts += 1
-            logger.debug(f'Attempt {attempts} for uploading medias.')
-            if attempts > 1:
-                nb_medias_left = total_medias_uploaded - nb_medias_uploaded
-                logger.debug(f'{nb_medias_left} medias left to upload.')
+        processed_count = 0
+        for index, media in enumerate(self.mediaserver_data):
+            print(f'Uploading: [{processed_count} / {total_medias_uploaded}] -- {int(100 * (processed_count / total_medias_uploaded))}%', end='\r')
+            processed_count += 1
 
-            for index, media in enumerate(self.mediaserver_data):
-                print(f'Uploading: [{nb_medias_uploaded} / {total_medias_uploaded}] -- {int(100 * (nb_medias_uploaded / total_medias_uploaded))}%', end='\r')
+            if max_videos and index >= max_videos:
+                break
 
-                if max_videos and index >= max_videos:
-                    break
+            if not media.get('ref', {}).get('media_oid'):
+                try:
+                    data = media.get('data', {})  # mediaserver data
+                    presentation_id = json.loads(data.get('external_data', {})).get('id')
 
-                if not media.get('ref', {}).get('media_oid'):
-                    try:
-                        data = media.get('data', {})  # mediaserver data
-                        presentation_id = json.loads(data.get('external_data', {})).get('id')
+                    channel_path = media['ref'].get('channel_path')
+                    if channel_path.startswith(self.mediasite_userfolder):
+                        if self.config.get('skip_userfolders'):
+                            continue
+                        target_channel = self.get_personal_channel_target(channel_path)
+                        if target_channel is None:
+                            logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
+                            continue
+                    else:
+                        channel_oid = self.create_channels(channel_path) or self.root_channel.get('oid')
+                        target_channel = 'mscid-' + channel_oid
 
-                        channel_path = media['ref'].get('channel_path')
-                        if channel_path.startswith(self.mediasite_userfolder):
-                            if self.config.get('skip_userfolders'):
-                                continue
-                            target_channel = self.get_personal_channel_target(channel_path)
-                            if target_channel is None:
-                                logger.warning('Could not find target channel for user, skipping media')
-                                continue
+                    logger.debug(f'Will publish {presentation_id} into channel {target_channel}')
+                    data['channel'] = target_channel
+
+                    if data.get('video_type').startswith('composite_'):
+                        if self.config.get('skip_composites'):
+                            continue
+                        logger.debug(f'Presentation {presentation_id} is a composite video.')
+
+                        # do not provide url to MS, file will be treated locally, we'll add it later
+                        data.pop('file_url', None)
+
+                        # we store composites medias infos, to migrate them later
+                        already_added = False
+                        for v_composites in self.composites_medias:
+                            if data.get('slug') == v_composites.get('data', {}).get('slug'):
+                                already_added = True
+                                break
+                        if not already_added:
+                            self.composites_medias.append(media)
+                            processed_count += 1
+                    else:
+                        if self.config.get('skip_others'):
+                            continue
+                        existing_media = self.get_ms_media_by_ref(presentation_id)
+                        if existing_media:
+                            media_oid = existing_media['oid']
+                            logger.warning(f'Presentation {presentation_id} already present on MediaServer (oid: {media_oid}), not reuploading')
                         else:
-                            channel_oid = self.create_channels(channel_path) or self.root_channel.get('oid')
-                            target_channel = 'mscid-' + channel_oid
+                            # store original presentation id to avoid duplicates
+                            data['external_ref'] = presentation_id
+                            result = self.ms_client.api('medias/add', method='post', data=data)
+                            if result.get('success'):
+                                oid = result['oid']
+                                self.add_presentation_redirection(presentation_id, oid)
+                                media['ref']['media_oid'] = oid
+                                media['ref']['slug'] = result.get('slug')
+                                if data.get('api_key'):
+                                    del data['api_key']
 
-                        logger.debug(f'Will publish {presentation_id} into channel {target_channel}')
-                        data['channel'] = target_channel
+                                self.migrate_slides(media)
 
-                        if data.get('video_type').startswith('composite_'):
-                            if self.config.get('skip_composites'):
-                                continue
-                            logger.debug(f'Presentation {presentation_id} is a composite video.')
+                                if data.get('video_type') == 'audio_only':
+                                    thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
+                                    if not thumb_ok:
+                                        logger.warning('Failed to upload audio thumbail for audio presentation')
 
-                            # do not provide url to MS, file will be treated locally, we'll add it later
-                            data.pop('file_url', None)
+                                if len(data.get('chapters')) > 0:
+                                    self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
 
-                            # we store composites medias infos, to migrate them later
-                            already_added = False
-                            for v_composites in self.composites_medias:
-                                if data.get('slug') == v_composites.get('data', {}).get('slug'):
-                                    already_added = True
-                                    break
-                            if not already_added:
-                                self.composites_medias.append(media)
-                                nb_medias_uploaded += 1
-                        else:
-                            if self.config.get('skip_others'):
-                                continue
-                            existing_media = self.get_ms_media_by_ref(presentation_id)
-                            if existing_media:
-                                media_oid = existing_media['oid']
-                                logger.warning(f'Presentation {presentation_id} already present on MediaServer (oid: {media_oid}), not reuploading')
+                                processed_count += 1
                             else:
-                                # store original presentation id to avoid duplicates
-                                data['external_ref'] = presentation_id
-                                result = self.ms_client.api('medias/add', method='post', data=data)
-                                if result.get('success'):
-                                    oid = result['oid']
-                                    self.add_presentation_redirection(presentation_id, oid)
-                                    media['ref']['media_oid'] = oid
-                                    media['ref']['slug'] = result.get('slug')
-                                    if data.get('api_key'):
-                                        del data['api_key']
-
-                                    self.migrate_slides(media)
-
-                                    if data.get('video_type') == 'audio_only':
-                                        thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
-                                        if not thumb_ok:
-                                            logger.warning('Failed to upload audio thumbail for audio presentation')
-
-                                    if len(data.get('chapters')) > 0:
-                                        self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
-
-                                    nb_medias_uploaded += 1
-                                else:
-                                    logger.error(f"Failed to upload media: {data['title']}")
-                    except requests.exceptions.ReadTimeout:
-                        logger.warning('Request timeout. Another attempt will be lauched at the end.')
-                        continue
+                                logger.error(f"Failed to upload media: {data['title']}")
+                except requests.exceptions.ReadTimeout:
+                    logger.warning('Request timeout. Another attempt will be lauched at the end.')
+                    continue
 
         if self.composites_medias:
             composite_ok = self.migrate_composites_videos()
@@ -195,7 +186,7 @@ class MediaTransfer():
         if self.dl_session is not None:
             self.dl_session.close()
 
-        return nb_medias_uploaded
+        return processed_count
 
     @lru_cache
     def get_personal_channel_target(self, channel_path):
@@ -395,19 +386,22 @@ class MediaTransfer():
         logger.debug(f'Getting user channel for user id {user_id}')
         params = {'create': 'yes'}
         if user_email:
-            params['email'] = user_email
+            key = 'email'
+            val = user_email
         elif user_id:
-            params['id'] = user_id
+            key = 'id'
+            val = user_id
+        params[key] = val
         try:
             result = self.ms_client.api('channels/personal/', method='get', params=params)
             if result and result.get('success'):
                 channel_oid = result.get('oid')
                 return channel_oid
             else:
-                logger.error(f"Failed to get user channel for {user_email} / Error: {result.get('error')}")
+                logger.error(f"Failed to get user channel for {key}={val} / Error: {result.get('error')}")
         except Exception as e:
             # if 403: user is not allowed to own personal channels
-            logger.error(f"Failed to get user channel for {user_email} / Error: {e}")
+            logger.error(f"Failed to get user channel for {key}={val} / Error: {e}")
 
     def create_user(self, user):
         logger.debug(f"Creating user {user.get('username')}")
