@@ -410,6 +410,18 @@ class MediaTransfer():
                 logger.error(f"Failed to get user channel for {key}={val} / Error: {result.get('error')}")
         except Exception as e:
             # if 403: user is not allowed to own personal channels
+            if user_id and '403' in str(e):
+                logger.info(f'Manually granting permission to own a personal channel to user with id {user_id}')
+                data = {
+                    'type': 'user',
+                    'id': user_id,
+                    'can_have_personal_channel': 'True',
+                    'can_create_media': 'True',
+                }
+                result = self.ms_client.api('perms/edit/', method='post', data=data)
+                # retry
+                return self.get_user_channel_oid(user_id=user_id)
+
             logger.error(f"Failed to get user channel for {key}={val} / Error: {e}")
 
     def create_user(self, user):
