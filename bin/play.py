@@ -87,7 +87,7 @@ if __name__ == '__main__':
                     presentations.append(pres)
     print(f'Found {len(presentations)} presentations')
     if presentations:
-        for presentation in presentations:
+        for index, presentation in enumerate(presentations):
             pres_id = presentation['id']
             root = Path(args.download_folder) / pres_id
             video_urls, duration_s = get_video_urls(presentation)
@@ -107,7 +107,7 @@ if __name__ == '__main__':
                     if returncode != 0:
                         sys.exit()
                 else:
-                    print(f'Downloading {pres_id}')
+                    print(f'[{index + 1}/{len(presentations)}] Downloading {pres_id}')
                     root.mkdir(parents=True, exist_ok=True)
                     with requests.Session() as session:
                         with open(root / 'mediasite_metadata.json', 'w') as f:
@@ -115,6 +115,12 @@ if __name__ == '__main__':
                         for name, url in video_urls.items():
                             local_filename = root / f'{name}.mp4'
                             with session.get(url, stream=True) as r:
+                                if local_filename.is_file():
+                                    remote_size = int(r.headers['Content-Length'])
+                                    local_size = local_filename.stat().st_size
+                                    if remote_size == local_size:
+                                        print(f'Already downloaded {url}, skipping')
+                                        continue
                                 r.raise_for_status()
                                 with open(local_filename, 'wb') as f:
                                     print(f'Downloading {url} to {local_filename}')
