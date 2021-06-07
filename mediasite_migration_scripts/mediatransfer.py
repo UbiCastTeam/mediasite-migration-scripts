@@ -21,7 +21,6 @@ class MediaTransfer():
         self.config = config
         self.e2e_test = e2e_test
         self.unit_test = unit_test
-        self.redirections = dict()
         if self.unit_test:
             self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
         else:
@@ -60,23 +59,20 @@ class MediaTransfer():
         self.composites_folder = dl / 'composite'
         self.medias_folders = list()
         self.dl_session = None
+
         self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
+        if self.redirections_file.is_file():
+            print(f'Loading redirections file {self.redirections_file}')
+            with open(self.redirections_file, 'r') as f:
+                self.redirections = json.load(f)
+        else:
+            self.redirections = dict()
 
     def write_redirections_file(self):
         if self.redirections:
-            logger.info(f'Saving {len(self.redirections)} redirections')
-            if self.redirections_file.is_file():
-                logger.info(f'Reading existing redirections file {self.redirections_file}')
-                with open(self.redirections_file, 'r') as f:
-                    data = json.load(f)
-                    logger.info('Updating redirections file')
-                    data.update(self.redirections)
-            else:
-                data = self.redirections
-
             logger.info(f'Writing redirections file {self.redirections_file}')
             with open(self.redirections_file, 'w') as f:
-                json.dump(data, f)
+                json.dump(self.redirections, f, indent=2)
 
     def upload_medias(self, max_videos=None):
         logger.debug('Uploading videos')
@@ -221,10 +217,23 @@ class MediaTransfer():
             target = f'mscpath-{self.unknown_users_channel_title}/{subfolders_path}'
         return target
 
+    def search_mediasite_id_in_redirections(self, mediasite_id):
+        # it is much faster to lookup the local redirections file than to perform an API request
+        for from_url, to_url in self.redirections.items():
+            if mediasite_id in from_url:
+                oid = to_url.split('/')[4]
+                return oid
+
     def get_ms_media_by_ref(self, external_ref):
+        oid = self.search_mediasite_id_in_redirections(external_ref)
+        if oid:
+            return {'oid': oid}
         return self.search_by_external_ref(external_ref, object_type='media')
 
     def get_ms_channel_by_ref(self, external_ref):
+        oid = self.search_mediasite_id_in_redirections(external_ref)
+        if oid:
+            return {'oid': oid}
         return self.search_by_external_ref(external_ref, object_type='channel')
 
     @lru_cache
@@ -513,12 +522,16 @@ class MediaTransfer():
                     external_data=external_data,
                 ).get('oid')
                 for url in urls:
-                    self.redirections[url] = f'/permalink/{oid}/iframe/?header=no'
+                    self.redirections[url] = self.get_full_ms_url(f'/permalink/{oid}/iframe/?header=no')
             oid = new_oid
 
         # last item in list is the final channel, return it's oid
         # because he will be the parent of the video
         return oid
+
+    def get_full_ms_url(self, suffix):
+        ms_prefix = self.config["mediaserver_url"].rstrip('/')
+        return f'{ms_prefix}/{suffix.lstrip("/")}'
 
     def _update_channel(self, channel_oid, unlisted_bool=True, external_ref=None, external_data=None):
         data = {'oid': channel_oid}
@@ -688,7 +701,7 @@ class MediaTransfer():
     def add_presentation_redirection(self, presentation_id, oid):
         mediasite_presentation_url = self.get_presentation_url(presentation_id)
         if mediasite_presentation_url:
-            self.redirections[mediasite_presentation_url] = f'/permalink/{oid}/iframe/'
+            self.redirections[mediasite_presentation_url] = self.get_full_ms_url(f'/permalink/{oid}/iframe/')
 
     def get_presentation_url(self, presentation_id):
         presentation = self.get_presentation_by_id(presentation_id)
