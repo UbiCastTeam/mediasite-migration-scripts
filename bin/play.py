@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 import requests
+import mediasite_migration_scripts.utils.common as utils
 
 
 def get_video_urls(presentation):
@@ -107,7 +108,7 @@ if __name__ == '__main__':
                     if returncode != 0:
                         sys.exit()
                 else:
-                    print(f'[{index + 1}/{len(presentations)}] Downloading {pres_id}')
+                    print(utils.get_progress_string(index, len(presentations)) + ' Downloading {pres_id}')
                     root.mkdir(parents=True, exist_ok=True)
                     with requests.Session() as session:
                         with open(root / 'mediasite_metadata.json', 'w') as f:
