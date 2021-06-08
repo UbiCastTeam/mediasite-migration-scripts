@@ -89,14 +89,13 @@ class MediaTransfer():
 
         logger.info(f'{total_count} medias found for uploading.')
 
-        processed_count = self.processed_count = 0
-        uploaded_count = self.uploaded_count = self.composite_uploaded_count = 0
+        self.processed_count = self.uploaded_count = self.composite_uploaded_count = 0
         self.failed = list()
 
         for index, media in enumerate(self.mediaserver_data):
             if sys.stdout.isatty():
                 print(utils.get_progress_string(index, total_count) + ' Uploading', end='\r')
-            processed_count += 1
+            self.processed_count += 1
 
             if max_videos and index >= max_videos:
                 break
@@ -137,7 +136,6 @@ class MediaTransfer():
                                 break
                         if not already_added:
                             self.composites_medias.append(media)
-                            processed_count += 1
                     else:
                         if self.config.get('skip_others'):
                             continue
@@ -150,7 +148,7 @@ class MediaTransfer():
                             data['external_ref'] = presentation_id
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
-                                uploaded_count += 1
+                                self.uploaded_count += 1
                                 oid = result['oid']
                                 self.add_presentation_redirection(presentation_id, oid)
                                 media['ref']['media_oid'] = oid
@@ -168,7 +166,7 @@ class MediaTransfer():
                                 if len(data.get('chapters')) > 0:
                                     self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
 
-                                processed_count += 1
+                                self.processed_count += 1
                             else:
                                 logger.error(f"Failed to upload media: {presentation_id}")
                                 self.failed.append(presentation_id)
