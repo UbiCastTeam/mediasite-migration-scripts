@@ -538,7 +538,7 @@ class MediaTransfer():
             existing_channel = self.get_ms_channel_by_ref(folder_id)
             if existing_channel:
                 new_oid = existing_channel['oid']
-                logger.warning(f'Channel with external_ref {folder_id} already exists on MediaServer (oid: {new_oid}), skipping creation')
+                logger.debug(f'Channel with external_ref {folder_id} already exists on MediaServer (oid: {new_oid}), skipping creation')
             else:
                 channel_title = self.get_channel_title_by_path(leaf)
                 new_oid = self._create_channel(
