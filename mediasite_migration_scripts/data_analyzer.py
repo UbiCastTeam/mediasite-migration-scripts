@@ -173,6 +173,7 @@ class DataAnalyzer():
 
         total_duration_h = 0
         total_size_gb = 0
+        total_slides = 0
         for folder in self.folders:
             for presentation in folder['presentations']:
                 total_video_count += 1
@@ -189,8 +190,10 @@ class DataAnalyzer():
                 has_slides = False
                 slides_are_synced = False
                 if presentation.get('slides'):
-                    if len(presentation['slides'].get('urls')) > 0:
+                    slides_count = len(presentation['slides'].get('urls'))
+                    if slides_count > 0:
                         has_slides = True
+                        total_slides += slides_count
                         if presentation['slides'].get('details'):
                             slides_are_synced = True
                         slides_stream_type = presentation['slides']['stream_type']
@@ -279,6 +282,7 @@ class DataAnalyzer():
             'total_importable': total_video_count - videotypes_dict['unsupported_videos'].count,
             'total_duration_h': int(total_duration_h),
             'total_size_gb': int(total_size_gb),
+            'total_slides': total_slides,
             'video_stats': video_stats,
             'video_types_stats': types_table_string,
         }

@@ -67,7 +67,8 @@ with open(input_file, 'r') as f:
                         print(f'Found term "{s}" in field "{field}" of folder {f_copy["id"]}')
                 for p in f.get('presentations', []):
                     p_copy = dict(p)
-                    p_copy['slides'] = [f'{len(p["slides"])} slides (hidden)']
+                    slides_count = len(p["slides"].get("urls", []))
+                    p_copy['slides'] = [f'{slides_count} slides (hidden)']
                     if s in p.get(field, ''):
                         if p_copy not in search_results_presentations:
                             search_results_presentations.append(p_copy)

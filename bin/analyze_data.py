@@ -136,6 +136,6 @@ if __name__ == '__main__':
 
     print()
     print(f'Found {len(analyzer.folders)} folders, {len(analyzer.presentations)} presentations, {len(folder_in_catalogs)} folders linked to a catalog')
-    print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_gb} GB)'.format(**encoding_infos))
+    print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_gb} GB), {total_slides} slides'.format(**encoding_infos))
     print()
     print(encoding_infos['video_types_stats'])
