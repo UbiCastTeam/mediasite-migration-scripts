@@ -222,7 +222,8 @@ class Merger:
             #source = message.src.get_name()
             if sname == 'progress':
                 percent = int(struct.get_value('percent'))
-                print(f'Processing: {percent}%', end='\r')
+                if sys.stdout.isatty():
+                    print(f'Processing: {percent}%', end='\r')
                 self.cancel_timeout()
                 self.timeout_id = GLib.timeout_add(TIMEOUT_MS, self._on_timeout)
 
