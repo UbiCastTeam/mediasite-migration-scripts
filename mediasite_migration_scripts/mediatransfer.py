@@ -165,8 +165,6 @@ class MediaTransfer():
 
                                 if len(data.get('chapters')) > 0:
                                     self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
-
-                                self.processed_count += 1
                             else:
                                 logger.error(f"Failed to upload media: {presentation_id}")
                                 self.failed.append(presentation_id)
