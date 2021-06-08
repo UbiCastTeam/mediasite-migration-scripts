@@ -64,6 +64,9 @@ merge_shell:
 merge_run:
 	docker run --rm -w /src -v ${CURDIR}:/src -it mediasite-merge python3 bin/merge.py $(ARGS)
 
+merge_all:
+	docker run --rm -w /src -e PYTHONPATH=/src -v ${CURDIR}:/src -it mediasite-merge python3 bin/batch_merge.py /src/downloads/composite
+
 clean_collect:
 	sudo rm -rf mediasite_*.json presentations_*.txt
 
