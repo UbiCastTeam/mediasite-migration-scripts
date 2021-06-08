@@ -73,6 +73,10 @@ clean_collect:
 clean_migrate:
 	sudo rm -rf downloads redirections.json
 
+clean_merge:
+	sudo rm -f downloads/composite/*/composite.mp4 downloads/composite/*/mediaserver_layout.json
+
 clean:
 	$(MAKE) clean_collect
 	$(MAKE) clean_migrate
+	$(MAKE) clean_merge
