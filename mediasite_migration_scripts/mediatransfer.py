@@ -793,7 +793,6 @@ class MediaTransfer():
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
                                 'channel_unlisted': is_unlisted_channel,
-                                'unlisted': 'yes' if is_unlisted_channel else 'no',
                                 'creation': presentation.get('creation_date'),
                                 'speaker_id': presentation.get('owner_username'),
                                 'speaker_name': presentation.get('owner_display_name'),
