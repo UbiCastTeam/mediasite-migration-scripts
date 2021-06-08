@@ -10,6 +10,8 @@ import argparse
 import math
 from fractions import Fraction
 
+import mediasite_migration_scripts.utils.common as utils
+
 gi.require_version('Gst', '1.0')
 gi.require_version('GstPbutils', '1.0')
 from gi.repository import GLib # noqa
@@ -17,16 +19,6 @@ from gi.repository import Gst  # noqa
 from gi.repository import GstPbutils  # noqa
 
 Gst.init([])
-
-
-def setup_logging(verbose=False):
-    logging.addLevelName(logging.ERROR, '\033[1;31m%s\033[1;0m' % logging.getLevelName(logging.ERROR))
-    logging.addLevelName(logging.WARNING, '\033[1;33m%s\033[1;0m' % logging.getLevelName(logging.WARNING))
-    level = getattr(logging, 'DEBUG' if verbose else 'INFO')
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s %(levelname)-8s %(message)s',
-    )
 
 
 def is_media_folder(path):
@@ -75,7 +67,7 @@ class Merger:
         }
 
     def convert(self, media_folder):
-        folder = Path(media_folder)
+        self.folder = folder = Path(media_folder)
         self.output_file = output_file = folder / 'composite.mp4'
         videomixer_width = self.options.width
         videomixer_height = self.options.height
@@ -163,11 +155,7 @@ class Merger:
         bus.connect('message::error', self._on_error)
         bus.connect('message', self._on_message)
 
-        layout_preset = self.get_layout_preset(videomixer_width, videomixer_height, layers_data)
-        layout_file = folder / 'mediaserver_layout.json'
-        with open(layout_file, 'w') as f:
-            print(f'Wrote {layout_file}')
-            json.dump(layout_preset, f, sort_keys=True, indent=4)
+        self.layout_preset = self.get_layout_preset(videomixer_width, videomixer_height, layers_data)
 
         GLib.idle_add(self.pipeline.set_state, Gst.State.PLAYING)
         self.start_time = time.time()
@@ -175,6 +163,12 @@ class Merger:
         if self.options.max_duration:
             logging.info(f'--max-duration option passed, will stop after {self.options.max_duration}s')
             self.force_eos_id = GLib.timeout_add_seconds(self.options.max_duration, self.send_eos)
+
+    def dump_layout(self):
+        layout_file = self.folder / 'mediaserver_layout.json'
+        with open(layout_file, 'w') as f:
+            print(f'Wrote {layout_file}')
+            json.dump(self.layout_preset, f, sort_keys=True, indent=4)
 
     def send_eos(self):
         logging.info('Forcing EOS')
@@ -197,6 +191,7 @@ class Merger:
         took = time.time() - self.start_time
         processing_speed = round(self.duration_s / took, 2)
         logging.info(f'Finished in {int(took)}s: {self.output_file} with processing speed: {processing_speed}x')
+        self.dump_layout()
         GLib.idle_add(self.cancel_timeout)
         GLib.idle_add(self.cancel_force_eos)
         self.mainloop.quit()
@@ -306,7 +301,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    setup_logging(args.verbose)
+    utils.setup_logging(args.verbose)
 
     mainloop = GLib.MainLoop()
 
