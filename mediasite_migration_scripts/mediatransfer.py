@@ -89,7 +89,7 @@ class MediaTransfer():
 
         logger.info(f'{total_count} medias found for uploading.')
 
-        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = 0
+        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = 0
         self.failed = list()
 
         for index, media in enumerate(self.mediaserver_data):
@@ -191,6 +191,7 @@ class MediaTransfer():
             'processed': self.processed_count,
             'uploaded': self.uploaded_count,
             'uploaded_composites': self.composite_uploaded_count,
+            'uploaded_slides': self.uploaded_slides_count,
             'skipped': self.skipped_count,
             'failed': len(self.failed),
         }
@@ -642,6 +643,7 @@ class MediaTransfer():
                 slides_dir = self.slides_folder / media_oid
                 slides_dir.mkdir(parents=True, exist_ok=True)
                 nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
+                self.uploaded_slides_count += nb_slides_uploaded
             else:
                 logger.debug(f'Media {media_oid} has slides binded to video (no timecode). Detect slides will be lauched in Mediaserver.')
 
