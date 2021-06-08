@@ -141,7 +141,6 @@ class DataAnalyzer():
             'computervideo_only',
             'computervideo_slides',
             'composite_videos',
-            'composite_slides',
             'unsupported_videos',
             'empty_videos',
         ]
@@ -201,7 +200,7 @@ class DataAnalyzer():
                     if dur_h == 0:
                         videotype = 'empty_videos'
                     else:
-                        if len(videos) == 1 or (len(videos) == 2 and has_slides):
+                        if len(videos) == 1:
                             video = presentation['videos'][0]
                             video_stream_type = video['stream_type']
                             video_file = self.get_best_video_file(video['files'])
@@ -229,11 +228,6 @@ class DataAnalyzer():
                                             videotype = 'video_only'
                                     else:
                                         videotype = 'video_only'
-                                else:
-                                    if slides_are_synced:
-                                        videotype = 'composite_slides'
-                                    else:
-                                        videotype = 'composite_videos'
                         elif len(videos) == 2:
                             videotype = 'composite_videos'
                             composite_info = {
@@ -243,8 +237,9 @@ class DataAnalyzer():
                                 'audio_codec': 'AAC',
                             }
                             for v in videos:
-                                size_gb += video_file.get('size_bytes', 0) / GB
-                                encoding_infos = self.get_best_video_file(v['files']).get('encoding_infos')
+                                best_video = self.get_best_video_file(v['files'])
+                                size_gb += best_video.get('size_bytes', 0) / GB
+                                encoding_infos = best_video.get('encoding_infos')
                                 # skip audio-only resources
                                 if encoding_infos and encoding_infos.get('video_codec'):
                                     composite_info['width'] += encoding_infos['width']
