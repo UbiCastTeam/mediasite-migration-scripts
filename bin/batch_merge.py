@@ -20,7 +20,7 @@ class BatchMerge:
         logging.debug(f'Merging videos in folder : {media_folder}')
         layout_file = media_folder / 'mediaserver_layout.json'
         if not layout_file.is_file():
-            cmd = f'python3 bin/merge.py --width {self.config.get("composite_width", 1920)} --height {self.config.get("composite_height", 1080)} {media_folder}'
+            cmd = f'python3 bin/merge.py --width {self.config.get("composite_width", 1920)} --height {self.config.get("composite_height", 1080)} --max-duration 10 {media_folder}'
             logging.debug(cmd)
             return_code, output = subprocess.getstatusoutput(cmd)
             logging.debug(output)
