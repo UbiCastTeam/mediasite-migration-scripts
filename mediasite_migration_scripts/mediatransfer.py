@@ -89,7 +89,7 @@ class MediaTransfer():
 
         logger.info(f'{total_count} medias found for uploading.')
 
-        self.processed_count = self.uploaded_count = self.composite_uploaded_count = 0
+        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = 0
         self.failed = list()
 
         for index, media in enumerate(self.mediaserver_data):
@@ -193,6 +193,7 @@ class MediaTransfer():
             'processed': self.processed_count,
             'uploaded': self.uploaded_count,
             'uploaded_composites': self.composite_uploaded_count,
+            'skipped': self.skipped_count,
             'failed': len(self.failed),
         }
 
@@ -295,6 +296,7 @@ class MediaTransfer():
                 existing_media = self.get_ms_media_by_ref(presentation_id)
                 if existing_media:
                     logger.warning(f'Composite presentation {presentation_id} already found on MediaServer (oid: {existing_media["oid"]}, skipping')
+                    self.skipped_count += 1
                     # consider uploaded so that the final condition works
                 else:
                     # store presentation id in order to skip upload if already present on MS
