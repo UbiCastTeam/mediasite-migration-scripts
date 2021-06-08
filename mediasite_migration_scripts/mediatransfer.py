@@ -181,7 +181,7 @@ class MediaTransfer():
             self.dl_session.close()
 
         took = time.time() - before
-        logger.info(f'Finished processing {self.processed_count} media in {utils.get_timecode_from_sec(took)}')
+        logger.info(f'Finished processing {self.processed_count} media in {int(took)}s / {utils.get_timecode_from_sec(took)}')
         if self.uploaded_count:
             took_per_media = took / self.uploaded_count
             logger.info(f'Uploaded {self.uploaded_count} media ({utils.get_timecode_from_sec(took_per_media)} per media)')
