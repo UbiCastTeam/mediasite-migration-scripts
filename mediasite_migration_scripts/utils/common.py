@@ -123,5 +123,12 @@ def setup_logging(verbose=False):
 
 
 def get_progress_string(index, total):
-    percent = 100 * (index + 1) / total
+    percent = 100 * (index) / total
     return f'[{index + 1}/{total} ({percent:.1f}%)]'
+
+
+def get_timecode_from_sec(seconds):
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    timecode = "%d:%02d:%02d" % (h, m, s)
+    return timecode
