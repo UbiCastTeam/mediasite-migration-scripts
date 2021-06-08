@@ -190,9 +190,10 @@ class DataAnalyzer():
                 has_slides = False
                 slides_are_synced = False
                 if presentation.get('slides'):
-                    if len(presentation['slides'].get('urls')) > 0:
+                    slides_count = len(presentation['slides'].get('urls'))
+                    if slides_count > 0:
                         has_slides = True
-                        total_slides += len(presentation['slides'])
+                        total_slides += slides_count
                         if presentation['slides'].get('details'):
                             slides_are_synced = True
                         slides_stream_type = presentation['slides']['stream_type']
