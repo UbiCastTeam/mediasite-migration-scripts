@@ -1,3 +1,4 @@
+import json
 import os
 import logging
 from datetime import datetime
@@ -103,3 +104,24 @@ def is_folder_to_add(path, config={}):
                 return True
         return False
     return True
+
+
+def read_json(path):
+    with open(path, 'r') as f:
+        return json.load(f)
+
+
+# FIXME: unify
+def setup_logging(verbose=False):
+    logging.addLevelName(logging.ERROR, '\033[1;31m%s\033[1;0m' % logging.getLevelName(logging.ERROR))
+    logging.addLevelName(logging.WARNING, '\033[1;33m%s\033[1;0m' % logging.getLevelName(logging.WARNING))
+    level = getattr(logging, 'DEBUG' if verbose else 'INFO')
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s %(levelname)-8s %(message)s',
+    )
+
+
+def get_progress_string(index, total):
+    percent = 100 * (index + 1) / total
+    return f'[{index + 1}/{total} ({percent:.1f}%)]'
