@@ -1,6 +1,7 @@
 import logging
 import json
 import os
+import time
 import requests
 import sys
 from pathlib import Path
@@ -75,22 +76,26 @@ class MediaTransfer():
                 json.dump(self.redirections, f, indent=2)
 
     def upload_medias(self, max_videos=None):
-        logger.debug('Uploading videos')
+        before = time.time()
         if max_videos:
             try:
                 max_videos = int(max_videos)
-                total_medias_uploaded = max_videos
+                total_count = max_videos
             except Exception as e:
                 logger.error(f'{max_videos} is not a valid number for videos maximum.')
                 logger.debug(e)
         else:
-            total_medias_uploaded = len(self.mediaserver_data)
+            total_count = len(self.mediaserver_data)
 
-        logger.debug(f'{total_medias_uploaded} medias found for uploading.')
+        logger.info(f'{total_count} medias found for uploading.')
 
-        processed_count = 0
+        processed_count = self.processed_count = 0
+        uploaded_count = self.uploaded_count = self.composite_uploaded_count = 0
+        self.failed = list()
+
         for index, media in enumerate(self.mediaserver_data):
-            print(f'Uploading: [{processed_count} / {total_medias_uploaded}] -- {int(100 * (processed_count / total_medias_uploaded))}%', end='\r')
+            if sys.stdout.isatty():
+                print(utils.get_progress_string(index, total_count) + ' Uploading', end='\r')
             processed_count += 1
 
             if max_videos and index >= max_videos:
@@ -145,6 +150,7 @@ class MediaTransfer():
                             data['external_ref'] = presentation_id
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
+                                uploaded_count += 1
                                 oid = result['oid']
                                 self.add_presentation_redirection(presentation_id, oid)
                                 media['ref']['media_oid'] = oid
@@ -164,17 +170,13 @@ class MediaTransfer():
 
                                 processed_count += 1
                             else:
-                                logger.error(f"Failed to upload media: {data['title']}")
+                                logger.error(f"Failed to upload media: {presentation_id}")
+                                self.failed.append(presentation_id)
                 except requests.exceptions.ReadTimeout:
                     logger.warning('Request timeout. Another attempt will be lauched at the end.')
                     continue
 
-        if self.composites_medias:
-            composite_ok = self.migrate_composites_videos()
-            if composite_ok:
-                logger.debug('Successfully migrate composites medias.')
-            else:
-                logger.error('Not all composite medias have been migrated.')
+        self.migrate_composites_videos()
 
         print('')
 
@@ -182,7 +184,24 @@ class MediaTransfer():
         if self.dl_session is not None:
             self.dl_session.close()
 
-        return processed_count
+        took = time.time() - before
+        logger.info(f'Finished processing {self.processed_count} media in {utils.get_timecode_from_sec(took)}')
+        if self.uploaded_count:
+            took_per_media = took / self.uploaded_count
+            logger.info(f'Uploaded {self.uploaded_count} media ({utils.get_timecode_from_sec(took_per_media)} per media)')
+
+        # uploaded_composites is included in uploaded
+        stats = {
+            'processed': self.processed_count,
+            'uploaded': self.uploaded_count,
+            'uploaded_composites': self.composite_uploaded_count,
+            'failed': len(self.failed),
+        }
+
+        if self.failed:
+            logger.error(f'{len(self.failed)} media failed to migrate: {self.failed}')
+
+        return stats
 
     @lru_cache
     def get_personal_channel_target(self, channel_path):
@@ -263,15 +282,15 @@ class MediaTransfer():
                 return user['id']
 
     def migrate_composites_videos(self):
-        logger.info(f'Merging and migrating {len(self.composites_medias)} composite videos.')
-        up_ok = False
+        total_composite = len(self.composites_medias)
+        logger.info(f'Merging and migrating {total_composite} composite videos')
         dl_ok = self.download_composites_videos()
 
         if dl_ok:
-            logger.debug('Merging and uploading')
-            nb_composites_medias_uploaded = 0
-            for media in self.composites_medias:
-                print(f'Uploading: [{nb_composites_medias_uploaded} / {len(self.composites_medias)}] -- {int(100 * (nb_composites_medias_uploaded / len(self.composites_medias)))}%', end='\r')
+            for index, media in enumerate(self.composites_medias):
+                self.processed_count += 1
+                if sys.stdout.isatty():
+                    print(utils.get_progress_string(index, total_composite) + ' Uploading composite', end='\r')
 
                 media_data = media.get('data', {})
                 presentation_id = json.loads(media_data.get('external_data', {})).get('id')
@@ -279,7 +298,6 @@ class MediaTransfer():
                 if existing_media:
                     logger.warning(f'Composite presentation {presentation_id} already found on MediaServer (oid: {existing_media["oid"]}, skipping')
                     # consider uploaded so that the final condition works
-                    nb_composites_medias_uploaded += 1
                 else:
                     # store presentation id in order to skip upload if already present on MS
                     media_data['external_ref'] = presentation_id
@@ -294,7 +312,8 @@ class MediaTransfer():
 
                         result = self.upload_local_file(file_path.__str__(), media_data)
                         if result.get('success'):
-                            nb_composites_medias_uploaded += 1
+                            self.uploaded_count += 1
+                            self.composite_uploaded_count += 1
 
                             oid = result['oid']
                             self.add_presentation_redirection(presentation_id, oid)
@@ -307,13 +326,10 @@ class MediaTransfer():
                             if len(media_data.get('chapters')) > 0:
                                 self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
                         else:
-                            logger.error(f"Failed to upload media: {media_data['title']}")
+                            logger.error(f"Failed to upload media: {presentation_id}")
+                            self.failed.append(presentation_id)
                     else:
                         logger.error(f'Failed to merge videos for presentation {presentation_id}')
-
-                up_ok = (nb_composites_medias_uploaded == len(self.composites_medias))
-
-        return up_ok
 
     def download_composites_videos(self):
         logger.info(f'Downloading composite videos into {self.composites_folder}.')
