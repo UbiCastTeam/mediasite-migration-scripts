@@ -28,8 +28,6 @@ if __name__ == '__main__':
                             help='add custom mediasite data file.')
         parser.add_argument('--max-folders', dest='max_folders', default=None,
                             help='specify maximum folders to collect infos')
-        parser.add_argument('-t', '--tests', action='store_true', default=None,
-                            help='skip useless actions for tests')
 
         return parser.parse_args()
 
