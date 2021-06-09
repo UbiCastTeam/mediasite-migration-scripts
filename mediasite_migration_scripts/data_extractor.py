@@ -5,6 +5,7 @@ import json
 import requests
 from datetime import datetime
 import time
+from pathlib import Path
 
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
@@ -35,6 +36,8 @@ class DataExtractor():
         self.failed_presentations = list()
         self.users = list()
         self.linked_catalogs = list()
+        self.download_folder = dl = Path(config.get('download_folder', ''))
+        self.slides_folder = dl / 'slides'
         self.timeit(self.run)
 
     def run(self):
@@ -425,9 +428,20 @@ class DataExtractor():
                 link = f'{slides_base_url}/{file_name}'
                 slides_urls.append(link)
 
-            slides_infos['stream_type'] = slides.get('StreamType', '')
-            slides_infos['urls'] = slides_urls
-            slides_infos['details'] = slides.get('SlideDetails') if details else None
+            nb_slides = len(slides_urls)
+            nb_slides_downloaded = self.download_slides(presentation)
+            if nb_slides_downloaded == nb_slides:
+                logger.debug(f"Sucessfully download {nb_slides_downloaded} slides (amongs {nb_slides} slides) for presentation {presentation_id}")
+            else:
+                logger.error(f"Failed to download all slides: {nb_slides - nb_slides_downloaded} missing ({nb_slides_downloaded} / {nb_slides} downloaded)")
+
+            slides_infos = {
+                'stream_type': slides.get('StreamType', ''),
+                'length': nb_slides,
+                'nb_downloaded': nb_slides_downloaded,
+                'urls': slides_urls,
+                'details': slides.get('SlideDetails') if details else None
+            }
 
         return slides_infos
 
@@ -440,6 +454,46 @@ class DataExtractor():
             is_useless = (source == '[Default] Use Recorder\'s Settings' and not slides.get('SlideDetails'))
 
         return is_useless
+
+    def download_slides(self, presentation):
+        presentation_id = presentation.get['id']
+        presentation_slides_urls = presentation.get('slides', {}).get('urls', [])
+        nb_slides_downloaded = 0
+
+        if self.dl_session is None:
+            self.dl_session = requests.Session()
+
+        logger.debug(f'Downloading slides for medias: {presentation_id}')
+        for i, url in enumerate(presentation_slides_urls):
+            if self.e2e_test:
+                path = url
+            else:
+                slide_dl_ok, path = self._download_slide(presentation_id, url)
+                if slide_dl_ok:
+                    nb_slides_downloaded += 1
+                else:
+                    logger.error(f'Failed to download slide {i + 1} for media {presentation_id}')
+
+        return nb_slides_downloaded
+
+    def _download_slide(self, presentation_id, url):
+        ok = False
+        filename = url.split('/').pop()
+        path = self.slides_folder / presentation_id / filename
+
+        if os.path.is_file(path):
+            # do not re-download
+            ok = True
+        else:
+            r = self.dl_session.get(url, auth=self.mediasite_auth)
+            if r.ok:
+                with open(path, 'wb') as f:
+                    f.write(r.content)
+                ok = r.ok
+            else:
+                logger.error(f'Failed to download {url}')
+
+        return ok, path
 
     def get_timed_events(self, presentation_id):
         chapters = []
