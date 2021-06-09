@@ -111,11 +111,15 @@ class MediaTransfer():
                     if channel_path.startswith(self.mediasite_userfolder):
                         if self.config.get('skip_userfolders'):
                             continue
-                        external_ref = self.get_folder_by_path(channel_path).get('id')
-                        target_channel = self.get_personal_channel_target(channel_path, external_ref)
-                        if target_channel is None:
-                            logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
-                            continue
+                        folder_id = self.get_folder_by_path(channel_path).get('id')
+                        existing_channel = self.get_ms_channel_by_ref(folder_id)
+                        if existing_channel:
+                            target_channel = 'mscid-' + existing_channel['oid']
+                        else:
+                            target_channel = self.get_personal_channel_target(channel_path, external_ref=folder_id)
+                            if target_channel is None:
+                                logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
+                                continue
                     else:
                         channel_oid = self.create_channels(channel_path) or self.root_channel.get('oid')
                         target_channel = 'mscid-' + channel_oid
