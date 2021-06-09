@@ -111,10 +111,15 @@ class MediaTransfer():
                     if channel_path.startswith(self.mediasite_userfolder):
                         if self.config.get('skip_userfolders'):
                             continue
-                        target_channel = self.get_personal_channel_target(channel_path)
-                        if target_channel is None:
-                            logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
-                            continue
+                        folder_id = self.get_folder_by_path(channel_path).get('id')
+                        existing_channel = self.get_ms_channel_by_ref(folder_id)
+                        if existing_channel:
+                            target_channel = 'mscid-' + existing_channel['oid']
+                        else:
+                            target_channel = self.get_personal_channel_target(channel_path, folder_id)
+                            if target_channel is None:
+                                logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
+                                continue
                     else:
                         channel_oid = self.create_channels(channel_path) or self.root_channel.get('oid')
                         target_channel = 'mscid-' + channel_oid
@@ -204,7 +209,7 @@ class MediaTransfer():
         return stats
 
     @lru_cache
-    def get_personal_channel_target(self, channel_path):
+    def get_personal_channel_target(self, channel_path, folder_id):
         logger.debug(f'Get personal channel target for {channel_path}')
         #"/Mediasite Users/USERNAME/SUBFOLDER"
         target = ''
@@ -225,7 +230,7 @@ class MediaTransfer():
                     spath = self.mediasite_userfolder + subfolders[0] + '/'
                     for s in subfolders[1:]:
                         spath += s + '/'
-                        channel_oid = self._create_channel(channel_oid, s, True, spath)['oid']
+                        channel_oid = self._create_channel(channel_oid, s, True, spath, external_ref=folder_id)['oid']
                 target = f'mscid-{channel_oid}'
             else:
                 logger.warning(f'User {username} is probably not allowed to have a personal channel')
