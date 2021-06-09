@@ -26,7 +26,7 @@ if __name__ == '__main__':
         parser.add_argument('-mf', '--mediasite_file',
                             dest='mediasite_file', action='store_true', default=None,
                             help='add custom mediasite data file.')
-        parser.add_argument('--max-folders', dest='max_folders'
+        parser.add_argument('--max-folders', dest='max_folders',
                             action='store_true', default=None,
                             help='specify maximum folders to collect infos')
 
