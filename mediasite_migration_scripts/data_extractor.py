@@ -31,13 +31,14 @@ class DataExtractor():
         }
         self.mediasite = mediasite_controller.controller(self.config)
         self.mediasite_format_date = '%Y-%m-%dT%H:%M:%S'
+        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
 
         self.presentations = None
         self.failed_presentations = list()
         self.users = list()
         self.linked_catalogs = list()
         self.download_folder = dl = Path(config.get('download_folder', ''))
-        self.slides_folder = dl / 'slides'
+        self.slides_download_folder = dl / 'slides'
         self.timeit(self.run)
 
     def run(self):
@@ -118,7 +119,7 @@ class DataExtractor():
                     if catalogs:
                         self.linked_catalogs.extend(catalogs)
 
-                    if self.max_folders and i >= self.max_folders:
+                    if self.max_folders and i >= int(self.max_folders):
                         break
 
         return presentations_folders
@@ -430,19 +431,18 @@ class DataExtractor():
                 slides_urls.append(link)
 
             nb_slides = len(slides_urls)
-            nb_slides_downloaded = self.download_slides(presentation)
+            slides_infos = {
+                'stream_type': slides.get('StreamType', ''),
+                'length': nb_slides,
+                'urls': slides_urls,
+                'details': slides.get('SlideDetails') if details else None
+            }
+
+            nb_slides_downloaded = self.download_slides(presentation_id, slides_infos)
             if nb_slides_downloaded == nb_slides:
                 logger.debug(f"Sucessfully download {nb_slides_downloaded} slides (amongs {nb_slides} slides) for presentation {presentation_id}")
             else:
                 logger.error(f"Failed to download all slides: {nb_slides - nb_slides_downloaded} missing ({nb_slides_downloaded} / {nb_slides} downloaded)")
-
-            slides_infos = {
-                'stream_type': slides.get('StreamType', ''),
-                'length': nb_slides,
-                'nb_downloaded': nb_slides_downloaded,
-                'urls': slides_urls,
-                'details': slides.get('SlideDetails') if details else None
-            }
 
         return slides_infos
 
@@ -456,45 +456,32 @@ class DataExtractor():
 
         return is_useless
 
-    def download_slides(self, presentation):
-        presentation_id = presentation['id']
-        presentation_slides_urls = presentation.get('slides', {}).get('urls', [])
+    def download_slides(self, presentation_id, slides):
+        presentation_slides_urls = slides.get('urls', [])
         nb_slides_downloaded = 0
 
-        if self.dl_session is None:
-            self.dl_session = requests.Session()
+        if self.session is None:
+            self.session = requests.Session()
 
-        logger.debug(f'Downloading slides for medias: {presentation_id}')
+        presentation_slides_download_folder = self.slides_download_folder / presentation_id
+        presentation_slides_download_folder.mkdir(parents=True, exist_ok=True)
+
+        logger.debug(f'Downloading slides for presentation: {presentation_id}')
         for i, url in enumerate(presentation_slides_urls):
-            if self.e2e_test:
-                path = url
-            else:
-                slide_dl_ok, path = self._download_slide(presentation_id, url)
-                if slide_dl_ok:
+            filename = url.split('/').pop()
+            file_path = presentation_slides_download_folder / filename
+
+            # do not re-download
+            if not file_path.is_file():
+                r = self.session.get(url, auth=self.mediasite_auth)
+                if r.ok:
+                    with open(file_path, 'wb') as f:
+                        f.write(r.content)
                     nb_slides_downloaded += 1
                 else:
-                    logger.error(f'Failed to download slide {i + 1} for media {presentation_id}')
+                    logger.error(f'Failed to download {url}')
 
         return nb_slides_downloaded
-
-    def _download_slide(self, presentation_id, url):
-        ok = False
-        filename = url.split('/').pop()
-        path = self.slides_folder / presentation_id / filename
-
-        if os.path.is_file(path):
-            # do not re-download
-            ok = True
-        else:
-            r = self.dl_session.get(url, auth=self.mediasite_auth)
-            if r.ok:
-                with open(path, 'wb') as f:
-                    f.write(r.content)
-                ok = r.ok
-            else:
-                logger.error(f'Failed to download {url}')
-
-        return ok, path
 
     def get_timed_events(self, presentation_id):
         chapters = []
