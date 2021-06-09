@@ -844,7 +844,8 @@ class MediaTransfer():
 
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': channel_path, 'folder_path': folder_path}})
                         else:
-                            logger.warning(f"No valid video for presentation {presentation.get('id')}")
+                            logger.warning(f"No valid video for presentation {presentation.get('id')}, skipping")
+                            self.skipped_count += 1
                             continue
 
         return mediaserver_data
