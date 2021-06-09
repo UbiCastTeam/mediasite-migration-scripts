@@ -215,7 +215,7 @@ class DataExtractor():
 
     def get_all_folders_infos(self):
         folders_infos = list()
-        folders = self.mediasite.folder.get_all_folders()
+        folders = self.mediasite.folder.get_all_folders(self.max_folders)
         for folder in folders:
             folder_info = {
                 'id': folder.get('Id', ''),

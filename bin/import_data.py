@@ -26,6 +26,9 @@ if __name__ == '__main__':
         parser.add_argument('-mf', '--mediasite_file',
                             dest='mediasite_file', action='store_true', default=None,
                             help='add custom mediasite data file.')
+        parser.add_argument('--max-folders', dest='max_folders'
+                            action='store_true', default=None,
+                            help='specify maximum folders to collect infos')
 
         return parser.parse_args()
 
@@ -60,7 +63,7 @@ if __name__ == '__main__':
             # lets ignore any whitelist
             config['whitelist'] = []
 
-            extractor = DataExtractor(config=config)
+            extractor = DataExtractor(config=config, max_folders=options.max_folders)
             data = extractor.all_data
 
             with open(mediasite_file, 'w') as f:
