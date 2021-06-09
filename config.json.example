@@ -7,7 +7,7 @@
     "mediaserver_url":"",
     "mediaserver_api_key": "",
     "mediaserver_parent_channel": "",
-    "mediaserver_unknown_users_channel", "Unknown Mediasite Users",
+    "mediaserver_unknown_users_channel": "Unknown Mediasite Users",
     "composite_width": 1920,
     "composite_height": 1080,
     "whitelist": [],

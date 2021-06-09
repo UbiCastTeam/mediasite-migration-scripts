@@ -20,8 +20,31 @@ class MediaTransfer():
 
     def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
+
+        self.dl_session = None
+        self.compositor = None
+        self.composites_medias = list()
+        self.medias_folders = list()
+        self.created_channels = dict()
+        self.slide_annot_type = None
+        self.chapters_annot_type = None
+        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = 0
+        self.failed = list()
+
+        self.download_folder = dl = Path(config.get('download_folder', ''))
+        self.slides_folder = dl / 'slides'
+        self.composites_folder = dl / 'composite'
+        self.mediasite_data = mediasite_data
+
+        self.formats_allowed = self.config.get('videos_formats_allowed', {})
+        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
+        self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
+        self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
+        self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
+
         self.e2e_test = e2e_test
         self.unit_test = unit_test
+
         if self.unit_test:
             self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
         else:
@@ -38,30 +61,10 @@ class MediaTransfer():
             else:
                 self.root_channel = self.get_root_channel()
 
-        self.formats_allowed = self.config.get('videos_formats_allowed', {})
-        self.created_channels = dict()
-        self.slide_annot_type = None
-        self.chapters_annot_type = None
         self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
 
-        self.mediasite_data = mediasite_data
-        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
-
-        #self.users = self.to_mediaserver_users(mediasite_users)
-        self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
-
         self.mediaserver_data = self.to_mediaserver_keys()
-        self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
 
-        self.compositor = None
-        self.composites_medias = list()
-        self.download_folder = dl = Path(config.get('download_folder', ''))
-        self.slides_folder = dl / 'slides'
-        self.composites_folder = dl / 'composite'
-        self.medias_folders = list()
-        self.dl_session = None
-
-        self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
         if self.redirections_file.is_file():
             print(f'Loading redirections file {self.redirections_file}')
             with open(self.redirections_file, 'r') as f:
@@ -90,9 +93,6 @@ class MediaTransfer():
             total_count = len(self.mediaserver_data)
 
         logger.info(f'{total_count} medias found for uploading.')
-
-        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = 0
-        self.failed = list()
 
         for index, media in enumerate(self.mediaserver_data):
             if sys.stdout.isatty():
@@ -844,7 +844,8 @@ class MediaTransfer():
 
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': channel_path, 'folder_path': folder_path}})
                         else:
-                            logger.warning(f"No valid video for presentation {presentation.get('id')}")
+                            logger.warning(f"No valid video for presentation {presentation.get('id')}, skipping")
+                            self.skipped_count += 1
                             continue
 
         return mediaserver_data
@@ -899,14 +900,22 @@ class MediaTransfer():
         return videos
 
     def _find_file_to_upload(self, video_files):
-        video_url = str()
+        video_url = file_url = ''
         for file in video_files:
             if file.get('format') == 'video/mp4':
-                video_url = file['url']
+                file_url = file['url']
                 break
             elif self.formats_allowed.get(file.get('format')):
-                video_url = file['url']
+                file_url = file['url']
                 break
+
+        if file_url:
+            if self.dl_session is None:
+                self.dl_session = requests.Session()
+
+            video_found = self.dl_session.head(file_url)
+            if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
+                video_url = file_url
 
         return video_url
 
