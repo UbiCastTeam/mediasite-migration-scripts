@@ -115,6 +115,7 @@ class DataAnalyzer():
         total_video_count = 0
         video_stats = dict()
         videotypes_dict = dict()
+        wmv_allowed = self.config.get('videos_formats_allowed', {}).get('video/x-ms-wmv')
 
         videotypes = [
             'audio_only',
@@ -192,7 +193,7 @@ class DataAnalyzer():
                                 'audio_codec': 'AAC',
                             }
                             for v in videos:
-                                best_video = mediasite.get_best_video_file(v, self.config.get('videos_formats_allowed', {}).get('video/x-ms-wmv'))
+                                best_video = mediasite.get_best_video_file(v, wmv_allowed)
                                 size_gb += best_video.get('size_bytes', 0) / GB
                                 encoding_infos = best_video.get('encoding_infos')
                                 # skip audio-only resources
@@ -203,7 +204,7 @@ class DataAnalyzer():
                         else:
                             video = presentation['videos'][0]
                             video_stream_type = video['stream_type']
-                            video_file = mediasite.get_best_video_file(video)
+                            video_file = mediasite.get_best_video_file(video, wmv_allowed)
                             encoding_infos = video_file.get('encoding_infos')
                             format_str = self.get_video_format_str(encoding_infos)
                             size_gb = video_file.get('size_bytes', 0) / GB
