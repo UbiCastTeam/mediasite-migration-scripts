@@ -28,6 +28,8 @@ class MediaTransfer():
         self.created_channels = dict()
         self.slide_annot_type = None
         self.chapters_annot_type = None
+        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = 0
+        self.failed = list()
 
         self.download_folder = dl = Path(config.get('download_folder', ''))
         self.slides_folder = dl / 'slides'
@@ -91,9 +93,6 @@ class MediaTransfer():
             total_count = len(self.mediaserver_data)
 
         logger.info(f'{total_count} medias found for uploading.')
-
-        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = 0
-        self.failed = list()
 
         for index, media in enumerate(self.mediaserver_data):
             if sys.stdout.isatty():
