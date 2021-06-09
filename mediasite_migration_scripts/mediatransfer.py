@@ -111,7 +111,8 @@ class MediaTransfer():
                     if channel_path.startswith(self.mediasite_userfolder):
                         if self.config.get('skip_userfolders'):
                             continue
-                        target_channel = self.get_personal_channel_target(channel_path)
+                        external_ref = self.get_folder_by_path(channel_path).get('id')
+                        target_channel = self.get_personal_channel_target(channel_path, external_ref)
                         if target_channel is None:
                             logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
                             continue
@@ -204,7 +205,7 @@ class MediaTransfer():
         return stats
 
     @lru_cache
-    def get_personal_channel_target(self, channel_path):
+    def get_personal_channel_target(self, channel_path, folder_id):
         logger.debug(f'Get personal channel target for {channel_path}')
         #"/Mediasite Users/USERNAME/SUBFOLDER"
         target = ''
@@ -225,7 +226,7 @@ class MediaTransfer():
                     spath = self.mediasite_userfolder + subfolders[0] + '/'
                     for s in subfolders[1:]:
                         spath += s + '/'
-                        channel_oid = self._create_channel(channel_oid, s, True, spath)['oid']
+                        channel_oid = self._create_channel(channel_oid, s, True, spath, external_ref=folder_id)['oid']
                 target = f'mscid-{channel_oid}'
             else:
                 logger.warning(f'User {username} is probably not allowed to have a personal channel')
