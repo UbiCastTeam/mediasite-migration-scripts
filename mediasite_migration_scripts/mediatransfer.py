@@ -812,6 +812,12 @@ class MediaTransfer():
                             else:
                                 layout = 'video'
 
+                            do_transcode = 'no'
+                            if v_type in ['audio_only', 'composite_slides', 'composite_video']:
+                                do_transcode = 'yes'
+                            elif v_url.endswith('.wmv'):
+                                do_transcode = 'yes'
+
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
@@ -825,7 +831,7 @@ class MediaTransfer():
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
                                 'external_data': json.dumps(ext_data, indent=2, sort_keys=True),
-                                'transcode': 'yes' if v_type in ['audio_only', 'composite_slides', 'composite_video'] else 'no',
+                                'transcode': do_transcode,
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
                                 'layout': layout,
