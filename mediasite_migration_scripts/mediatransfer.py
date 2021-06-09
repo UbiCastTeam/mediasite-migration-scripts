@@ -116,7 +116,7 @@ class MediaTransfer():
                         if existing_channel:
                             target_channel = 'mscid-' + existing_channel['oid']
                         else:
-                            target_channel = self.get_personal_channel_target(channel_path, external_ref=folder_id)
+                            target_channel = self.get_personal_channel_target(channel_path, folder_id)
                             if target_channel is None:
                                 logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
                                 continue
