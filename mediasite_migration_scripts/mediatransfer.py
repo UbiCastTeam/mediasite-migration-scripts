@@ -900,7 +900,7 @@ class MediaTransfer():
         return videos
 
     def _find_file_to_upload(self, video_files):
-        video_url = str()
+        video_url = file_url = ''
         for file in video_files:
             if file.get('format') == 'video/mp4':
                 file_url = file['url']
@@ -909,12 +909,13 @@ class MediaTransfer():
                 file_url = file['url']
                 break
 
-        if self.dl_session is None:
-            self.dl_session = requests.Session()
+        if file_url:
+            if self.dl_session is None:
+                self.dl_session = requests.Session()
 
-        video_found = self.dl_session.head(file_url)
-        if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
-            video_url = file_url
+            video_found = self.dl_session.head(file_url)
+            if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
+                video_url = file_url
 
         return video_url
 
