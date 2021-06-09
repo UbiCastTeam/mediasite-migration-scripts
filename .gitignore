@@ -134,6 +134,7 @@ dmypy.json
 tests/content/
 config.json.backup
 *.txt
+*.csv
 
 # VS Code
 .vscode

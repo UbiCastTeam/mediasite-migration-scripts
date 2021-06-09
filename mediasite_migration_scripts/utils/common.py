@@ -132,3 +132,7 @@ def get_timecode_from_sec(seconds):
     h, m = divmod(m, 60)
     timecode = "%d:%02d:%02d" % (h, m, s)
     return timecode
+
+
+def get_mediasite_host(url):
+    return url.split('/')[2]
