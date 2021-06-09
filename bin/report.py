@@ -29,7 +29,7 @@ def get_mediaserver_path(oid):
         path = r['info']['path']
         for p in path:
             path_str += p['title'] + '/'
-    return path_str + '/' + oid
+    return path_str + oid
 
 
 rows = list()
