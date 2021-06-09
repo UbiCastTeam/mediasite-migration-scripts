@@ -138,7 +138,7 @@ class DataExtractor():
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
                 children_presentations.append(presentation)
-        logger.debug(f'Gettings {len(children_presentations)} presentations infos for folder: {folder_id}')
+        logger.debug(f'Gettings infos for {len(children_presentations)} presentations for folder: {folder_id}')
 
         for p in children_presentations:
             try:
@@ -146,8 +146,8 @@ class DataExtractor():
                 presentations_infos.append(infos)
             except Exception:
                 pid = p.get('Id')
-                logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
-                time.sleep(5 * 60)
+                # logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
+                # time.sleep(5 * 60)
                 try:
                     infos = self.get_presentation_infos(p)
                     logger.info(f'Second try for {pid} passed')
@@ -417,6 +417,7 @@ class DataExtractor():
             content_server_id = slides.get('ContentServerId', '')
             content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
             content_server_url = content_server.get('Url', '')
+
             presentation_id = slides.get('ParentResourceId', '')
 
             slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
@@ -456,7 +457,7 @@ class DataExtractor():
         return is_useless
 
     def download_slides(self, presentation):
-        presentation_id = presentation.get['id']
+        presentation_id = presentation['id']
         presentation_slides_urls = presentation.get('slides', {}).get('urls', [])
         nb_slides_downloaded = 0
 
