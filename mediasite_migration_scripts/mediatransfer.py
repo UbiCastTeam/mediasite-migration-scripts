@@ -41,6 +41,12 @@ class MediaTransfer():
         self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
         self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
         self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
+        if self.redirections_file.is_file():
+            print(f'Loading redirections file {self.redirections_file}')
+            with open(self.redirections_file, 'r') as f:
+                self.redirections = json.load(f)
+        else:
+            self.redirections = dict()
 
         self.e2e_test = e2e_test
         self.unit_test = unit_test
@@ -64,13 +70,6 @@ class MediaTransfer():
         self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
 
         self.mediaserver_data = self.to_mediaserver_keys()
-
-        if self.redirections_file.is_file():
-            print(f'Loading redirections file {self.redirections_file}')
-            with open(self.redirections_file, 'r') as f:
-                self.redirections = json.load(f)
-        else:
-            self.redirections = dict()
 
     def write_redirections_file(self):
         if self.redirections:
