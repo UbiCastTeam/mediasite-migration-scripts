@@ -1,6 +1,7 @@
 import requests
 import logging
 from mediasite_migration_scripts.utils.common import get_age_days
+import mediasite_migration_scripts.utils.mediasite as mediasite
 import json
 from copy import copy
 
@@ -96,24 +97,6 @@ class DataAnalyzer():
         }
         return infos
 
-    def get_preferred_file(self, files):
-        for format_name in ['video/mp4', 'video/x-ms-wmv']:
-            for f in files:
-                if f.get('format') == format_name and f.get('size_bytes') != 0:
-                    return f
-
-    def get_best_video_file(self, files):
-        video_file = {}
-        max_width = 0
-
-        preferred_file = self.get_preferred_file(files)
-        if preferred_file:
-            info = preferred_file.get('encoding_infos', {})
-            width = int(info.get('width', 0))
-            if width >= max_width:
-                video_file = preferred_file
-        return video_file
-
     def get_video_format_str(self, encoding_infos=None):
         format_str = 'unknown'
         if encoding_infos:
@@ -132,6 +115,7 @@ class DataAnalyzer():
         total_video_count = 0
         video_stats = dict()
         videotypes_dict = dict()
+        wmv_allowed = self.config.get('videos_formats_allowed', {}).get('video/x-ms-wmv')
 
         videotypes = [
             'audio_only',
@@ -189,24 +173,38 @@ class DataAnalyzer():
                 slides_stream_type = None
                 has_slides = False
                 slides_are_synced = False
-                if presentation.get('slides'):
-                    slides_count = len(presentation['slides'].get('urls'))
-                    if slides_count > 0:
-                        has_slides = True
-                        total_slides += slides_count
-                        if presentation['slides'].get('details'):
-                            slides_are_synced = True
-                        slides_stream_type = presentation['slides']['stream_type']
+                slides_count = mediasite.get_slides_count(presentation)
+                if slides_count:
+                    total_slides += slides_count
+                    has_slides = True
+                    if presentation['slides'].get('details'):
+                        slides_are_synced = True
+                    slides_stream_type = presentation['slides']['stream_type']
 
                 if len(videos) > 0:
-                    dur_h = videos[0]['files'][0].get('duration_ms', 0) / (3600 * 1000)
-                    if dur_h == 0:
-                        videotype = 'empty_videos'
-                    else:
-                        if len(videos) == 1:
+                    dur_h = mediasite.get_duration_h(videos)
+                    if dur_h:
+                        if mediasite.is_composite(presentation):
+                            videotype = 'composite_videos'
+                            composite_info = {
+                                'width': 0,
+                                'height': 0,
+                                'video_codec': 'H264',
+                                'audio_codec': 'AAC',
+                            }
+                            for v in videos:
+                                best_video = mediasite.get_best_video_file(v, wmv_allowed)
+                                size_gb += best_video.get('size_bytes', 0) / GB
+                                encoding_infos = best_video.get('encoding_infos')
+                                # skip audio-only resources
+                                if encoding_infos and encoding_infos.get('video_codec'):
+                                    composite_info['width'] += encoding_infos['width']
+                                    composite_info['height'] = max(composite_info['height'], encoding_infos['height'])
+                            format_str = self.get_video_format_str(composite_info) + ' (composite)'
+                        else:
                             video = presentation['videos'][0]
                             video_stream_type = video['stream_type']
-                            video_file = self.get_best_video_file(video['files'])
+                            video_file = mediasite.get_best_video_file(video, wmv_allowed)
                             encoding_infos = video_file.get('encoding_infos')
                             format_str = self.get_video_format_str(encoding_infos)
                             size_gb = video_file.get('size_bytes', 0) / GB
@@ -218,6 +216,7 @@ class DataAnalyzer():
                                     videotype = 'audio_only'
                             elif format_str != 'unknown':
                                 if len(videos) == 1:
+                                    videotype = 'video_only'
                                     if has_slides:
                                         if video_stream_type == slides_stream_type:
                                             if not slides_are_synced:
@@ -229,25 +228,8 @@ class DataAnalyzer():
                                         else:
                                             # there are slides but they are not synced
                                             videotype = 'video_only'
-                                    else:
-                                        videotype = 'video_only'
-                        elif len(videos) == 2:
-                            videotype = 'composite_videos'
-                            composite_info = {
-                                'width': 0,
-                                'height': 0,
-                                'video_codec': 'H264',
-                                'audio_codec': 'AAC',
-                            }
-                            for v in videos:
-                                best_video = self.get_best_video_file(v['files'])
-                                size_gb += best_video.get('size_bytes', 0) / GB
-                                encoding_infos = best_video.get('encoding_infos')
-                                # skip audio-only resources
-                                if encoding_infos and encoding_infos.get('video_codec'):
-                                    composite_info['width'] += encoding_infos['width']
-                                    composite_info['height'] = max(composite_info['height'], encoding_infos['height'])
-                            format_str = self.get_video_format_str(composite_info) + ' (composite)'
+                    else:
+                        videotype = 'empty_videos'
 
                     videotypes_dict[videotype].add(pres_id, dur_h, size_gb)
 

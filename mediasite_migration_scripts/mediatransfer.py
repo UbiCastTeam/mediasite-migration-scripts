@@ -41,6 +41,12 @@ class MediaTransfer():
         self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
         self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
         self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
+        if self.redirections_file.is_file():
+            print(f'Loading redirections file {self.redirections_file}')
+            with open(self.redirections_file, 'r') as f:
+                self.redirections = json.load(f)
+        else:
+            self.redirections = dict()
 
         self.e2e_test = e2e_test
         self.unit_test = unit_test
@@ -64,13 +70,6 @@ class MediaTransfer():
         self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
 
         self.mediaserver_data = self.to_mediaserver_keys()
-
-        if self.redirections_file.is_file():
-            print(f'Loading redirections file {self.redirections_file}')
-            with open(self.redirections_file, 'r') as f:
-                self.redirections = json.load(f)
-        else:
-            self.redirections = dict()
 
     def write_redirections_file(self):
         if self.redirections:
@@ -812,6 +811,12 @@ class MediaTransfer():
                             else:
                                 layout = 'video'
 
+                            do_transcode = 'no'
+                            if v_type in ['audio_only', 'composite_slides', 'composite_video']:
+                                do_transcode = 'yes'
+                            elif v_url.endswith('.wmv'):
+                                do_transcode = 'yes'
+
                             data = {
                                 'title': presentation.get('title'),
                                 'channel_title': channel_name,
@@ -825,7 +830,7 @@ class MediaTransfer():
                                 'keywords': ','.join(presentation.get('tags')),
                                 'slug': 'mediasite-' + presentation.get('id'),
                                 'external_data': json.dumps(ext_data, indent=2, sort_keys=True),
-                                'transcode': 'yes' if v_type in ['audio_only', 'composite_slides', 'composite_video'] else 'no',
+                                'transcode': do_transcode,
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
                                 'layout': layout,

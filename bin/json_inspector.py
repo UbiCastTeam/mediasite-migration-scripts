@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import json
 import argparse
+import mediasite_migration_scripts.utils.mediasite as mediasite
+
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -67,7 +69,7 @@ with open(input_file, 'r') as f:
                         print(f'Found term "{s}" in field "{field}" of folder {f_copy["id"]}')
                 for p in f.get('presentations', []):
                     p_copy = dict(p)
-                    slides_count = len(p["slides"].get("urls", []))
+                    slides_count = mediasite.get_slides_count(p)
                     p_copy['slides'] = [f'{slides_count} slides (hidden)']
                     if s in p.get(field, ''):
                         if p_copy not in search_results_presentations:
