@@ -914,7 +914,7 @@ class MediaTransfer():
             self.dl_session = requests.Session()
 
         video_found = self.dl_session.head(file_url)
-        if video_found.ok and video_found.headers.get('Content-Length', 0) > 0:
+        if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
             video_url = file_url
 
         return video_url
