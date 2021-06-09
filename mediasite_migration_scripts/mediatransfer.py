@@ -74,6 +74,8 @@ class MediaTransfer():
             logger.info(f'Writing redirections file {self.redirections_file}')
             with open(self.redirections_file, 'w') as f:
                 json.dump(self.redirections, f, indent=2)
+        else:
+            logger.info('No redirections to write')
 
     def upload_medias(self, max_videos=None):
         before = time.time()

@@ -132,6 +132,8 @@ if __name__ == '__main__':
     try:
         nb_uploaded_medias = mediatransfer.upload_medias(options.max_videos)
         logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
+    except KeyboardInterrupt:
+        logger.warning('Interrupted by the user')
     except Exception as e:
         logger.error(f'Error during upload: {e}')
 
