@@ -902,11 +902,18 @@ class MediaTransfer():
         video_url = str()
         for file in video_files:
             if file.get('format') == 'video/mp4':
-                video_url = file['url']
+                file_url = file['url']
                 break
             elif self.formats_allowed.get(file.get('format')):
-                video_url = file['url']
+                file_url = file['url']
                 break
+
+        if self.dl_session is None:
+            self.dl_session = requests.Session()
+
+        video_found = self.dl_session.head(file_url)
+        if video_found and video_found.headers.get('Content-Length', 0) > 0:
+            video_url = file_url
 
         return video_url
 
