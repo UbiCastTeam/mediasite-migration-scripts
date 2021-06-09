@@ -37,7 +37,7 @@ class DataExtractor():
         self.failed_presentations = list()
         self.users = list()
         self.linked_catalogs = list()
-        self.download_folder = dl = Path(config.get('download_folder', ''))
+        self.download_folder = dl = Path(config.get('download_folder', '/downloads'))
         self.slides_download_folder = dl / 'slides'
         self.timeit(self.run)
 
