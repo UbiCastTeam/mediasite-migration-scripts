@@ -60,7 +60,7 @@ if __name__ == '__main__':
             # lets ignore any whitelist
             config['whitelist'] = []
 
-            extractor = DataExtractor(config=config)
+            extractor = DataExtractor(config=config, max_folders=10)
             data = extractor.all_data
 
             with open(mediasite_file, 'w') as f:

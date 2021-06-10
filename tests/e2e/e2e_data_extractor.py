@@ -106,10 +106,13 @@ class TestDataExtractorE2E(TestCase):
             if len(presentations) > 0:
                 for p in presentations:
                     for key in presentation_keys:
+<<<<<<< Updated upstream
                         self.assertIn(key, list(p.keys()))
+=======
+                        self.assertIn(key, p.keys())
+>>>>>>> Stashed changes
 
         self.assertIsInstance(self.extractor.users, list)
-
         usernames = [user.get('username') for user in self.extractor.users]
         for i, u in enumerate(usernames):
             self.assertIn(u, usernames)

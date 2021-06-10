@@ -28,16 +28,15 @@ class DataExtractor():
             'whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
-        self.mediasite_format_date = '%Y-%m-%dT%H:%M:%S'
 
         self.presentations = None
         self.failed_presentations = list()
         self.users = list()
         self.linked_catalogs = list()
-        self.timeit(self.run)
+        self.timeit(self.run(max_folders))
 
-    def run(self):
-        self.folders = self.get_all_folders_infos()
+    def run(self, max_folders=None):
+        self.folders = self.get_all_folders_infos(max_folders=max_folders)
         self.all_catalogs = self.get_all_catalogs()
         self.all_data = self.timeit(self.extract_mediasite_data)
 
@@ -112,6 +111,21 @@ class DataExtractor():
                     })
 
                     if catalogs:
+                        most_recent_time = datetime.strptime('0001-12-25T00:00:00', '%Y-%m-%dT%H:%M:%S')
+                        for c in catalogs:
+                            tmp = datetime.strptime(c.get('creation_date'), '%Y-%m-%dT%H:%M:%S')
+                            if tmp > most_recent_time:
+                                most_recent_time = tmp
+                                most_recent_channel = c
+
+                        folder['name'] = most_recent_channel.get('name')
+                        folder['linked_catalog_id'] = most_recent_channel.get('id')
+
+                    presentations_folders.append({**folder,
+                                                  'catalogs': catalogs,
+                                                  'path': path,
+                                                  'presentations': self.get_presentations_infos(folder['id'])})
+                    if catalogs:
                         self.linked_catalogs.extend(catalogs)
 
                     if self.max_folders and i >= self.max_folders:
@@ -134,7 +148,43 @@ class DataExtractor():
         for presentation in self.presentations:
             if presentation.get('ParentFolderId') == folder_id:
                 children_presentations.append(presentation)
+
         logger.debug(f'Gettings {len(children_presentations)} presentations infos for folder: {folder_id}')
+        logger.debug('-' * 50)
+        logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
+        has_slides_details = False
+        for stream_type in presentation.get('Streams'):
+            if stream_type.get('StreamType') == 'Slide':
+                has_slides_details = True
+                break
+
+        owner_infos = self.get_user_infos(username=presentation.get('RootOwner', ''))
+
+        presenter_display_name = presentation.get('PrimaryPresenter', '')
+        if presenter_display_name.startswith('Default Presenter'):
+            presenter_display_name = None
+
+        infos = {
+            'id': presentation.get('Id', ''),
+            'title': presentation.get('Title', ''),
+            'creation_date': presentation.get('CreationDate', ''),
+            'presenter_display_name': presenter_display_name,
+            'owner_username': owner_infos.get('username', ''),
+            'owner_display_name': owner_infos.get('display_name', ''),
+            'owner_mail': owner_infos.get('mail', ''),
+            'creator': presentation.get('Creator', ''),
+            'other_presenters': self.get_presenters_infos(presentation.get('Id', '')),
+            'availability': self.mediasite.presentation.get_availability(presentation.get('Id', '')),
+            'published_status': presentation.get('Status') == 'Viewable',
+            'private': presentation.get('Private'),
+            'has_slides_details': has_slides_details,
+            'description': presentation.get('Description', ''),
+            'tags': presentation.get('TagList', ''),
+            'timed_events': self.get_timed_events(presentation.get('Id', '')),
+            'url': presentation.get('#Play').get('target', ''),
+        }
+        infos['videos'] = self.get_videos_infos(presentation.get('Id'))
+        infos['slides'] = self.get_slides_infos(infos, details=True)
 
         for p in children_presentations:
             try:
@@ -204,9 +254,9 @@ class DataExtractor():
         infos['slides'] = self.get_slides_infos(infos, details=True)
         return infos
 
-    def get_all_folders_infos(self):
+    def get_all_folders_infos(self, max_folders=None):
         folders_infos = list()
-        folders = self.mediasite.folder.get_all_folders()
+        folders = self.mediasite.folder.get_all_folders(max_folders)
         for folder in folders:
             folder_info = {
                 'id': folder.get('Id', ''),
@@ -228,7 +278,7 @@ class DataExtractor():
                          'description': catalog.get('Description', ''),
                          'url': catalog.get('CatalogUrl', ''),
                          'owner_username': catalog.get('Owner', ''),
-                         'creation_date': catalog.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
+                         'creation_date': catalog.get('CreationDate', '')
                          }
                 folder_catalogs.append(infos)
         return folder_catalogs
