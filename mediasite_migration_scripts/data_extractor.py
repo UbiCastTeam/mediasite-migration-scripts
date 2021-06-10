@@ -244,14 +244,15 @@ class DataExtractor():
                 break
 
         if not user_infos:
+            user_infos = {
+                'username': username,
+            }
             user = self.mediasite.user.get_profile_by_username(username)
             if user:
-                user_infos = {
-                    'username': username,
-                    'display_name': user.get('DisplayName'),
-                    'mail': user.get('Email').lower()
-                }
-                self.users.append(user_infos)
+                user_infos['display_name'] = user.get('DisplayName')
+                user_infos['mail'] = user.get('Email').lower()
+
+            self.users.append(user_infos)
 
         return user_infos
 
