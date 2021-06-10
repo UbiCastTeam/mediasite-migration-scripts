@@ -68,13 +68,13 @@ merge_all:
 	docker run --rm -w /src -e PYTHONPATH=/src -v ${CURDIR}:/src -it mediasite-merge python3 bin/batch_merge.py /src/downloads/composite
 
 clean_collect:
-	sudo rm -rf mediasite_*.json presentations_*.txt
-
-clean_migrate:
-	sudo rm -rf downloads redirections.json
+	sudo rm -rf *mediasite_*.json presentations_*.txt samples.json
 
 clean_merge:
 	sudo rm -f downloads/composite/*/composite.mp4 downloads/composite/*/mediaserver_layout.json
+
+clean_migrate:
+	sudo rm -rf downloads redirections.json *mediaserver_data.json
 
 clean:
 	$(MAKE) clean_collect
