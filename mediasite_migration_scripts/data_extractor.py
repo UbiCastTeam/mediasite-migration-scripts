@@ -24,7 +24,7 @@ class DataExtractor():
             'mediasite_base_url': config.get('mediasite_api_url'),
             'mediasite_api_secret': config.get('mediasite_api_key'),
             'mediasite_api_user': config.get('mediasite_api_user'),
-            'mediasite_api_pass': config.get('mediasite_api_password'),
+            'mediasite_api_password': config.get('mediasite_api_password'),
             'whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
@@ -191,7 +191,7 @@ class DataExtractor():
             'creator': presentation.get('Creator', ''),
             'other_presenters': self.get_presenters_infos(presentation.get('Id', '')),
             'availability': self.mediasite.presentation.get_availability(presentation.get('Id', '')),
-            'published_status': presentation.get('Status') == 'Viewable',
+            'published_status': presentation.get('Status') == 'Viewable' and not presentation.get('Private'),
             'has_slides_details': has_slides_details,
             'description': presentation.get('Description', ''),
             'tags': presentation.get('TagList', ''),
