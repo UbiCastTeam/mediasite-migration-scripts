@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
+    def __init__(self, config=dict(), mediasite_data=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
 
         self.dl_session = None
@@ -478,18 +478,6 @@ class MediaTransfer():
             logger.error(f"Failed te create user {user.get('username')} / Error: {result.get('error')}")
 
         return user_id
-
-    def to_mediaserver_users(self, mediasite_users):
-        ms_users = list()
-
-        for user in mediasite_users:
-            ms_users.append({
-                'email': user.get('mail', ''),
-                'username': user.get('username', ''),
-                'speaker_id': user.get('display_name', '')
-            })
-
-        return ms_users
 
     @lru_cache
     def channel_has_catalog(self, channel_path):

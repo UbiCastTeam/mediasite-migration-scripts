@@ -234,11 +234,11 @@ class DataExtractor():
         return folder_catalogs
 
     def get_user_infos(self, username=str()):
-        logger.debug(f'Getting user infos with username: {username}.')
+        logger.debug(f'Getting user infos for username: {username}.')
         user_infos = dict()
 
         for u in self.users:
-            if u.get('username') == username.lower():
+            if u.get('username') == username:
                 logger.debug(f'User {username} already fetched.')
                 user_infos = u
                 break
@@ -247,7 +247,7 @@ class DataExtractor():
             user = self.mediasite.user.get_profile_by_username(username)
             if user:
                 user_infos = {
-                    'username': username.lower(),
+                    'username': username,
                     'display_name': user.get('DisplayName'),
                     'mail': user.get('Email').lower()
                 }
