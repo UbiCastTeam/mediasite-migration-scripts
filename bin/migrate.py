@@ -50,11 +50,6 @@ if __name__ == '__main__':
             help='Path to mediaserver data file (output).'
         )
         parser.add_argument(
-            '--mediasite-users-file',
-            default='mediasite_users.json',
-            help='Path to mediasite users file.'
-        )
-        parser.add_argument(
             '--download-folder',
             type=str,
             help='Folder name for downloads. Will be created if needed.',
@@ -118,15 +113,13 @@ if __name__ == '__main__':
     try:
         with open(mediasite_file) as f:
             mediasite_data = json.load(f)
-        with open(options.mediasite_users_file) as f:
-            mediasite_users = json.load(f)
     except Exception as e:
         logger.error(f'Failed to parse Mediasite {mediasite_file}')
         logger.error(e)
         logger.error('--------- Aborted ---------')
         sys.exit(1)
 
-    mediatransfer = MediaTransfer(config, mediasite_data, mediasite_users)
+    mediatransfer = MediaTransfer(config, mediasite_data)
 
     logger.info('Uploading videos')
     try:
