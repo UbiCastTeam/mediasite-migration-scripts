@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import csv
+import json
 from mediasite_migration_scripts.utils import common as utils
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
 
@@ -7,6 +8,7 @@ from mediasite_migration_scripts.ms_client.client import MediaServerClient
 config = utils.read_json('config.json')
 mediasite_data = utils.read_json('mediasite_data.json')
 redirections = utils.read_json('redirections.json')
+redirections_copy = dict(redirections)
 
 mediasite_cname = utils.get_mediasite_host(config['mediasite_api_url'])
 mediasite_play_url_pattern = f'https://{mediasite_cname}/Site1/Play/'
@@ -23,13 +25,15 @@ ms_client = MediaServerClient(local_conf=ms_config, setup_logging=False)
 
 
 def get_mediaserver_path(oid):
-    r = ms_client.api('medias/get/', params={'oid': oid, 'path': 'yes'})
+    r = ms_client.api('medias/get/', params={'oid': oid, 'path': 'yes'}, ignore_404=True)
     path_str = ''
-    if r['success']:
+    if r and r['success']:
         path = r['info']['path']
         for p in path:
             path_str += p['title'] + '/'
-    return path_str + oid
+        return path_str + oid
+    else:
+        return
 
 
 rows = list()
@@ -54,6 +58,9 @@ for f in folders_to_process:
         if mediaserver_url:
             oid = mediaserver_url.split('/')[4]
             mediaserver_path = get_mediaserver_path(oid)
+            if not mediaserver_path:
+                print(f'{oid} missing, it will be removed from the redirections')
+                redirections_copy.pop(mediasite_url)
         else:
             mediaserver_url = 'SKIPPED'
             skipped_presentations += 1
@@ -73,3 +80,9 @@ with open('report.csv', 'w', newline='') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(rows)
+
+if redirections_copy != redirections:
+    fixed_redirections_path = 'redirections_fixed.json'
+    print(f'Saving fixed redirections into {fixed_redirections_path}')
+    with open(fixed_redirections_path, 'w') as f:
+        json.dump(redirections_copy, f, indent=2)
