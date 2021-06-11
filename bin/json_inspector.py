@@ -51,7 +51,7 @@ with open(input_file, 'r') as f:
     d = json.load(f)
     s = args.search
     if s:
-        print(f'Searching for {s} in filds {fields}')
+        print(f'Searching for {s} in fields {fields}')
     for f in d:
         folders += 1
         presentations += len(f.get('presentations', []))
@@ -63,7 +63,8 @@ with open(input_file, 'r') as f:
             f_copy['presentations'] = [f'{len(f["presentations"])} presentations (hidden)']
 
             for field in fields:
-                if s in f.get(field, ''):
+                val = f.get('field')
+                if val and s in val:
                     if f_copy not in search_results_folders:
                         search_results_folders.append(f_copy)
                         print(f'Found term "{s}" in field "{field}" of folder {f_copy["id"]}')
