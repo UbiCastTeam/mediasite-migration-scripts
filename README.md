@@ -131,4 +131,6 @@ optional arguments:
                         add custom mediasite data file.
 ```
 
+### Known limitations
 
+* Docker does not support symlinked folders (e.g. download/ folder), prefer a bind mount over symlinks
