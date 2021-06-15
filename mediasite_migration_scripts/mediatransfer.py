@@ -27,7 +27,7 @@ class MediaTransfer():
         self.created_channels = dict()
         self.slide_annot_type = None
         self.chapters_annot_type = None
-        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = 0
+        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = self.skipped_slides_count = self.skipped_chapters_count = 0
         self.failed = list()
 
         self.download_folder = dl = Path(config.get('download_folder', ''))
@@ -198,6 +198,8 @@ class MediaTransfer():
             'uploaded_composites': self.composite_uploaded_count,
             'uploaded_slides': self.uploaded_slides_count,
             'skipped': self.skipped_count,
+            'skipped_slides': self.skipped_slides_count,
+            'skipped_chapters_count': self.skipped_chapters_count,
             'failed': len(self.failed),
         }
 
@@ -675,13 +677,38 @@ class MediaTransfer():
                 'content': media_slides_details[i].get('Content'),
                 'type': self.slide_annot_type
             }
-            with open(path, 'rb') as file:
-                result = self.ms_client.api('annotations/post/', method='post', data=details, files={'attachment': file})
-            slide_up_ok = result.get('annotation')
-            if slide_up_ok is not None:
+            success = self._add_annotation_safe(details, path)
+            if success:
                 nb_slides_uploaded += 1
+            else:
+                self.skipped_slides_count += 1
 
         return nb_slides_downloaded, nb_slides_uploaded, nb_slides
+
+    def _add_annotation_safe(self, data, path=None):
+        try:
+            if path:
+                with open(path, 'rb') as file:
+                    files = {'attachment': file}
+                    result = self.ms_client.api('annotations/post/', method='post', data=data, files=files)
+            else:
+                result = self.ms_client.api('annotations/post/', method='post', data=data)
+            if result.get('annotation'):
+                return True
+        except Exception as e:
+            error_str = str(e)
+            media_oid = data['oid']
+            if "The timecode can't be superior to the video duration" in error_str:
+                logger.error(f'Failed to add annotation on media {media_oid} with data {data}, ignoring annotation: {e}')
+                self.skipped_slides_count += 1
+                return False
+            elif "Remote end closed connection without response" in error_str:
+                WAIT_S = 5
+                logger.warning(f'{error_str} while adding annotation on media {media_oid}: retrying in {WAIT_S}s')
+                time.sleep(WAIT_S)
+                return self._add_annotation_safe(data, path)
+            else:
+                raise Exception(e)
 
     def _download_slide(self, media_oid, url):
         ok = False
@@ -930,8 +957,9 @@ class MediaTransfer():
                 'time': c.get('chapter_position_ms'),
                 'type': self.chapters_annot_type
             }
-            result = self.ms_client.api('annotations/post', method='post', data=data)
-            ok = result.get('success', False)
+            success = self._add_annotation_safe(data)
+            if not success:
+                self.skipped_chapters_count += 1
 
         return ok
 
