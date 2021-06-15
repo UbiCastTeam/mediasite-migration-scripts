@@ -783,14 +783,19 @@ class MediaTransfer():
                             break
 
                     for presentation in folder['presentations']:
-                        presenters = str()
+                        description = ''
+                        presenters = list()
                         for p in presentation.get('other_presenters'):
-                            presenters += p.get('display_name', '')
+                            presenter_name = p.get('display_name')
+                            if presenter_name:
+                                presenters.append(presenter_name)
 
-                        description_text = presentation.get('description', '')
-                        description_text = description_text if description_text else ''
-                        presenters = f'[Presenters: {presenters}] \n<br/>' if presenters else ''
-                        description = f'{presenters}{description_text}'
+                        if presenters:
+                            description = 'Presenters: ' + ', '.join(presenters)
+
+                        original_description = presentation.get('description')
+                        if original_description:
+                            description += '\n<br/>' + original_description
 
                         v_composites_urls = list()
                         v_files = None
