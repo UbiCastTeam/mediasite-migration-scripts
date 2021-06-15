@@ -1,6 +1,5 @@
 import logging
 import json
-import os
 import time
 import requests
 import sys
@@ -689,7 +688,7 @@ class MediaTransfer():
         filename = url.split('/').pop()
         path = self.slides_folder / media_oid / filename
 
-        if os.path.exists(path):
+        if path.is_file():
             # do not re-download
             ok = True
         else:
