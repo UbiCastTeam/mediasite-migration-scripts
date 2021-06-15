@@ -745,7 +745,7 @@ class MediaTransfer():
         if hasattr(self, 'mediaserver_data'):
             mediaserver_data = self.mediaserver_data
         else:
-            logger.debug('No Mediaserver mapping. Generating mapping.')
+            logger.info('No Mediaserver mapping. Generating mapping.')
             for folder in self.mediasite_data:
                 if utils.is_folder_to_add(folder.get('path'), config=self.config):
                     has_catalog = (len(folder.get('catalogs', [])) > 0)
