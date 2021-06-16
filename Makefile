@@ -70,11 +70,11 @@ merge_all:
 clean_collect:
 	sudo rm -rf *mediasite_*.json presentations_*.txt samples.json
 
+clean_migrate:
+	sudo rm -rf downloads/composite redirections.json *mediaserver_data.json
+
 clean_merge:
 	sudo rm -f downloads/composite/*/composite.mp4 downloads/composite/*/mediaserver_layout.json
-
-clean_migrate:
-	sudo rm -rf downloads redirections.json *mediaserver_data.json
 
 clean:
 	$(MAKE) clean_collect

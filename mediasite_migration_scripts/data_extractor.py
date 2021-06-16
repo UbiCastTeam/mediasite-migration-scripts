@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class DataExtractor():
 
-    def __init__(self, config=dict(), max_folders=None, e2e_tests=False):
+    def __init__(self, config=dict(), force_slides_download=None, max_folders=None, e2e_tests=False):
         logger.info('Connecting...')
         self.session = None
         self.max_folders = max_folders
@@ -39,12 +39,16 @@ class DataExtractor():
         self.linked_catalogs = list()
         self.download_folder = dl = Path(config.get('download_folder', '/downloads'))
         self.slides_download_folder = dl / 'slides'
+        self.nb_all_slides = 0
+        self.nb_all_downloaded_slides = 0
+
         self.timeit(self.run)
 
     def run(self):
         self.folders = self.get_all_folders_infos()
         self.all_catalogs = self.get_all_catalogs()
         self.all_data = self.timeit(self.extract_mediasite_data)
+        self.download_all_slides()
 
     def timeit(self, method):
         before = time.time()
@@ -60,7 +64,7 @@ class DataExtractor():
             logger.info(f'{method} took {took_min} minutes')
         return results
 
-    def get_all_presentations(self):
+    def get_all_presentations(self, already_fetched=False):
         presentations = self.timeit(self.mediasite.presentation.get_all_presentations)
         return presentations
 
@@ -79,12 +83,14 @@ class DataExtractor():
                 list of items containing presentations' infos and
                     list of items containing videos and slides metadata
         '''
+
         presentations_folders = list()
+        mediasite_data_already_fetched = os.path.exists('mediasite_data.json')
 
         if parent_id is None:
             parent_id = self.mediasite.folder.root_folder_id
 
-        if os.path.exists('mediasite_data.json') and not self.e2e_tests:
+        if mediasite_data_already_fetched:
             try:
                 with open('mediasite_data.json') as f:
                     presentations_folders = json.load(f)
@@ -95,39 +101,39 @@ class DataExtractor():
                 logger.error('Failed to extract mediasite data from file.')
                 logger.debug(e)
         else:
+            logger.info('Extracting and ordering metadata.')
+
             if self.presentations is None:
                 self.presentations = self.get_all_presentations()
 
-            logger.info('Extracting and ordering metadata.')
             for i, folder in enumerate(self.folders):
                 if i > 1:
                     print(f'Requesting folders: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
 
-                path = self._find_folder_path(folder['id'], self.folders)
-                if utils.is_folder_to_add(path, config=self.config):
-                    logger.debug('-' * 50)
-                    logger.debug('Found folder : ' + path)
-                    catalogs = self.get_folder_catalogs_infos(folder['id'])
-                    presentation_infos = self.get_folder_presentations_infos(folder['id'])
-                    presentations_folders.append({
-                        **folder,
-                        'catalogs': catalogs,
-                        'path': path,
-                        'presentations': presentation_infos
-                    })
+                path = self._find_folder_path(folder['id'])
+                logger.debug('-' * 50)
+                logger.debug('Found folder : ' + path)
+                catalogs = self.get_folder_catalogs_infos(folder['id'])
+                presentation_infos = self.get_folder_presentations_infos(folder['id'])
+                presentations_folders.append({
+                    **folder,
+                    'catalogs': catalogs,
+                    'path': path,
+                    'presentations': presentation_infos
+                })
 
-                    if catalogs:
-                        self.linked_catalogs.extend(catalogs)
+                if catalogs:
+                    self.linked_catalogs.extend(catalogs)
 
-                    if self.max_folders and i >= int(self.max_folders):
-                        break
+                if self.max_folders and i >= int(self.max_folders):
+                    break
 
         return presentations_folders
 
-    def _find_folder_path(self, folder_id, folders, path=''):
-        for folder in folders:
+    def _find_folder_path(self, folder_id, path=''):
+        for folder in self.folders:
             if folder['id'] == folder_id:
-                path += self._find_folder_path(folder['parent_id'], folders, path)
+                path += self._find_folder_path(folder['parent_id'], path)
                 path += '/' + folder['name']
                 return path
         return ''
@@ -147,8 +153,8 @@ class DataExtractor():
                 presentations_infos.append(infos)
             except Exception:
                 pid = p.get('Id')
-                # logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
-                # time.sleep(5 * 60)
+                logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
+                time.sleep(5 * 60)
                 try:
                     infos = self.get_presentation_infos(p)
                     logger.info(f'Second try for {pid} passed')
@@ -438,12 +444,6 @@ class DataExtractor():
                 'details': slides.get('SlideDetails') if details else None
             }
 
-            nb_slides_downloaded = self.download_slides(presentation_id, slides_infos)
-            if nb_slides_downloaded == nb_slides:
-                logger.debug(f"Sucessfully download {nb_slides_downloaded} slides (amongs {nb_slides} slides) for presentation {presentation_id}")
-            else:
-                logger.error(f"Failed to download all slides: {nb_slides - nb_slides_downloaded} missing ({nb_slides_downloaded} / {nb_slides} downloaded)")
-
         return slides_infos
 
     def _is_useless_slides(self, slides):
@@ -456,9 +456,27 @@ class DataExtractor():
 
         return is_useless
 
-    def download_slides(self, presentation_id, slides):
-        presentation_slides_urls = slides.get('urls', [])
+    def download_all_slides(self):
+        all_ok = True
+        self.nb_all_slides = self.get_nb_all_slides()
+        for folder in self.all_data:
+            path = self._find_folder_path(folder['id'])
+            if utils.is_folder_to_add(path, config=self.config):
+                for presentation in folder.get('presentations', []):
+                    ok = self._download_slides(presentation.get('id'), presentation['slides'].get('urls', []))
+                # if at least one is false, all is false
+                all_ok *= ok
+
+        if all_ok:
+            logger.info(f'Sucessfully downloaded all slides: [{self.nb_all_slides}]')
+        else:
+            logger.error(f'Failed to download all slides from Mediasite: [{self.nb_all_downloaded_slides}] / [{self.nb_all_slides}]')
+        return all_ok
+
+    def _download_slides(self, presentation_id, presentation_slides_urls):
+        ok = False
         nb_slides_downloaded = 0
+        nb_slides = len(presentation_slides_urls)
 
         if self.session is None:
             self.session = requests.Session()
@@ -467,21 +485,42 @@ class DataExtractor():
         presentation_slides_download_folder.mkdir(parents=True, exist_ok=True)
 
         logger.debug(f'Downloading slides for presentation: {presentation_id}')
-        for i, url in enumerate(presentation_slides_urls):
+        for url in presentation_slides_urls:
             filename = url.split('/').pop()
             file_path = presentation_slides_download_folder / filename
 
+            print(f'Downloading slides: [{self.nb_all_downloaded_slides}] / [{self.nb_all_slides}] -- {round(self.nb_all_downloaded_slides / self.nb_all_slides * 100, 1)}%',
+                  end='\r')
+
             # do not re-download
-            if not file_path.is_file():
+            if file_path.is_file():
+                nb_slides_downloaded += 1
+            else:
                 r = self.session.get(url, auth=self.mediasite_auth)
                 if r.ok:
                     with open(file_path, 'wb') as f:
                         f.write(r.content)
                     nb_slides_downloaded += 1
+                    self.nb_all_downloaded_slides += 1
                 else:
                     logger.error(f'Failed to download {url}')
 
-        return nb_slides_downloaded
+        logger.debug(f'Downloaded [{nb_slides_downloaded}] / [{nb_slides}] slides.')
+
+        ok = (nb_slides_downloaded == nb_slides)
+        if not ok:
+            logger.error(f'Failed to download all slides for presentation {presentation_id}: [{nb_slides_downloaded}] / [{nb_slides}]')
+
+        return ok
+
+    def get_nb_all_slides(self):
+        nb_slides = 0
+        for folder in self.all_data:
+            path = self._find_folder_path(folder['id'])
+            if utils.is_folder_to_add(path, config=self.config):
+                for presentation in folder.get('presentations', []):
+                    nb_slides += len(presentation['slides'].get('urls', []))
+        return nb_slides
 
     def get_timed_events(self, presentation_id):
         chapters = []

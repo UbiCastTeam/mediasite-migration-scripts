@@ -4,6 +4,8 @@ import os
 import logging
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 RED, GREEN, YELLOW, BLUE, WHITE, LIGHT_RED = [1, 2, 3, 4, 67, 61]
 
 # The background is set with 40 plus the number of the color, and the foreground with 30

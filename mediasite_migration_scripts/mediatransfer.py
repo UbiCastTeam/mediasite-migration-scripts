@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, config=dict(), mediasite_data=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
+    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), download_folder=None, slides_download=None, unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
 
         self.compositor = None
@@ -33,10 +33,15 @@ class MediaTransfer():
         self.media_with_missing_slides = list()
         self.failed = list()
 
-        self.download_folder = dl = Path(config.get('download_folder', ''))
+        if download_folder:
+            self.download_folder = dl = Path(download_folder)
+        elif config.get('download_folder'):
+            self.download_folder = dl = Path(config.get('download_folder'))
+        else:
+            logger.error('Please provide a download folder path. Not found in config.json or in argument.')
+            sys.exit(1)
         self.slides_folder = dl / 'slides'
         self.composites_folder = dl / 'composite'
-        self.mediasite_data = mediasite_data
 
         retry_strategy = Retry(
             total=3,
@@ -48,6 +53,7 @@ class MediaTransfer():
         self.dl_session.mount('https://', adapter)
         self.dl_session.mount('http://', adapter)
 
+        self.mediasite_data = mediasite_data
         self.formats_allowed = self.config.get('videos_formats_allowed', {})
         self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
         self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
@@ -119,7 +125,7 @@ class MediaTransfer():
             if not media.get('ref', {}).get('media_oid'):
                 try:
                     data = media.get('data', {})  # mediaserver data
-                    presentation_id = json.loads(data.get('external_data', {})).get('id')
+                    presentation_id = json.loads(data.get('external_data', '{}')).get('id')
 
                     channel_path = media['ref'].get('channel_path')
                     if channel_path.startswith(self.mediasite_userfolder):
@@ -162,7 +168,7 @@ class MediaTransfer():
                             continue
                         existing_media = self.get_ms_media_by_ref(presentation_id)
                         if existing_media:
-                            media_oid = existing_media['oid']
+                            media_oid = media['ref']['media_oid'] = existing_media['oid']
                             logger.warning(f'Presentation {presentation_id} already present on MediaServer (oid: {media_oid}), not reuploading')
                         else:
                             # store original presentation id to avoid duplicates
@@ -180,14 +186,12 @@ class MediaTransfer():
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 self.uploaded_count += 1
-                                oid = result['oid']
-                                self.add_presentation_redirection(presentation_id, oid)
-                                media['ref']['media_oid'] = oid
+                                media_oid = result['oid']
+                                self.add_presentation_redirection(presentation_id, media_oid)
+                                media['ref']['media_oid'] = media_oid
                                 media['ref']['slug'] = result.get('slug')
                                 if data.get('api_key'):
                                     del data['api_key']
-
-                                self.migrate_slides(media)
 
                                 if data.get('video_type') == 'audio_only':
                                     thumb_ok = self._send_audio_thumb(media['ref']['media_oid'])
@@ -199,6 +203,10 @@ class MediaTransfer():
                             else:
                                 logger.error(f"Failed to upload media: {presentation_id}")
                                 self.failed.append(presentation_id)
+
+                        if not self.slides_already_uploaded(media_oid):
+                            self.migrate_slides(media)
+
                 except requests.exceptions.ReadTimeout:
                     logger.warning('Request timeout. Another attempt will be lauched at the end.')
                     continue
@@ -315,6 +323,7 @@ class MediaTransfer():
     def migrate_composites_videos(self):
         total_composite = len(self.composites_medias)
         logger.info(f'Merging and migrating {total_composite} composite videos')
+
         self.download_composites_videos()
 
         for index, media in enumerate(self.composites_medias):
@@ -375,7 +384,6 @@ class MediaTransfer():
         if self.compositor is None:
             self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
 
-        all_ok = False
         for i, v_composite in enumerate(self.composites_medias):
             print(utils.get_progress_string(i, len(self.composites_medias)) + ' Downloading composite', end='\r')
             data = v_composite.get('data', {})
@@ -390,7 +398,6 @@ class MediaTransfer():
                 logger.warning(f'Failed to download composite videos for presentation {presentation_id}.')
             else:
                 pass
-        return all_ok
 
     def upload_local_file(self, file_path, data):
         logger.debug(f'Uploading local file (composite video) : {file_path}')
@@ -655,47 +662,37 @@ class MediaTransfer():
         return channel
 
     def migrate_slides(self, media):
-        media_oid = media['ref'].get('media_oid')
+        presentation_id = json.loads(media['data']['external_data'])['id']
         media_slides = media['data'].get('slides')
-        nb_slides_downloaded, nb_slides_uploaded, nb_slides = 0, 0, 0
+        nb_slides_uploaded, nb_slides = 0, 0
 
         if media_slides:
+            logger.debug(f"Migrating slides for medias: {media['ref']['media_oid']}")
+
             if media_slides.get('stream_type') == 'Slide' and media_slides.get('details'):
-                slides_dir = self.slides_folder / media_oid
-                slides_dir.mkdir(parents=True, exist_ok=True)
-                nb_slides_downloaded, nb_slides_uploaded, nb_slides = self._migrate_slides(media)
+                slides_dir = self.slides_folder / presentation_id
+                nb_slides = len(media_slides)
+                nb_slides_uploaded = self._upload_slides(media, slides_dir)
                 self.uploaded_slides_count += nb_slides_uploaded
             else:
-                logger.debug(f'Media {media_oid} has slides binded to video (no timecode). Detect slides will be lauched in Mediaserver.')
+                logger.debug(f"Media {media['ref']['media_oid']} has slides binded to video (no timecode). Detect slides will be lauched in Mediaserver.")
 
-        logger.debug(f"{nb_slides_downloaded} slides downloaded and {nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
+        logger.debug(f"{nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
 
         return nb_slides_uploaded, nb_slides
 
-    def _migrate_slides(self, media):
+    def _upload_slides(self, media, slides_dir):
         media_oid = media['ref']['media_oid']
-        media_slides = media['data']['slides']
         media_slides_details = media['data']['slides']['details']
-        nb_slides = len(media_slides.get('urls', []))
-        nb_slides_downloaded = 0
         nb_slides_uploaded = 0
 
-        logger.debug(f'Migrating slides for medias: {media_oid}')
-        for i, url in enumerate(media_slides['urls']):
-            if self.e2e_test:
-                path = url
-            else:
-                slide_dl_ok, path = self._download_slide(media_oid, url)
-                if slide_dl_ok:
-                    nb_slides_downloaded += 1
-                else:
-                    logger.error(f'Failed to download slide {i + 1} for media {media_oid}, skipping slide')
-                    if media_oid not in self.media_with_missing_slides:
-                        self.media_with_missing_slides.append(media_oid)
-                    continue
+        if self.dl_session is None:
+            self.dl_session = requests.Session()
+        if self.slide_annot_type is None:
+            self.slide_annot_type = self._get_annotation_type_id(media_oid, annotation_type='slide')
 
-            if self.slide_annot_type is None:
-                self.slide_annot_type = self._get_annotation_type_id(media_oid, annot_type='slide')
+        logger.debug(f'Uploading slides for medias: {media_oid}')
+        for i, slide_path in enumerate(slides_dir.iterdir()):
             details = {
                 'oid': media_oid,
                 'time': media_slides_details[i].get('TimeMilliseconds'),
@@ -703,13 +700,28 @@ class MediaTransfer():
                 'content': media_slides_details[i].get('Content'),
                 'type': self.slide_annot_type
             }
-            success = self._add_annotation_safe(details, path)
+            success = self._add_annotation_safe(details, slide_path)
             if success:
-                nb_slides_uploaded += 1
-            else:
-                self.skipped_slides_count += 1
+                with open(slide_path, 'rb') as file:
+                    result = self.ms_client.api('annotations/post/', method='post', data=details, files={'attachment': file})
+                    slide_up_ok = result.get('annotation')
+                if slide_up_ok is not None:
+                    nb_slides_uploaded += 1
+                else:
+                    self.skipped_slides_count += 1
 
-        return nb_slides_downloaded, nb_slides_uploaded, nb_slides
+        return nb_slides_uploaded
+
+    def _get_annotation_type_id(self, media_oid, annotation_type):
+        annotation_type = int()
+
+        result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': media_oid})
+        if result.get('success'):
+            for a in result.get('types'):
+                if a.get('slug') == annotation_type:
+                    annotation_type = a.get('id')
+
+        return annotation_type
 
     def _add_annotation_safe(self, data, path=None):
         media_oid = data['oid']
@@ -734,35 +746,16 @@ class MediaTransfer():
                 self.media_with_missing_slides.append(media_oid)
             return False
 
-    def _download_slide(self, media_oid, url):
-        ok = False
-        filename = url.split('/').pop()
-        path = self.slides_folder / media_oid / filename
+    def slides_already_uploaded(self, media_oid):
+        already_up = True
 
-        if path.is_file():
-            # do not re-download
-            ok = True
-        else:
-            r = self.dl_session.get(url, auth=self.mediasite_auth)
-            if r.ok:
-                with open(path, 'wb') as f:
-                    f.write(r.content)
-                ok = r.ok
-            else:
-                logger.error(f'Failed to download {url}')
+        result = self.ms_client.api('annotations/slides/list', method='get', params={'oid': media_oid})
+        # if media not found (success = false), same behavior if already_up (do not upload)
+        already_up = not (result.get('success') and len(result.get('slides')) == 0)
+        if already_up:
+            logger.warning(f'Slides already uploaded for media {media_oid}')
 
-        return ok, path
-
-    def _get_annotation_type_id(self, media_oid, annot_type):
-        annotation_type = int()
-
-        result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': media_oid})
-        if result.get('success'):
-            for a in result.get('types'):
-                if a.get('slug') == annot_type:
-                    annotation_type = a.get('id')
-
-        return annotation_type
+        return already_up
 
     def _send_audio_thumb(self, media_oid):
         file = open('mediasite_migration_scripts/files/utils/audio.jpg', 'rb')
