@@ -151,6 +151,13 @@ class MediaTransfer():
                         else:
                             # store original presentation id to avoid duplicates
                             data['external_ref'] = presentation_id
+
+                            # mediaserver currently crashes when providing more than 254 characters in keywords
+                            # keeping in mind that it replaces "," by ", " (2 chars) we need to truncate it by
+                            # 254 - count(',') * 2
+                            if data['keywords']:
+                                truncate_to = 254 - data['keywords'].count(',') * 2
+                                data['keywords'] = data['keywords'][:truncate_to]
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 self.uploaded_count += 1
