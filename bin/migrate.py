@@ -4,6 +4,8 @@ import json
 import os
 import sys
 import logging
+import traceback
+
 
 from mediatransfer import MediaTransfer
 import mediasite_migration_scripts.utils.common as utils
@@ -129,6 +131,7 @@ if __name__ == '__main__':
         logger.warning('Interrupted by the user')
     except Exception as e:
         logger.error(f'Error during upload: {e}')
+        traceback.print_exc()
 
     # ensure that we save redirections even if we crashed
     mediatransfer.write_redirections_file()
