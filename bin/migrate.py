@@ -132,6 +132,7 @@ if __name__ == '__main__':
 
     # ensure that we save redirections even if we crashed
     mediatransfer.write_redirections_file()
+    mediatransfer.dump_incomplete_media()
 
     if options.verbose:
         mediaserver_data = mediatransfer.mediaserver_data

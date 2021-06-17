@@ -28,6 +28,7 @@ class MediaTransfer():
         self.slide_annot_type = None
         self.chapters_annot_type = None
         self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = self.skipped_slides_count = self.skipped_chapters_count = 0
+        self.media_with_missing_slides = list()
         self.failed = list()
 
         self.download_folder = dl = Path(config.get('download_folder', ''))
@@ -77,6 +78,14 @@ class MediaTransfer():
                 json.dump(self.redirections, f, indent=2)
         else:
             logger.info('No redirections to write')
+
+    def dump_incomplete_media(self):
+        incomplete_file = 'incomplete_presentations.csv'
+        if self.media_with_missing_slides:
+            logger.info(f'Writing {len(self.media_with_missing_slides)} oids in {incomplete_file}')
+            with open(incomplete_file, 'a') as f:
+                for oid in self.media_with_missing_slides:
+                    f.write(oid + ',missing_slides\n')
 
     def upload_medias(self, max_videos=None):
         before = time.time()
@@ -673,7 +682,10 @@ class MediaTransfer():
                 if slide_dl_ok:
                     nb_slides_downloaded += 1
                 else:
-                    logger.error(f'Failed to download slide {i + 1} for media {media_oid}')
+                    logger.error(f'Failed to download slide {i + 1} for media {media_oid}, skipping slide')
+                    if media_oid not in self.media_with_missing_slides:
+                        self.media_with_missing_slides.append(media_oid)
+                    continue
 
             if self.slide_annot_type is None:
                 self.slide_annot_type = self._get_annotation_type_id(media_oid, annot_type='slide')
@@ -708,6 +720,8 @@ class MediaTransfer():
             if "The timecode can't be superior to the video duration" in error_str:
                 logger.error(f'Failed to add annotation on media {media_oid} with data {data}, ignoring annotation: {e}')
                 self.skipped_slides_count += 1
+                if media_oid not in self.media_with_missing_slides:
+                    self.media_with_missing_slides.append(media_oid)
                 return False
             elif "Remote end closed connection without response" in error_str:
                 WAIT_S = 5
