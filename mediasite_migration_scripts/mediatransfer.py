@@ -200,12 +200,11 @@ class MediaTransfer():
 
                                 if len(data.get('chapters')) > 0:
                                     self.add_chapters(media['ref']['media_oid'], chapters=data['chapters'])
+
+                                self.migrate_slides(media)
                             else:
                                 logger.error(f"Failed to upload media: {presentation_id}")
                                 self.failed.append(presentation_id)
-
-                        if not self.slides_already_uploaded(media_oid):
-                            self.migrate_slides(media)
 
                 except requests.exceptions.ReadTimeout:
                     logger.warning('Request timeout. Another attempt will be lauched at the end.')
