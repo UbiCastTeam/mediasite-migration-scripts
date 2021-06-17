@@ -176,7 +176,7 @@ class DataExtractor():
                 has_slides_details = True
                 break
 
-        owner_infos = self.get_user_infos(username=presentation.get('RootOwner', ''))
+        users_infos = self.get_users_infos(presentation)
 
         presenter_display_name = presentation.get('PrimaryPresenter', '')
         if presenter_display_name.startswith('Default Presenter'):
@@ -200,9 +200,9 @@ class DataExtractor():
             'title': presentation['Title'],
             'creation_date': creation_date.strftime(self.mediasite_format_date),
             'presenter_display_name': presenter_display_name,
-            'owner_username': owner_infos.get('username', ''),
-            'owner_display_name': owner_infos.get('display_name', ''),
-            'owner_mail': owner_infos.get('mail', ''),
+            'owner': users_infos.get('owner', {}),
+            'creator': users_infos.get('creator', {}),
+            'primary_presenter': users_infos.get('presenter', {}),
             'creator': presentation.get('Creator', ''),
             'other_presenters': self.get_presenters_infos(pid),
             'availability': self.mediasite.presentation.get_availability(pid),
@@ -249,8 +249,16 @@ class DataExtractor():
                 folder_catalogs.append(infos)
         return folder_catalogs
 
-    def get_user_infos(self, username=str()):
-        logger.debug(f'Getting user infos for username: {username}.')
+    def get_users_infos(self, presentation):
+        logger.debug(f"Getting all users infos for presentation {presentation.get('Id')}.")
+        return {
+            'owner': self._get_user_infos(presentation.get('RootOwner', '')),
+            'presenter': self._get_user_infos(presentation.get('PrimaryPresenter', '')),
+            'creator': self._get_user_infos(presentation.get('Creator', '')),
+        }
+
+    def _get_user_infos(self, username):
+        logger.debug(f'Getting user info for {username}')
         user_infos = dict()
 
         for u in self.users:
