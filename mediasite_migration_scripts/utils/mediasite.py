@@ -1,4 +1,30 @@
 #!/usr/bin/env python3
+import requests
+
+
+class MediasiteClient:
+    def __init__(self, config):
+        self.headers = {
+            'sfapikey': config['mediasite_api_key'],
+        }
+        self.auth = requests.auth.HTTPBasicAuth(config['mediasite_api_user'], config['mediasite_api_password'])
+        self.url_prefix = config['mediasite_api_url'].rstrip('/')
+        self.session = requests.Session()
+
+    def get_presentation(self, presentation_id):
+        r = self.do_request(f"/Presentations('{presentation_id}')?$select=full")
+        if r.get('odata.error'):
+            return
+        else:
+            return r
+
+    def do_request(self, suffix):
+        url = f"{self.url_prefix}/{suffix.lstrip('/')}"
+        return self.session.get(url, headers=self.headers, auth=self.auth).json()
+
+    def close(self):
+        self.session.close()
+
 
 def get_slides_count(presentation):
     count = 0

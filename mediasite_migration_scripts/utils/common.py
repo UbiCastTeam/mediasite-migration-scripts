@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import logging
@@ -107,6 +108,7 @@ def is_folder_to_add(path, config={}):
 
 
 def read_json(path):
+    logging.info(f'Loading {path}')
     with open(path, 'r') as f:
         return json.load(f)
 
@@ -136,3 +138,14 @@ def get_timecode_from_sec(seconds):
 
 def get_mediasite_host(url):
     return url.split('/')[2]
+
+
+def get_argparser():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help='Print all information to stdout.',
+    )
+    return parser
