@@ -52,6 +52,12 @@ if __name__ == '__main__':
             help='Path to mediaserver data file (output).'
         )
         parser.add_argument(
+            '--ommit-migration-files',
+            action='store_true',
+            default=False,
+            help='Ommit mediaserver_data.json and redirection.json files (make more requests to check existing medias)'
+        )
+        parser.add_argument(
             '--download-folder',
             type=str,
             help='Folder name for downloads. Will be created if needed.',
@@ -75,7 +81,6 @@ if __name__ == '__main__':
             default=False,
             help='Skip importing media that are not composite videos.'
         )
-
         return parser.parse_args()
 
     options = manage_opts()
@@ -121,7 +126,7 @@ if __name__ == '__main__':
         logger.error('--------- Aborted ---------')
         sys.exit(1)
 
-    mediatransfer = MediaTransfer(config, mediasite_data)
+    mediatransfer = MediaTransfer(config, mediasite_data, options.ommit_migration_files)
 
     logger.info('Uploading videos')
     try:
