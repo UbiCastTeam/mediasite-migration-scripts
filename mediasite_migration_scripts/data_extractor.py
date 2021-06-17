@@ -158,6 +158,7 @@ class DataExtractor():
         logger.debug('-' * 50)
         logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
 
+        pid = presentation['Id']
         has_slides_details = False
         for stream_type in presentation.get('Streams'):
             if stream_type.get('StreamType') == 'Slide':
@@ -170,7 +171,7 @@ class DataExtractor():
         if presenter_display_name.startswith('Default Presenter'):
             presenter_display_name = None
 
-        presentation_analytics = self.mediasite.presentation.get_analytics(presentation.get('Id', ''))
+        presentation_analytics = self.mediasite.presentation.get_analytics(pid)
 
         # we split at '.' to pop out millisesonds, and remove 'Z' tag
         creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
@@ -180,27 +181,31 @@ class DataExtractor():
             creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
             creation_date = min([creation_date, record_date])
 
+        is_private = presentation['Private']
+        status = presentation['Status']
+
         infos = {
-            'id': presentation.get('Id', ''),
-            'title': presentation.get('Title', ''),
+            'id': pid,
+            'title': presentation['Title'],
             'creation_date': creation_date.strftime(self.mediasite_format_date),
             'presenter_display_name': presenter_display_name,
             'owner_username': owner_infos.get('username', ''),
             'owner_display_name': owner_infos.get('display_name', ''),
             'owner_mail': owner_infos.get('mail', ''),
             'creator': presentation.get('Creator', ''),
-            'other_presenters': self.get_presenters_infos(presentation.get('Id', '')),
-            'availability': self.mediasite.presentation.get_availability(presentation.get('Id', '')),
-            'published_status': presentation.get('Status') == 'Viewable' and not presentation.get('Private'),
+            'other_presenters': self.get_presenters_infos(pid),
+            'availability': self.mediasite.presentation.get_availability(pid),
+            'private': is_private,
+            'published_status': status == 'Viewable' and not is_private,
             'has_slides_details': has_slides_details,
             'description': presentation.get('Description', ''),
             'tags': presentation.get('TagList', ''),
-            'timed_events': self.get_timed_events(presentation.get('Id', '')),
+            'timed_events': self.get_timed_events(pid),
             'total_views': presentation_analytics.get('TotalViews', ''),
             'last_viewed': presentation_analytics.get('LastWatched', ''),
             'url': presentation.get('#Play').get('target', ''),
         }
-        infos['videos'] = self.get_videos_infos(presentation.get('Id'))
+        infos['videos'] = self.get_videos_infos(pid)
         infos['slides'] = self.get_slides_infos(infos, details=True)
         return infos
 
