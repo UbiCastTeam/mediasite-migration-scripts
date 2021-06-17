@@ -820,7 +820,11 @@ class MediaTransfer():
                             else:
                                 v_files = videos[0].get('files', [])
 
-                            v_url = self._find_file_to_upload(v_files)
+                            skip_check = False
+                            # there is no use in checking if the video is available if we already processed it
+                            if self.search_mediasite_id_in_redirections(presentation['id']):
+                                skip_check = True
+                            v_url = self._find_file_to_upload(v_files, skip_check)
 
                         if v_url:
                             has_catalog = len(folder.get('catalogs', [])) > 0
@@ -935,7 +939,7 @@ class MediaTransfer():
                     break
         return videos
 
-    def _find_file_to_upload(self, video_files):
+    def _find_file_to_upload(self, video_files, skip_check=False):
         video_url = file_url = ''
         for file in video_files:
             if file.get('format') == 'video/mp4':
@@ -946,12 +950,14 @@ class MediaTransfer():
                 break
 
         if file_url:
-            if self.dl_session is None:
-                self.dl_session = requests.Session()
-
-            video_found = self.dl_session.head(file_url)
-            if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
+            if skip_check:
                 video_url = file_url
+            else:
+                if self.dl_session is None:
+                    self.dl_session = requests.Session()
+                video_found = self.dl_session.head(file_url)
+                if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
+                    video_url = file_url
 
         return video_url
 
