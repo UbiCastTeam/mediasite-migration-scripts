@@ -2,6 +2,8 @@ import logging
 import json
 import time
 import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 import sys
 from pathlib import Path
 from functools import lru_cache
@@ -20,7 +22,6 @@ class MediaTransfer():
     def __init__(self, config=dict(), mediasite_data=dict(), unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
 
-        self.dl_session = None
         self.compositor = None
         self.composites_medias = list()
         self.medias_folders = list()
@@ -35,6 +36,16 @@ class MediaTransfer():
         self.slides_folder = dl / 'slides'
         self.composites_folder = dl / 'composite'
         self.mediasite_data = mediasite_data
+
+        retry_strategy = Retry(
+            total=3,
+            status_forcelist=[429, 500, 502, 503, 504],
+            method_whitelist=["HEAD", "GET"]
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.dl_session = requests.Session()
+        self.dl_session.mount('https://', adapter)
+        self.dl_session.mount('http://', adapter)
 
         self.formats_allowed = self.config.get('videos_formats_allowed', {})
         self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
@@ -54,12 +65,15 @@ class MediaTransfer():
         if self.unit_test:
             self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
         else:
-            self.ms_config = {'API_KEY': self.config.get('mediaserver_api_key', ''),
-                              'CLIENT_ID': 'mediasite-migration-client',
-                              'SERVER_URL': self.config.get('mediaserver_url', ''),
-                              'VERIFY_SSL': False,
-                              'LOG_LEVEL': 'WARNING',
-                              'TIMEOUT': 120}
+            self.ms_config = {
+                'API_KEY': self.config.get('mediaserver_api_key', ''),
+                'CLIENT_ID': 'mediasite-migration-client',
+                'SERVER_URL': self.config.get('mediaserver_url', ''),
+                'VERIFY_SSL': False,
+                'LOG_LEVEL': 'WARNING',
+                'TIMEOUT': 120,
+                'MAX_RETRY': 3,
+            }
             self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
 
             if root_channel_oid:
@@ -167,6 +181,7 @@ class MediaTransfer():
                             if data['keywords']:
                                 truncate_to = 254 - data['keywords'].count(',') * 2
                                 data['keywords'] = data['keywords'][:truncate_to]
+
                             # lower transcoding priority
                             data['priority'] = 'low'
                             result = self.ms_client.api('medias/add', method='post', data=data)
@@ -442,7 +457,7 @@ class MediaTransfer():
             val = user_id
         params[key] = val
         try:
-            result = self.ms_client.api('channels/personal/', method='get', params=params)
+            result = self.ms_client.api('channels/personal/', method='get', params=params, max_retry=None)
             if result and result.get('success'):
                 channel_oid = result.get('oid')
                 return channel_oid
@@ -672,9 +687,6 @@ class MediaTransfer():
         nb_slides_downloaded = 0
         nb_slides_uploaded = 0
 
-        if self.dl_session is None:
-            self.dl_session = requests.Session()
-
         logger.debug(f'Migrating slides for medias: {media_oid}')
         for i, url in enumerate(media_slides['urls']):
             if self.e2e_test:
@@ -707,31 +719,27 @@ class MediaTransfer():
         return nb_slides_downloaded, nb_slides_uploaded, nb_slides
 
     def _add_annotation_safe(self, data, path=None):
-        try:
-            if path:
-                with open(path, 'rb') as file:
-                    files = {'attachment': file}
-                    result = self.ms_client.api('annotations/post/', method='post', data=data, files=files)
-            else:
-                result = self.ms_client.api('annotations/post/', method='post', data=data)
-            if result.get('annotation'):
-                return True
-        except Exception as e:
-            error_str = str(e)
-            media_oid = data['oid']
-            if "The timecode can't be superior to the video duration" in error_str:
-                logger.error(f'Failed to add annotation on media {media_oid} with data {data}, ignoring annotation: {e}')
-                self.skipped_slides_count += 1
-                if media_oid not in self.media_with_missing_slides:
-                    self.media_with_missing_slides.append(media_oid)
-                return False
-            elif "Remote end closed connection without response" in error_str:
-                WAIT_S = 5
-                logger.warning(f'{error_str} while adding annotation on media {media_oid}: retrying in {WAIT_S}s')
-                time.sleep(WAIT_S)
-                return self._add_annotation_safe(data, path)
-            else:
-                raise Exception(e)
+        media_oid = data['oid']
+        arguments = {
+            'method': 'post',
+            'data': data,
+            'ignored_error_strings': ["The timecode can't be superior to the video duration"]  # mediasite may have slides with timecodes after the duration of the video
+        }
+        if path:
+            # slide upload
+            with open(path, 'rb') as f:
+                arguments['files'] = {'attachment': f}
+                result = self.ms_client.api('annotations/post/', **arguments)
+        else:
+            result = self.ms_client.api('annotations/post/', **arguments)
+        if result and result.get('annotation'):
+            return True
+        else:
+            logger.error(f'Failed to add annotation on media {media_oid} with data {data}, ignoring annotation')
+            self.skipped_slides_count += 1
+            if media_oid not in self.media_with_missing_slides:
+                self.media_with_missing_slides.append(media_oid)
+            return False
 
     def _download_slide(self, media_oid, url):
         ok = False
@@ -969,8 +977,6 @@ class MediaTransfer():
             if skip_check:
                 video_url = file_url
             else:
-                if self.dl_session is None:
-                    self.dl_session = requests.Session()
                 video_found = self.dl_session.head(file_url)
                 if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
                     video_url = file_url
