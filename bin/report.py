@@ -54,9 +54,9 @@ def get_mediaserver_path(media):
         return
 
 
-def set_media_private(oid, private_bool):
-    logging.info(f'Setting {oid} to validated: {not private_bool}')
-    r = ms_client.api('medias/edit/', method='post', data={'oid': oid, 'validated': 'no' if private_bool else 'yes'})
+def set_media_published(oid, published_bool):
+    logging.info(f'Setting {oid} to validated: {published_bool}')
+    r = ms_client.api('medias/edit/', method='post', data={'oid': oid, 'validated': 'yes' if published_bool else 'no'})
     if not r or not r['success']:
         logging.error(r)
 
@@ -77,11 +77,13 @@ for f in folders_to_process:
         print(utils.get_progress_string(processed_presentations, total_presentations), end='\r')
         processed_presentations += 1
         p_id = p['id']
-        private = True
+        should_be_published = False
         if args.fix_private:
             presentation = mediasite_client.get_presentation(p_id)
             if presentation:
                 private = presentation['Private']
+                status = presentation['Status']
+                should_be_published = (status == 'Viewable') and not private
             else:
                 # presentation does not exist
                 pass
@@ -92,13 +94,13 @@ for f in folders_to_process:
             oid = mediaserver_url.split('/')[4]
             media = get_mediaserver_media(oid)
             if args.fix_private:
-                is_private = not media['info']['validated']
-                if private != is_private:
-                    print(f'Video {oid} private status mismatch: {is_private} vs expected {private}')
+                is_published = media['info']['validated']
+                if is_published != should_be_published:
+                    print(f'Video {oid} published status mismatch: {is_published} vs expected {should_be_published}')
                     if args.apply_changes:
-                        set_media_private(oid, private)
+                        set_media_published(oid, should_be_published)
                     else:
-                        logging.info(f'Dry run: not setting {oid} published to {not private}')
+                        logging.info(f'Dry run: not setting {oid} published to {should_be_published}')
             mediaserver_path = get_mediaserver_path(media)
             if not mediaserver_path:
                 print(f'{oid} missing, it will be removed from the redirections')
