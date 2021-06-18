@@ -598,7 +598,9 @@ class MediaTransfer():
 
         result = self.ms_client.api('channels/edit/', method='post', data=data)
         if result and not result.get('success'):
-            logger.error(f"Failed to edit channel {channel_oid} with data {data} / Error: {result.get('error')}")
+            logdata = dict(data)
+            logdata.pop('api_key', None)  # hide api key from logs
+            logger.error(f"Failed to edit channel {channel_oid} with data {logdata} / Error: {result.get('error')}")
         elif not result:
             logger.error(f'Unknown error when trying to edit channel {channel_oid} with data {data}: {result}')
 
