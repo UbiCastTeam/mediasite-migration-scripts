@@ -30,12 +30,12 @@ class DataExtractor():
             'whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
-        self.mediasite_format_date = '%Y-%m-%dT%H:%M:%S'
         self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
 
         self.presentations = None
         self.failed_presentations = list()
         self.users = list()
+        self.skipped_users = list()
         self.linked_catalogs = list()
         self.download_folder = dl = Path(config.get('download_folder', '/downloads'))
         self.slides_download_folder = dl / 'slides'
@@ -49,6 +49,7 @@ class DataExtractor():
         self.all_catalogs = self.get_all_catalogs()
         self.all_data = self.timeit(self.extract_mediasite_data)
         self.download_all_slides()
+        print(f'Skipped users : \n {self.skipped_users}')
 
     def timeit(self, method):
         before = time.time()
@@ -154,7 +155,7 @@ class DataExtractor():
             except Exception:
                 pid = p.get('Id')
                 logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
-                time.sleep(5 * 60)
+                # time.sleep(5 * 60)
                 try:
                     infos = self.get_presentation_infos(p)
                     logger.info(f'Second try for {pid} passed')
@@ -170,55 +171,36 @@ class DataExtractor():
         logger.debug(f"Getting all infos for presentation {presentation.get('Id')}")
 
         pid = presentation['Id']
-        has_slides_details = False
-        for stream_type in presentation.get('Streams'):
-            if stream_type.get('StreamType') == 'Slide':
-                has_slides_details = True
-                break
-
         users_infos = self.get_users_infos(presentation)
-
-        presenter_display_name = presentation.get('PrimaryPresenter', '')
-        if presenter_display_name.startswith('Default Presenter'):
-            presenter_display_name = None
-
         presentation_analytics = self.mediasite.presentation.get_analytics(pid)
 
-        # we split at '.' to pop out millisesonds, and remove 'Z' tag
-        creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00').split('.')[0].replace('Z', '')
-        if presentation.get('RecordDate', ''):
-            record_date_str = presentation['RecordDate'].split('.')[0].replace('Z', '')
-            record_date = datetime.strptime(record_date_str, self.mediasite_format_date)
-            creation_date = datetime.strptime(creation_date_str, self.mediasite_format_date)
-            creation_date = min([creation_date, record_date])
-
-        is_private = presentation['Private']
-        status = presentation['Status']
-
-        infos = {
+        presentation_infos = {
             'id': pid,
-            'title': presentation['Title'],
-            'creation_date': creation_date.strftime(self.mediasite_format_date),
-            'presenter_display_name': presenter_display_name,
+            'title': presentation.get('Title', ''),
+            'creation_date': self.get_creation_date(presentation),
             'owner': users_infos.get('owner', {}),
             'creator': users_infos.get('creator', {}),
             'primary_presenter': users_infos.get('presenter', {}),
-            'creator': presentation.get('Creator', ''),
             'other_presenters': self.get_presenters_infos(pid),
             'availability': self.mediasite.presentation.get_availability(pid),
-            'private': is_private,
-            'published_status': status == 'Viewable' and not is_private,
-            'has_slides_details': has_slides_details,
+            'status': presentation.get('Status', ''),
+            'private': presentation.get('Private'),
             'description': presentation.get('Description', ''),
             'tags': presentation.get('TagList', ''),
             'timed_events': self.get_timed_events(pid),
             'total_views': presentation_analytics.get('TotalViews', ''),
             'last_viewed': presentation_analytics.get('LastWatched', ''),
             'url': presentation.get('#Play').get('target', ''),
+            'videos': self.get_videos_infos(presentation.get('Id')),
+            'slides': self.get_slides_infos(presentation)
         }
-        infos['videos'] = self.get_videos_infos(pid)
-        infos['slides'] = self.get_slides_infos(infos, details=True)
-        return infos
+
+        # we need videos infos before getting slides and chapters in order to check timecodes
+        request_details = self._has_slides_details(presentation)
+        presentation_infos['slides'] = self.get_slides_infos(presentation_infos, request_details)
+        presentation_infos['timed_events'] = self.get_timed_events(presentation_infos)
+
+        return presentation_infos
 
     def get_all_folders_infos(self):
         folders_infos = list()
@@ -258,16 +240,22 @@ class DataExtractor():
         }
 
     def _get_user_infos(self, username):
-        logger.debug(f'Getting user info for {username}')
         user_infos = dict()
 
-        for u in self.users:
-            if u.get('username') == username:
-                logger.debug(f'User {username} already fetched.')
-                user_infos = u
-                break
+        if username.startswith('Default Presenter'):
+            pass
+        elif '&' in username:
+            logger.warning(f'"&" in username {username}, skipping. ')
+            self.skipped_users.append(username)
+        else:
+            for u in self.users:
+                if u.get('username') == username:
+                    logger.debug(f'User {username} already fetched.')
+                    user_infos = u
+                    break
 
         if not user_infos:
+            logger.debug(f'Getting user info for {username}')
             user_infos = {
                 'username': username,
             }
@@ -279,6 +267,28 @@ class DataExtractor():
             self.users.append(user_infos)
 
         return user_infos
+
+    def get_creation_date(self, presentation):
+        creation_date_str = str()
+        mediasite_format_date = '%Y-%m-%dT%H:%M:%S'
+
+        creation_date_str = presentation.get('CreationDate', '0001-12-25T00:00:00.00Z')
+        # MediaServer API do not accept microseconds
+        if creation_date_str.endswith('Z'):
+            creation_date_str = creation_date_str[:-1].split('.')[0]
+
+        if presentation.get('RecordDate', ''):
+            creation_date = datetime.strptime(creation_date_str, mediasite_format_date)
+
+            record_date_str = presentation['RecordDate']
+            if record_date_str.endswith('Z'):
+                record_date_str = record_date_str[:-1].split('.')[0]
+            record_date = datetime.strptime(record_date_str, mediasite_format_date)
+
+            creation_date = min([record_date, creation_date])
+            creation_date_str = creation_date.strftime(mediasite_format_date)
+
+        return creation_date_str
 
     def get_presenters_infos(self, presentation_id):
         presenters_infos = list()
@@ -413,11 +423,11 @@ class DataExtractor():
 
         return encoding_infos
 
-    def get_slides_infos(self, presentation, details=True):
-        presentation_id = presentation['id']
+    def get_slides_infos(self, presentation, request_details=True):
+        presentation_id = presentation['Id']
         logger.debug(f'Gathering slides infos for presentation: {presentation_id}')
 
-        if details and presentation['has_slides_details']:
+        if request_details and self._has_slides_details(presentation):
             option = 'SlideDetailsContent'
         else:
             option = 'SlideContent'
@@ -449,10 +459,16 @@ class DataExtractor():
                 'stream_type': slides.get('StreamType', ''),
                 'length': nb_slides,
                 'urls': slides_urls,
-                'details': slides.get('SlideDetails') if details else None
+                'details': slides.get('SlideDetails') if request_details else None
             }
 
         return slides_infos
+
+    def _has_slides_details(self, presentation):
+        for stream_type in presentation.get('Streams'):
+            if stream_type.get('StreamType') == 'Slide':
+                return True
+        return False
 
     def _is_useless_slides(self, slides):
         is_useless = False
