@@ -80,6 +80,10 @@ if __name__ == '__main__':
 
         with open('mediasite_users.json', 'x') as f:
             json.dump(extractor.users, f)
+
+        with open('mediasite_failed_presentations.json', 'w') as f:
+            json.dump(extractor.failed_presentations, f)
+
     except FileExistsError:
         pass
     except Exception as e:
@@ -90,4 +94,8 @@ if __name__ == '__main__':
         failed_count = len(extractor.failed_presentations)
         if failed_count:
             logger.info(f'Failed to collect {failed_count} presentations:')
-            print('\n\t'.join(extractor.failed_presentations))
+            for p in extractor.failed_presentations:
+                row = f'{p.presentation_id} | {p.reason}'
+                sep = '-' * len(row)
+                print(sep)
+                print(row)

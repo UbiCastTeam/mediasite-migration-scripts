@@ -55,7 +55,7 @@ class MediaTransfer():
 
         self.mediasite_data = mediasite_data
         self.formats_allowed = self.config.get('videos_formats_allowed', {})
-        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
+        self.mediasite_auth = requests.auth.HTTPBasicAuth(self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
         self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
         self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
         self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))

@@ -6,6 +6,7 @@ import requests
 from datetime import datetime
 import time
 from pathlib import Path
+from collections import namedtuple
 
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
@@ -13,6 +14,7 @@ import utils.common as utils
 import utils.media as media
 
 logger = logging.getLogger(__name__)
+Failed = namedtuple('Failed', ['presentation_id', 'reason'])
 
 
 class DataExtractor():
@@ -30,10 +32,16 @@ class DataExtractor():
             'whitelist': config.get('whitelist')
         }
         self.mediasite = mediasite_controller.controller(self.config)
-        self.mediasite_auth = (self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
+        self.mediasite_auth = requests.auth.HTTPBasicAuth(self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
 
         self.presentations = None
         self.failed_presentations = list()
+        self.failed_reasons = {
+            'request': 'Requesting Mediasite API gone wrong. Presentation not collected',
+            'slides': 'Slides not found',
+            'videos': 'Videos not found'
+        }
+
         self.users = list()
         self.skipped_users = list()
         self.linked_catalogs = list()
@@ -41,7 +49,6 @@ class DataExtractor():
         self.slides_download_folder = dl / 'slides'
         self.nb_all_slides = 0
         self.nb_all_downloaded_slides = 0
-
         self.timeit(self.run)
 
     def run(self):
@@ -154,7 +161,7 @@ class DataExtractor():
                 presentations_infos.append(infos)
             except Exception:
                 pid = p.get('Id')
-                logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
+                # logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
                 # time.sleep(5 * 60)
                 try:
                     infos = self.get_presentation_infos(p)
@@ -162,7 +169,7 @@ class DataExtractor():
                     presentations_infos.append(infos)
                 except Exception as e:
                     logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
-                    self.failed_presentations.append(pid)
+                    self.failed_presentations.append(Failed(pid, reason=self.failed_reasons['request']))
 
         return presentations_infos
 
@@ -305,15 +312,23 @@ class DataExtractor():
         logger.debug(f'Gathering video info for presentation : {presentation_id}')
 
         videos_infos = []
-        video = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
-        videos_infos = self._get_video_details(video)
+        videos = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
+        videos_infos = self._get_videos_details(videos)
+
+        if not videos_infos:
+            logger.warning(f'Failed to get video file for presentation {presentation_id}, moving to next one')
+            self.failed_presentations.append(Failed(presentation_id, reason=self.failed_reasons['videos']))
 
         return videos_infos
 
-    def _get_video_details(self, video):
-        video_list = []
+    def _get_videos_details(self, videos):
+        videos_list = list()
 
-        for file in video:
+        if self.session is None:
+            self.session = requests.session()
+            self.session.auth = self.mediasite_auth
+
+        for file in videos:
             content_server = self.mediasite.content.get_content_server(file['ContentServerId'])
             if 'DistributionUrl' in content_server:
                 # popping odata query params, we just need the route
@@ -321,40 +336,47 @@ class DataExtractor():
                 splitted_url.pop()
                 storage_url = '/'.join(splitted_url)
             file_name = file['FileNameWithExtension']
-            video_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
+            file_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
 
-            file_infos = {
-                'url': video_url,
-                'format': file['ContentMimeType'],
-                'size_bytes': int(file['FileLength']),
-                'duration_ms': int(file['Length']),
-                'is_transcode_source': file['IsTranscodeSource'],
-                'encoding_infos': {}
-            }
+            file_found = self.session.head(file_url)
+            if not file_found:
+                logger.warning(f'Video file not found: {file_url}')
+                videos_list = []
+                break
+            else:
+                file_infos = {
+                    'url': file_url,
+                    'format': file['ContentMimeType'],
+                    'size_bytes': int(file['FileLength']),
+                    'duration_ms': int(file['Length']),
+                    'is_transcode_source': file['IsTranscodeSource'],
+                    'encoding_infos': {}
+                }
 
-            if file_infos['format'] == 'video/mp4' or file_infos['format'] == 'video/x-ms-wmv':
-                if file.get('ContentEncodingSettingsId'):
-                    file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
+                if file_infos['format'] == 'video/mp4' or file_infos['format'] == 'video/x-ms-wmv':
+                    if file.get('ContentEncodingSettingsId'):
+                        file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
 
-                if not file_infos.get('encoding_infos'):
-                    logger.debug(f"Video encoding infos not found in API for presentation: {file['ParentResourceId']}")
-                    if file_infos.get('url'):
-                        file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
-                    elif 'LocalUrl' in content_server:
-                        logger.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
-                    else:
-                        logger.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
+                    if not file_infos.get('encoding_infos'):
+                        logger.debug(f"Video encoding infos not found in API for presentation: {file['ParentResourceId']}")
+                        if file_infos.get('url'):
+                            file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
+                        elif 'LocalUrl' in content_server:
+                            logger.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
+                        else:
+                            logger.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
 
-            stream = file['StreamType']
-            in_list = False
-            for v in video_list:
-                if stream == v.get('stream_type'):
-                    in_list = True
-                    v['files'].append(file_infos)
-            if not in_list:
-                video_list.append({'stream_type': stream,
-                                   'files': [file_infos]})
-        return video_list
+                stream = file['StreamType']
+                in_list = False
+                for v in videos_list:
+                    if stream == v.get('stream_type'):
+                        in_list = True
+                        v['files'].append(file_infos)
+                if not in_list:
+                    videos_list.append({'stream_type': stream,
+                                       'files': [file_infos]})
+
+        return videos_list
 
     def _get_encoding_infos_from_api(self, settings_id, video_url):
         logger.debug(f'Getting encoding infos from api with settings id: {settings_id}')
@@ -414,7 +436,9 @@ class DataExtractor():
             logger.debug(f'Failed to get media info for {video_url}. Error: {e}')
             try:
                 if self.session is None:
-                    self.session = requests.Session()
+                    self.session = requests.session()
+                    self.session.auth = self.mediasite_auth
+
                 response = self.session.head(video_url)
                 if not response.ok:
                     logger.debug(f'Video {video_url} not reachable: {response.status_code}, content: {response.text}')
@@ -424,6 +448,10 @@ class DataExtractor():
         return encoding_infos
 
     def get_slides_infos(self, presentation, request_details=True):
+        if self.session is None:
+            self.session = requests.session()
+            self.session.auth = self.mediasite_auth
+
         presentation_id = presentation['Id']
         logger.debug(f'Gathering slides infos for presentation: {presentation_id}')
 
@@ -451,8 +479,15 @@ class DataExtractor():
             for i in range(int(slides.get('Length', '0'))):
                 # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
                 file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
-                link = f'{slides_base_url}/{file_name}'
-                slides_urls.append(link)
+                file_url = f'{slides_base_url}/{file_name}'
+                file_found = self.session.head(file_url)
+                if file_found:
+                    slides_urls.append(file_url)
+                else:
+                    logger.warning(f'Slide file not found: {file_url} ')
+                    self.failed_presentations.append(Failed(presentation_id, reason=self.failed_reasons['slides']))
+                    slides_urls = {}
+                    break
 
             nb_slides = len(slides_urls)
             slides_infos = {
@@ -503,7 +538,8 @@ class DataExtractor():
         nb_slides = len(presentation_slides_urls)
 
         if self.session is None:
-            self.session = requests.Session()
+            self.session = requests.session()
+            self.session.auth = self.mediasite_auth
 
         presentation_slides_download_folder = self.slides_download_folder / presentation_id
         presentation_slides_download_folder.mkdir(parents=True, exist_ok=True)
