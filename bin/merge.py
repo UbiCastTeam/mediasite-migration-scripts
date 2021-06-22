@@ -87,14 +87,15 @@ class Merger:
 
         reduction_factor = 1
         if total_native_width < videomixer_width:
-            print(f'Warning, native files summed width is smaller {total_native_width}x{max_height} than target resolution {videomixer_width}x{videomixer_height}')
-            output_ratio = videomixer_width / videomixer_height
-            videomixer_width = total_native_width
-            videomixer_height = int(total_native_width / output_ratio)
+            print(f'Warning, native files summed size {total_native_width}x{max_height} is smaller than target resolution {videomixer_width}x{videomixer_height}')
+            videomixer_width, videomixer_height = self.find_optimal_rendering_size(total_native_width, max_height)
+            reduction_factor = videomixer_width / total_native_width
             print(f'Falling back to {videomixer_width}x{videomixer_height}')
         elif total_native_width > videomixer_width:
             print(f'Native files summed size {total_native_width}x{max_height} is larger than target resolution, will reduce to match target resolution')
             reduction_factor = videomixer_width / total_native_width
+
+        print(f'Reduction factor: {reduction_factor:.2f}')
 
         layers_data = list()
         pipeline_desc = ''
@@ -130,7 +131,7 @@ class Merger:
                 False,
             ))
             compositor_options += '{pad}::xpos={x} {pad}::ypos={y} '.format(**pad_data)
-            pad_caps = 'video/x-raw, format=(string)I420, width=(int){width}, height=(int){height}'.format(**pad_data)
+            pad_caps = 'video/x-raw, format=(string)I420, width=(int){width}, height=(int){height}, pixel-aspect-ratio=(fraction)1/1'.format(**pad_data)
             pipeline_desc += f' filesrc location={video_info["path"]} ! qtdemux name=demux_{index} ! queue name=qh264dec_{index} ! avdec_h264 ! queue name=vscale{index} ! videoscale ! {pad_caps} ! queue ! vmix. '
             if video_name != 'Slides.mp4' and not has_audio:
                 pipeline_desc += f' demux_{index}. ! queue name=qaparse ! aacparse ! queue name=amux ! mux. '
@@ -163,6 +164,18 @@ class Merger:
         if self.options.max_duration:
             logging.info(f'--max-duration option passed, will stop after {self.options.max_duration}s')
             self.force_eos_id = GLib.timeout_add_seconds(self.options.max_duration, self.send_eos)
+
+    def find_optimal_rendering_size(self, width, height):
+        # select the first resolution supported by mediaserver that can fit all pixels
+        resolutions = [
+            (1280, 720),
+            (1920, 1080),
+            (2560, 1440),
+            (3840, 2160)
+        ]
+        for w, h in resolutions:
+            if w >= width and h >= height:
+                return w, h
 
     def dump_layout(self):
         layout_file = self.folder / 'mediaserver_layout.json'
