@@ -1,14 +1,15 @@
 import os
 import logging
 import xml.dom.minidom as xml
-from pymediainfo import MediaInfo
 import json
 import requests
 from datetime import datetime
 import time
 
+
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
 import utils.common as utils
+import utils.media as media
 
 logger = logging.getLogger(__name__)
 
@@ -371,7 +372,7 @@ class DataExtractor():
         logger.debug(f'Parsing with MediaInfo lib for: {video_url}')
         encoding_infos = {}
         try:
-            media_tracks = MediaInfo.parse(video_url, mediainfo_options={'Ssl_IgnoreSecurity': '1'}).tracks
+            media_tracks = media.get_tracks(video_url)
             for track in media_tracks:
                 if track.track_type == 'Video':
                     encoding_infos['video_codec'] = 'H264' if track.format == 'AVC' else track.format
