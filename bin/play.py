@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 import requests
 import mediasite_migration_scripts.utils.common as utils
+import mediasite_migration_scripts.utils.media as media
 
 
 def get_video_urls(presentation):
@@ -17,7 +18,8 @@ def get_video_urls(presentation):
         if name == slides_stream_type:
             name = 'Slides'
         for f in video['files']:
-            if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
+            has_video_track = f.get('encoding_infos', {}).get('video_codec') == 'H264' or media.has_h264_video_track(f['url'])
+            if f['size_bytes'] > 0 and f['format'] == 'video/mp4' and has_video_track:
                 videos[name] = f['url']
                 duration_s = max(duration_s, int(f["duration_ms"] / 1000))
                 break
@@ -91,6 +93,7 @@ if __name__ == '__main__':
         for index, presentation in enumerate(presentations):
             pres_id = presentation['id']
             root = Path(args.download_folder) / pres_id
+            print(f'Looking for video urls for {pres_id}')
             video_urls, duration_s = get_video_urls(presentation)
             if video_urls:
                 if not args.download:
@@ -108,7 +111,7 @@ if __name__ == '__main__':
                     if returncode != 0:
                         sys.exit()
                 else:
-                    print(utils.get_progress_string(index, len(presentations)) + ' Downloading {pres_id}')
+                    print(utils.get_progress_string(index, len(presentations)) + f' Downloading {pres_id}')
                     root.mkdir(parents=True, exist_ok=True)
                     with requests.Session() as session:
                         with open(root / 'mediasite_metadata.json', 'w') as f:
