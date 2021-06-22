@@ -252,6 +252,7 @@ class Merger:
             vinfo = info.get_video_streams()[0]
         except IndexError:
             logging.error(f'File {media_file} contains no video stream')
+            sys.exit(1)
 
         result = {
             'width': vinfo.get_width(),
