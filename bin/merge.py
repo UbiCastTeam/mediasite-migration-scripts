@@ -134,7 +134,7 @@ class Merger:
             pad_caps = 'video/x-raw, format=(string)I420, width=(int){width}, height=(int){height}, pixel-aspect-ratio=(fraction)1/1'.format(**pad_data)
             pipeline_desc += f' filesrc location={video_info["path"]} ! qtdemux name=demux_{index} ! queue name=qh264dec_{index} ! avdec_h264 ! queue name=vscale{index} ! videoscale ! {pad_caps} ! queue ! vmix. '
             if video_name != 'Slides.mp4' and not has_audio:
-                pipeline_desc += f' demux_{index}. ! queue name=qaparse ! aacparse ! queue name=amux ! mux. '
+                pipeline_desc += f' demux_{index}. ! queue name=qaparse ! aacparse ! queue name=amux max-size-time={60 * Gst.SECOND} max-size-bytes=0 max-size-buffers=0 ! mux. '
                 has_audio = True
             index += 1
             x_offset = adjusted_width
