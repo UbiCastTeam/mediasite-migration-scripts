@@ -18,7 +18,10 @@ def get_video_urls(presentation):
         if name == slides_stream_type:
             name = 'Slides'
         for f in video['files']:
-            has_video_track = f.get('encoding_infos', {}).get('video_codec') == 'H264' or media.has_h264_video_track(f['url'])
+            url = f['url']
+            if url.endswith('.ism'):
+                continue
+            has_video_track = f.get('encoding_infos', {}).get('video_codec') == 'H264' or media.has_h264_video_track(url)
             if f['size_bytes'] > 0 and f['format'] == 'video/mp4' and has_video_track:
                 videos[name] = f['url']
                 duration_s = max(duration_s, int(f["duration_ms"] / 1000))
