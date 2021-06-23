@@ -456,28 +456,29 @@ class MediaTransfer():
             key = 'id'
             val = user_id
         params[key] = val
-        try:
-            result = self.ms_client.api('channels/personal/', method='get', params=params, max_retry=None)
-            if result and result.get('success'):
-                channel_oid = result.get('oid')
-                return channel_oid
+        result = self.ms_client.api('channels/personal/', method='get', params=params)
+        if result:
+            if isinstance(result, dict):
+                if result.get('success'):
+                    channel_oid = result['oid']
+                    return channel_oid
+                else:
+                    error = result.get('error', '')
+                    if user_id and '403' in error:
+                        #{'error': 'Access denied (403)', 'message': '', 'success': False}
+                        logger.info(f'Granting permission to own a personal channel to user with id {user_id}')
+                        data = {
+                            'type': 'user',
+                            'id': user_id,
+                            'can_have_personal_channel': 'True',
+                            'can_create_media': 'True',
+                        }
+                        result = self.ms_client.api('perms/edit/', method='post', data=data)
+                        return self.get_user_channel_oid(user_id=user_id)
+                    else:
+                        logger.error(f'Failed to get user channel for {key}={val} / Error: {error}')
             else:
-                logger.error(f"Failed to get user channel for {key}={val} / Error: {result.get('error')}")
-        except Exception as e:
-            # if 403: user is not allowed to own personal channels
-            if user_id and '403' in str(e):
-                logger.info(f'Manually granting permission to own a personal channel to user with id {user_id}')
-                data = {
-                    'type': 'user',
-                    'id': user_id,
-                    'can_have_personal_channel': 'True',
-                    'can_create_media': 'True',
-                }
-                result = self.ms_client.api('perms/edit/', method='post', data=data)
-                # retry
-                return self.get_user_channel_oid(user_id=user_id)
-
-            logger.error(f"Failed to get user channel for {key}={val} / Error: {e}")
+                logger.error(f'Failed to get user channel: unknown error {result}')
 
     def create_user(self, user):
         logger.debug(f"Creating user {user.get('username')}")
