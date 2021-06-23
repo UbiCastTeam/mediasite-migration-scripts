@@ -36,7 +36,10 @@ class VideoCompositor:
                     logger.debug(f'Already downloaded {video_url}, skipping')
                     return True
 
-            request.raise_for_status()
+            if request.status_code != 200:
+                logger.error(f'Failed to download {video_url}: {request.status_code}')
+                return False
+
             with open(video_path, 'wb') as f:
                 logger.debug(f'Downloading {video_url} to {video_path}')
                 downloaded = 0

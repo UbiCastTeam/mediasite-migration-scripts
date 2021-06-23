@@ -10,6 +10,7 @@ from functools import lru_cache
 
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
 from mediasite_migration_scripts.utils import common as utils
+import mediasite_migration_scripts.utils.http as http
 from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
 from mediasite_migration_scripts.video_compositor import VideoCompositor
 
@@ -117,7 +118,7 @@ class MediaTransfer():
 
         for index, media in enumerate(self.mediaserver_data):
             if sys.stdout.isatty():
-                print(utils.get_progress_string(index, total_count) + ' Uploading', end='\r')
+                print(utils.get_progress_string(index, total_count) + ' Uploading non-composites presentations or preparing folders', end='\r')
             self.processed_count += 1
 
             if max_videos and index >= max_videos:
@@ -322,84 +323,78 @@ class MediaTransfer():
     def migrate_composites_videos(self):
         total_composite = len(self.composites_medias)
         logger.info(f'Merging and migrating {total_composite} composite videos')
-        dl_ok = self.download_composites_videos()
+        self.download_composites_videos()
 
-        if dl_ok:
-            for index, media in enumerate(self.composites_medias):
-                self.processed_count += 1
-                if sys.stdout.isatty():
-                    print(utils.get_progress_string(index, total_composite) + ' Uploading composite', end='\r')
+        for index, media in enumerate(self.composites_medias):
+            self.processed_count += 1
+            if sys.stdout.isatty():
+                print(utils.get_progress_string(index, total_composite) + ' Uploading composite', end='\r')
 
-                media_data = media.get('data', {})
-                presentation_id = json.loads(media_data.get('external_data', {})).get('id')
-                existing_media = self.get_ms_media_by_ref(presentation_id)
-                if existing_media:
-                    logger.warning(f'Composite presentation {presentation_id} already found on MediaServer (oid: {existing_media["oid"]}, skipping')
-                    self.skipped_count += 1
-                    # consider uploaded so that the final condition works
-                else:
-                    # store presentation id in order to skip upload if already present on MS
-                    media_data['external_ref'] = presentation_id
-                    media_folder = self.composites_folder / presentation_id
-                    merge_ok = self.compositor.merge(media_folder)
-                    if merge_ok:
-                        file_path = media_folder / 'composite.mp4'
-                        layout_preset_path = media_folder / 'mediaserver_layout.json'
-                        if layout_preset_path.is_file():
-                            with open(layout_preset_path) as f:
-                                media_data['layout_preset'] = f.read()
+            media_data = media.get('data', {})
+            presentation_id = json.loads(media_data.get('external_data', {})).get('id')
+            existing_media = self.get_ms_media_by_ref(presentation_id)
+            if existing_media:
+                logger.warning(f'Composite presentation {presentation_id} already found on MediaServer (oid: {existing_media["oid"]}, skipping')
+                self.skipped_count += 1
+                # consider uploaded so that the final condition works
+            else:
+                # store presentation id in order to skip upload if already present on MS
+                media_data['external_ref'] = presentation_id
+                media_folder = self.composites_folder / presentation_id
+                layout_preset_path = media_folder / 'mediaserver_layout.json'
+                if not media_folder.is_dir():
+                    logger.warning(f'Missing downloads folder for {presentation_id}, skipping')
+                    continue
+                if not layout_preset_path.is_file():
+                    self.compositor.merge(media_folder)
 
-                        result = self.upload_local_file(file_path.__str__(), media_data)
-                        if result.get('success'):
-                            self.uploaded_count += 1
-                            self.composite_uploaded_count += 1
+                if layout_preset_path.is_file():
+                    file_path = media_folder / 'composite.mp4'
+                    if layout_preset_path.is_file():
+                        with open(layout_preset_path) as f:
+                            media_data['layout_preset'] = f.read()
 
-                            oid = result['oid']
-                            self.add_presentation_redirection(presentation_id, oid)
+                    result = self.upload_local_file(file_path.__str__(), media_data)
+                    if result.get('success'):
+                        self.uploaded_count += 1
+                        self.composite_uploaded_count += 1
 
-                            media['ref']['media_oid'] = oid
-                            media['ref']['slug'] = result.get('slug')
-                            if media_data.get('api_key'):
-                                del media_data['api_key']
+                        oid = result['oid']
+                        self.add_presentation_redirection(presentation_id, oid)
 
-                            if len(media_data.get('chapters')) > 0:
-                                self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
-                        else:
-                            logger.error(f"Failed to upload media: {presentation_id}")
-                            self.failed.append(presentation_id)
+                        media['ref']['media_oid'] = oid
+                        media['ref']['slug'] = result.get('slug')
+                        if media_data.get('api_key'):
+                            del media_data['api_key']
+
+                        if len(media_data.get('chapters')) > 0:
+                            self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
                     else:
-                        logger.error(f'Failed to merge videos for presentation {presentation_id}')
+                        logger.error(f"Failed to upload media: {presentation_id}")
+                        self.failed.append(presentation_id)
+                else:
+                    logger.error(f'Failed to merge videos for presentation {presentation_id}')
 
     def download_composites_videos(self):
         logger.info(f'Downloading composite videos into {self.composites_folder}.')
-
         if self.compositor is None:
             self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
 
         all_ok = False
-        medias_completed = 0
-        videos_downloaded = 0
         for i, v_composite in enumerate(self.composites_medias):
-            print(f'Downloading: [{i} / {len(self.composites_medias)}] -- {i / len(self.composites_medias)}%', end='\r')
-
+            print(utils.get_progress_string(i, len(self.composites_medias)) + ' Downloading composite', end='\r')
             data = v_composite.get('data', {})
             presentation_id = json.loads(data.get('external_data', {})).get('id')
             logger.debug(f"Downloading for presentation {presentation_id}")
-
             media_folder = self.composites_folder / presentation_id
             media_folder.mkdir(parents=True, exist_ok=True)
             urls = data.get('composites_videos_urls', {})
-            if not self.compositor.download_all(urls, media_folder):
-                logger.error(f'Failed to download composite videos for presentation {presentation_id}.')
-                break
+            if (media_folder / 'mediaserver_layout.json').is_file():
+                pass
+            elif not self.compositor.download_all(urls, media_folder):
+                logger.warning(f'Failed to download composite videos for presentation {presentation_id}.')
             else:
-                medias_completed += 1
-
-        all_ok = (medias_completed == len(self.composites_medias))
-        if all_ok:
-            logger.info(f'Sucessfully downloaded all composite videos ({len(self.composites_medias)})')
-        else:
-            logger.error(f'Failed to complete all composite medias download: [{medias_completed} / {len(self.composites_medias)}] medias completed | {videos_downloaded} videos downloaded')
+                pass
         return all_ok
 
     def upload_local_file(self, file_path, data):
@@ -806,7 +801,8 @@ class MediaTransfer():
             mediaserver_data = self.mediaserver_data
         else:
             logger.info('No Mediaserver mapping. Generating mapping.')
-            for folder in self.mediasite_data:
+            for index, folder in enumerate(self.mediasite_data):
+                print(utils.get_progress_string(index, len(self.mediasite_data)) + ' Pre-processing folders and checking resources', end='\r')
                 if utils.is_folder_to_add(folder.get('path'), config=self.config):
                     has_catalog = (len(folder.get('catalogs', [])) > 0)
 
@@ -817,27 +813,33 @@ class MediaTransfer():
                             break
 
                     for presentation in folder['presentations']:
-                        description = ''
+                        v_composites_urls = list()
+                        v_files = v_url = None
+
+                        presentation_id = presentation['id']
+                        # there is no use in checking if the video is available if we already processed it
+                        if self.search_mediasite_id_in_redirections(presentation_id):
+                            continue
+
                         presenters = list()
                         for p in presentation.get('other_presenters'):
                             presenter_name = p.get('display_name')
                             if presenter_name:
                                 presenters.append(presenter_name)
 
+                        description = ''
                         if presenters:
                             description = 'Presenters: ' + ', '.join(presenters)
-
                         original_description = presentation.get('description')
                         if original_description:
                             description += '\n<br/>' + original_description
 
-                        v_composites_urls = list()
-                        v_files = None
                         videos = presentation.get('videos', [])
                         v_type, slides_source = self._find_video_type(presentation)
-                        v_url = 'local'
                         if v_type in ('composite_video', 'composite_slides'):
                             v_composites_urls = self._get_composite_video_resources(presentation)
+                            if v_composites_urls:
+                                v_url = 'local'
                         else:
                             if slides_source:
                                 for v in videos:
@@ -847,11 +849,7 @@ class MediaTransfer():
                             else:
                                 v_files = videos[0].get('files', [])
 
-                            skip_check = False
-                            # there is no use in checking if the video is available if we already processed it
-                            if self.search_mediasite_id_in_redirections(presentation['id']):
-                                skip_check = True
-                            v_url = self._find_file_to_upload(v_files, skip_check)
+                            v_url = self._find_file_to_upload(v_files)
 
                         if v_url:
                             has_catalog = len(folder.get('catalogs', [])) > 0
@@ -955,6 +953,7 @@ class MediaTransfer():
 
     def _get_composite_video_resources(self, presentation):
         videos = dict()
+        presentation_id = presentation['id']
         slides_stream_type = presentation.get('slides', {}).get('stream_type')
         for video in presentation['videos']:
             name = video['stream_type']
@@ -962,11 +961,13 @@ class MediaTransfer():
                 name = 'Slides'
             for f in video['files']:
                 if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
-                    videos[name] = f['url']
-                    break
+                    url = f['url']
+                    if (self.composites_folder / presentation_id / 'mediaserver_layout.json').is_file() or http.url_exists(url, self.dl_session):
+                        videos[name] = f['url']
+                        break
         return videos
 
-    def _find_file_to_upload(self, video_files, skip_check=False):
+    def _find_file_to_upload(self, video_files):
         video_url = file_url = ''
         for file in video_files:
             if file.get('format') == 'video/mp4':
@@ -977,12 +978,8 @@ class MediaTransfer():
                 break
 
         if file_url:
-            if skip_check:
+            if http.url_exists(file_url, self.dl_session):
                 video_url = file_url
-            else:
-                video_found = self.dl_session.head(file_url)
-                if video_found.ok and int(video_found.headers.get('Content-Length', 0)) > 0:
-                    video_url = file_url
 
         return video_url
 
