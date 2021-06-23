@@ -418,7 +418,7 @@ class MediaTransfer():
             logger.error('No title or oid provided for getting channel')
             return channel
 
-        channel = self.ms_client.api('channels/get', method='get', params=params, ignore_404=True)
+        channel = self.ms_client.api('channels/get', method='get', params=params)
         if channel and channel.get('success'):
             channel = channel.get('info')
         else:
