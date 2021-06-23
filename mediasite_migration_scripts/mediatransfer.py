@@ -183,7 +183,7 @@ class MediaTransfer():
                                 data['keywords'] = data['keywords'][:truncate_to]
 
                             # lower transcoding priority
-                            data['priority'] = 'low'
+                            data['priority'] = 20
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 self.uploaded_count += 1
