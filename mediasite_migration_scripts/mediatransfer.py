@@ -184,7 +184,7 @@ class MediaTransfer():
                                 data['keywords'] = data['keywords'][:truncate_to]
 
                             # lower transcoding priority
-                            data['priority'] = 20
+                            data['priority'] = 'lowest'
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 self.uploaded_count += 1
@@ -353,6 +353,9 @@ class MediaTransfer():
                     if layout_preset_path.is_file():
                         with open(layout_preset_path) as f:
                             media_data['layout_preset'] = f.read()
+
+                    # reduce transcoding priority
+                    media_data['priority'] = 'lowest'
 
                     result = self.upload_local_file(file_path.__str__(), media_data)
                     if result.get('success'):
