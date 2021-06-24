@@ -121,7 +121,7 @@ print(f'{skipped_presentations}/{total_presentations} presentations have not bee
 print('Writing csv')
 with open('report.csv', 'w', newline='') as csvfile:
     fieldnames = ['mediasite_path', 'mediaserver_path', 'mediasite_url', 'mediaserver_url']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer = csv.DictWriter(csvfile, delimiter='|', fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(rows)
 
