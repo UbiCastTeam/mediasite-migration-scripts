@@ -971,18 +971,17 @@ class MediaTransfer():
         return videos
 
     def _find_file_to_upload(self, video_files):
-        video_url = file_url = ''
+        video_url = ''
         for file in video_files:
+            url = file['url']
             if file.get('format') == 'video/mp4':
-                file_url = file['url']
-                break
+                if file['encoding_infos'].get('video_codec', '') == 'H264' and http.url_exists(url, self.dl_session):
+                    video_url = url
+                    break
             elif self.formats_allowed.get(file.get('format')):
-                file_url = file['url']
-                break
-
-        if file_url:
-            if http.url_exists(file_url, self.dl_session):
-                video_url = file_url
+                if http.url_exists(url, self.dl_session):
+                    video_url = file['url']
+                    break
 
         return video_url
 
