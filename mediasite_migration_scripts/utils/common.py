@@ -113,6 +113,19 @@ def read_json(path):
         return json.load(f)
 
 
+def to_mediaserver_conf(config):
+    msconfig = {
+        'API_KEY': config.get('mediaserver_api_key', ''),
+        'CLIENT_ID': 'mediasite-migration-client',
+        'SERVER_URL': config.get('mediaserver_url', ''),
+        'VERIFY_SSL': False,
+        'LOG_LEVEL': 'WARNING',
+        'TIMEOUT': 120,
+        'MAX_RETRY': 3,
+    }
+    return msconfig
+
+
 # FIXME: unify
 def setup_logging(verbose=False):
     logging.addLevelName(logging.ERROR, '\033[1;31m%s\033[1;0m' % logging.getLevelName(logging.ERROR))

@@ -66,15 +66,7 @@ class MediaTransfer():
         if self.unit_test:
             self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
         else:
-            self.ms_config = {
-                'API_KEY': self.config.get('mediaserver_api_key', ''),
-                'CLIENT_ID': 'mediasite-migration-client',
-                'SERVER_URL': self.config.get('mediaserver_url', ''),
-                'VERIFY_SSL': False,
-                'LOG_LEVEL': 'WARNING',
-                'TIMEOUT': 120,
-                'MAX_RETRY': 3,
-            }
+            self.ms_config = utils.to_mediaserver_conf(self.config)
             self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
 
             if root_channel_oid:
