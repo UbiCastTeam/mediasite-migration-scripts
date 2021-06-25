@@ -40,7 +40,7 @@ ms_client = MediaServerClient(local_conf=ms_config, setup_logging=False)
 
 
 def get_mediaserver_media(oid):
-    return ms_client.api('medias/get/', params={'oid': oid, 'path': 'yes'}, ignore_404=True)
+    return ms_client.api('medias/get/', params={'oid': oid, 'path': 'yes'}, ignored_status_codes=[404])
 
 
 def get_mediaserver_path(media):
