@@ -66,15 +66,7 @@ class MediaTransfer():
         if self.unit_test:
             self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
         else:
-            self.ms_config = {
-                'API_KEY': self.config.get('mediaserver_api_key', ''),
-                'CLIENT_ID': 'mediasite-migration-client',
-                'SERVER_URL': self.config.get('mediaserver_url', ''),
-                'VERIFY_SSL': False,
-                'LOG_LEVEL': 'WARNING',
-                'TIMEOUT': 120,
-                'MAX_RETRY': 3,
-            }
+            self.ms_config = utils.to_mediaserver_conf(self.config)
             self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
 
             if root_channel_oid:
@@ -184,7 +176,7 @@ class MediaTransfer():
                                 data['keywords'] = data['keywords'][:truncate_to]
 
                             # lower transcoding priority
-                            data['priority'] = 'lowest'
+                            data['priority'] = 'low'
                             result = self.ms_client.api('medias/add', method='post', data=data)
                             if result.get('success'):
                                 self.uploaded_count += 1
@@ -355,7 +347,7 @@ class MediaTransfer():
                             media_data['layout_preset'] = f.read()
 
                     # reduce transcoding priority
-                    media_data['priority'] = 'lowest'
+                    media_data['priority'] = 'low'
 
                     result = self.upload_local_file(file_path.__str__(), media_data)
                     if result.get('success'):
