@@ -3,12 +3,9 @@
 This script allows to launch transcoding on all media that have been migrated
 '''
 import json
-import sys
 
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
 import mediasite_migration_scripts.utils.common as utils
-
-DEFAULT_TASKS_PRIORITY = 5
 
 
 def transcode_all_videos(msc):
@@ -22,8 +19,8 @@ def transcode_all_videos(msc):
         print('//// Making request on latest (start=%s)' % start)
         response = msc.api('latest/', params=dict(start=start, content='v', count=20, order_by='creation'))
         for item in response['items']:
-            # only apply on content migrated using this project
-            if item['origin'] == 'mediatransfer':
+            # only apply on content migrated using this project that is published
+            if item['origin'] == 'mediatransfer' and item['validated']:
                 index += 1
                 oid = item['oid']
                 print('// Media %s: %s' % (index, oid))
@@ -32,7 +29,7 @@ def transcode_all_videos(msc):
                     print(f'Skipping {oid}: already transcoded')
                     continue
                 try:
-                    params = json.dumps(dict(priority_preset=DEFAULT_TASKS_PRIORITY, behavior='delete'))
+                    params = json.dumps(dict(priority='low', behavior='delete'))
                     # behavior: action to do on existing resources
                     msc.api('medias/task/', method='post', data=dict(
                         oid=item['oid'],
@@ -48,7 +45,6 @@ def transcode_all_videos(msc):
                 else:
                     succeeded += 1
 
-                sys.exit()
         start = response['max_date']
         more = response['more']
 
