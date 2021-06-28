@@ -34,7 +34,7 @@ server {
 }
 '''
 
-block_template = '\tlocation {from_url} {{ return 301 {to_url}; }}\n'
+block_template = '\tlocation ~* {from_url} {{ return 301 {to_url}; }}\n'
 
 argparser = utils.get_argparser()
 
