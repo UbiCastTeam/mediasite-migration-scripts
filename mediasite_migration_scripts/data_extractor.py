@@ -14,7 +14,7 @@ import utils.common as utils
 import utils.media as media
 
 logger = logging.getLogger(__name__)
-Failed = namedtuple('Failed', ['presentation_id', 'reason'])
+Failed = namedtuple('Failed', ['presentation_id', 'reason', 'collected'])
 
 
 class DataExtractor():
@@ -36,10 +36,13 @@ class DataExtractor():
 
         self.presentations = None
         self.failed_presentations = list()
-        self.failed_reasons = {
-            'request': 'Requesting Mediasite API gone wrong. Presentation not collected',
-            'slides': 'Slides not found',
-            'videos': 'Videos not found'
+        self.failure_reasons = {
+            'request': 'Requesting Mediasite API gone wrong',
+            'slides_404': 'Slides not found',
+            'slides_timecodes': 'Somes slides timecodes are greater than the video duration',
+            'videos_404': 'No videos found',
+            'some_videos_404': 'Some videos not found',
+            'timed_events_timecodes': 'Some timed events / chapters timecode are greater thant the video duration '
         }
 
         self.users = list()
@@ -169,7 +172,7 @@ class DataExtractor():
                     presentations_infos.append(infos)
                 except Exception as e:
                     logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
-                    self.failed_presentations.append(Failed(pid, reason=self.failed_reasons['request']))
+                    self.failed_presentations.append(Failed(pid, reason=self.failure_reasons['request'], collected=False))
 
         return presentations_infos
 
@@ -181,26 +184,28 @@ class DataExtractor():
         users_infos = self.get_users_infos(presentation)
         presentation_analytics = self.mediasite.presentation.get_analytics(pid)
 
-        presentation_infos = {
-            'id': pid,
-            'title': presentation.get('Title', ''),
-            'creation_date': self.get_creation_date(presentation),
-            'owner': users_infos.get('owner', {}),
-            'creator': users_infos.get('creator', {}),
-            'primary_presenter': users_infos.get('presenter', {}),
-            'other_presenters': self.get_presenters_infos(pid),
-            'availability': self.mediasite.presentation.get_availability(pid),
-            'status': presentation.get('Status', ''),
-            'private': presentation.get('Private'),
-            'description': presentation.get('Description', ''),
-            'tags': presentation.get('TagList', ''),
-            'timed_events': self.get_timed_events(pid),
-            'total_views': presentation_analytics.get('TotalViews', ''),
-            'last_viewed': presentation_analytics.get('LastWatched', ''),
-            'url': presentation.get('#Play').get('target', ''),
-            'videos': self.get_videos_infos(presentation.get('Id')),
-            'slides': self.get_slides_infos(presentation)
-        }
+        videos = self.get_videos_infos(presentation.get('Id'))
+        if videos:
+            presentation_infos = {
+                'id': pid,
+                'title': presentation.get('Title', ''),
+                'creation_date': self.get_creation_date(presentation),
+                'owner': users_infos.get('owner', {}),
+                'creator': users_infos.get('creator', {}),
+                'primary_presenter': users_infos.get('presenter', {}),
+                'other_presenters': self.get_presenters_infos(pid),
+                'availability': self.mediasite.presentation.get_availability(pid),
+                'status': presentation.get('Status', ''),
+                'private': presentation.get('Private'),
+                'description': presentation.get('Description', ''),
+                'tags': presentation.get('TagList', ''),
+                'timed_events': self.get_timed_events(pid),
+                'total_views': presentation_analytics.get('TotalViews', ''),
+                'last_viewed': presentation_analytics.get('LastWatched', ''),
+                'url': presentation.get('#Play').get('target', ''),
+                'videos': self.get_videos_infos(presentation.get('Id')),
+                'slides': self.get_slides_infos(presentation)
+            }
 
         # we need videos infos before getting slides and chapters in order to check timecodes
         request_details = self._has_slides_details(presentation)
@@ -311,18 +316,22 @@ class DataExtractor():
     def get_videos_infos(self, presentation_id):
         logger.debug(f'Gathering video info for presentation : {presentation_id}')
 
-        videos_infos = []
+        videos_infos = list()
         videos = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
-        videos_infos = self._get_videos_details(videos)
+        videos_infos, nb_videos_not_found = self._get_videos_details(videos)
 
-        if not videos_infos:
-            logger.warning(f'Failed to get video file for presentation {presentation_id}, moving to next one')
-            self.failed_presentations.append(Failed(presentation_id, reason=self.failed_reasons['videos']))
+        if videos_infos and nb_videos_not_found:
+            self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['some_videos_404'], collected=True))
+            logger.warning(f'{nb_videos_not_found} videos files not found for presentation {presentation_id}')
+        elif not videos_infos:
+            logger.error(f'Failed to get a video file for presentation {presentation_id}, moving to next one')
+            self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['videos_404'], collected=False))
 
         return videos_infos
 
     def _get_videos_details(self, videos):
         videos_list = list()
+        videos_not_found = int()
 
         if self.session is None:
             self.session = requests.session()
@@ -341,8 +350,7 @@ class DataExtractor():
             file_found = self.session.head(file_url)
             if not file_found:
                 logger.warning(f'Video file not found: {file_url}')
-                videos_list = []
-                break
+                videos_not_found += 1
             else:
                 file_infos = {
                     'url': file_url,
@@ -372,11 +380,12 @@ class DataExtractor():
                     if stream == v.get('stream_type'):
                         in_list = True
                         v['files'].append(file_infos)
+                        break
                 if not in_list:
                     videos_list.append({'stream_type': stream,
                                        'files': [file_infos]})
 
-        return videos_list
+        return videos_list, videos_not_found
 
     def _get_encoding_infos_from_api(self, settings_id, video_url):
         logger.debug(f'Getting encoding infos from api with settings id: {settings_id}')
@@ -447,15 +456,15 @@ class DataExtractor():
 
         return encoding_infos
 
-    def get_slides_infos(self, presentation, request_details=True):
+    def get_slides_infos(self, presentation_infos, request_details=False):
         if self.session is None:
             self.session = requests.session()
             self.session.auth = self.mediasite_auth
 
-        presentation_id = presentation['Id']
+        presentation_id = presentation_infos['id']
         logger.debug(f'Gathering slides infos for presentation: {presentation_id}')
 
-        if request_details and self._has_slides_details(presentation):
+        if request_details:
             option = 'SlideDetailsContent'
         else:
             option = 'SlideContent'
@@ -485,16 +494,22 @@ class DataExtractor():
                     slides_urls.append(file_url)
                 else:
                     logger.warning(f'Slide file not found: {file_url} ')
-                    self.failed_presentations.append(Failed(presentation_id, reason=self.failed_reasons['slides']))
+                    self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_404'], collected=True))
                     slides_urls = {}
                     break
+
+            slides_details = slides.get('SlideDetails', [])
+            for s_details in slides_details:
+                if not self._is_correct_timecode(s_details['TimeMilliseconds'], presentation_infos):
+                    self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_timecodes'], collected=True))
+                    return {}
 
             nb_slides = len(slides_urls)
             slides_infos = {
                 'stream_type': slides.get('StreamType', ''),
                 'length': nb_slides,
                 'urls': slides_urls,
-                'details': slides.get('SlideDetails') if request_details else None
+                'details': slides_details
             }
 
         return slides_infos
@@ -514,6 +529,39 @@ class DataExtractor():
             is_useless = (source == '[Default] Use Recorder\'s Settings' and not slides.get('SlideDetails'))
 
         return is_useless
+
+    def get_timed_events(self, presentation_infos):
+        timed_events = []
+        presentation_id = presentation_infos['id']
+        if presentation_id:
+            timed_events_result = self.mediasite.presentation.get_content(presentation_id, resource_content='TimedEvents')
+            for event in timed_events_result:
+                if event.get('Payload'):
+                    try:
+                        event_xml = xml.parseString(event['Payload']).documentElement
+
+                        event_position = event.get('Position', 0)
+                        if not self._is_correct_timecode(event_position, presentation_infos):
+                            logger.warning(f'A timed event timecode is greater than the video duration for presentation {presentation_id}')
+                            self.failed_presentations(Failed(presentation_id, reason=self.failure_reasons['timed_events_timecodes'], collected=True))
+                            return []
+
+                        timed_events.append({
+                            'event_index': event_xml.getElementsByTagName('Number')[0].firstChild.nodeValue,
+                            'event_title': event_xml.getElementsByTagName('Title')[0].firstChild.nodeValue,
+                            'event_position_ms': event_position
+                        })
+                    except Exception as e:
+                        logger.debug(f'Failed to get timed event for presentation {presentation_id}: {e}')
+
+        return timed_events
+
+    def _is_correct_timecode(self, timecode, presentation_infos):
+        for video in presentation_infos['videos']:
+            for file in video['files']:
+                if timecode > file['duration_ms']:
+                    return False
+        return True
 
     def download_all_slides(self):
         all_ok = True
@@ -581,24 +629,6 @@ class DataExtractor():
                 for presentation in folder.get('presentations', []):
                     nb_slides += len(presentation['slides'].get('urls', []))
         return nb_slides
-
-    def get_timed_events(self, presentation_id):
-        chapters = []
-        if presentation_id:
-            timed_events = self.mediasite.presentation.get_content(presentation_id, resource_content='TimedEvents')
-            for event in timed_events:
-                if event.get('Payload'):
-                    try:
-                        chapter_xml = xml.parseString(event['Payload']).documentElement
-                        chapters.append({
-                            'chapter_index': chapter_xml.getElementsByTagName('Number')[0].firstChild.nodeValue,
-                            'chapter_title': chapter_xml.getElementsByTagName('Title')[0].firstChild.nodeValue,
-                            'chapter_position_ms': event.get('Position', 0)
-                        })
-                    except Exception as e:
-                        logger.debug(f'Non valid chapter: {e}')
-
-        return chapters
 
     def get_hostname(self):
         api_url = self.setup.config.get('mediasite_base_url')

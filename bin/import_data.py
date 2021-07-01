@@ -95,7 +95,7 @@ if __name__ == '__main__':
         if failed_count:
             logger.info(f'Failed to collect {failed_count} presentations:')
             for p in extractor.failed_presentations:
-                row = f'{p.presentation_id} | {p.reason}'
+                row = f'{p.presentation_id} | {p.reason} | Collected: {p.collected}'
                 sep = '-' * len(row)
                 print(sep)
                 print(row)
