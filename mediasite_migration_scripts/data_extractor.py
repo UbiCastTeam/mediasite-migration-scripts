@@ -46,7 +46,6 @@ class DataExtractor():
         }
 
         self.users = list()
-        self.skipped_users = list()
         self.linked_catalogs = list()
         self.download_folder = dl = Path(config.get('download_folder', '/downloads'))
         self.slides_download_folder = dl / 'slides'
@@ -59,7 +58,6 @@ class DataExtractor():
         self.all_catalogs = self.get_all_catalogs()
         self.all_data = self.timeit(self.extract_mediasite_data)
         self.download_all_slides()
-        print(f'Skipped users : \n {self.skipped_users}')
 
     def timeit(self, method):
         before = time.time()
@@ -256,9 +254,6 @@ class DataExtractor():
 
         if username.startswith('Default Presenter'):
             pass
-        elif '&' in username:
-            logger.warning(f'"&" in username {username}, skipping. ')
-            self.skipped_users.append(username)
         else:
             for u in self.users:
                 if u.get('username') == username:
@@ -268,6 +263,7 @@ class DataExtractor():
 
         if not user_infos:
             logger.debug(f'Getting user info for {username}')
+
             user_infos = {
                 'username': username,
             }
