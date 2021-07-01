@@ -42,7 +42,8 @@ class DataExtractor():
             'slides_timecodes': 'Somes slides timecodes are greater than the video duration',
             'videos_404': 'No videos found',
             'some_videos_404': 'Some videos not found',
-            'timed_events_timecodes': 'Some timed events / chapters timecode are greater thant the video duration '
+            'timed_events_timecodes': 'Some timed events / chapters timecode are greater thant the video duration ',
+            'videos_composites_404': 'A video is missing for video composition'
         }
 
         self.users = list()
@@ -314,7 +315,12 @@ class DataExtractor():
 
         videos_infos = list()
         videos = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
-        videos_infos, nb_videos_not_found = self._get_videos_details(videos)
+        videos_infos, nb_videos_not_found, videos_streams = self._get_videos_details(videos)
+
+        for stream in videos_streams:
+            if stream not in [v.get('stream_type') for v in videos_infos]:
+                self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['videos_composites_404'], collected=False))
+                return []
 
         if videos_infos and nb_videos_not_found:
             self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['some_videos_404'], collected=True))
@@ -327,6 +333,7 @@ class DataExtractor():
 
     def _get_videos_details(self, videos):
         videos_list = list()
+        videos_streams = list()
         videos_not_found = int()
 
         if self.session is None:
@@ -334,6 +341,10 @@ class DataExtractor():
             self.session.auth = self.mediasite_auth
 
         for file in videos:
+            stream = file['StreamType']
+            if stream not in videos_streams:
+                videos_streams.append(stream)
+
             content_server = self.mediasite.content.get_content_server(file['ContentServerId'])
             if 'DistributionUrl' in content_server:
                 # popping odata query params, we just need the route
@@ -370,7 +381,6 @@ class DataExtractor():
                         else:
                             logger.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
 
-                stream = file['StreamType']
                 in_list = False
                 for v in videos_list:
                     if stream == v.get('stream_type'):
@@ -381,7 +391,7 @@ class DataExtractor():
                     videos_list.append({'stream_type': stream,
                                        'files': [file_infos]})
 
-        return videos_list, videos_not_found
+        return videos_list, videos_not_found, videos_streams
 
     def _get_encoding_infos_from_api(self, settings_id, video_url):
         logger.debug(f'Getting encoding infos from api with settings id: {settings_id}')
@@ -489,7 +499,7 @@ class DataExtractor():
                 if file_found:
                     slides_urls.append(file_url)
                 else:
-                    logger.warning(f'Slide file not found: {file_url} ')
+                    logger.error(f'Slide file not found for presentation {presentation_id}: {file_url}')
                     self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_404'], collected=True))
                     slides_urls = {}
                     break
