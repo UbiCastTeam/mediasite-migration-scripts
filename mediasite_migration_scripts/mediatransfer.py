@@ -568,7 +568,7 @@ class MediaTransfer():
                     external_data=external_data,
                 ).get('oid')
                 for url in urls:
-                    self.redirections[url] = self.get_full_ms_url(f'/permalink/{oid}/iframe/?header=no')
+                    self.redirections[url] = self.get_full_ms_url(f'/permalink/{new_oid}/iframe/?header=no')
             oid = new_oid
 
         # last item in list is the final channel, return it's oid
