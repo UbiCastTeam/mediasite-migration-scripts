@@ -167,6 +167,7 @@ class DataExtractor():
 
         for p in children_presentations:
             pid = p.get('Id')
+            infos = dict()
             try:
                 infos = self.get_presentation_infos(p)
             except Exception:
@@ -491,12 +492,12 @@ class DataExtractor():
         else:
             option = 'SlideContent'
 
-        slides_infos = {}
         slides = self.mediasite.presentation.get_content(presentation_id, option)
         # SlideDetailsContent returns a dict whereas SlideContent return a list (key 'value' in JSON response)
         if type(slides) == list and len(slides) > 0:
             slides = slides[0]
 
+        slides_infos = dict()
         if slides and not self._is_useless_slides(slides):
             content_server_id = slides.get('ContentServerId', '')
             content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
@@ -505,9 +506,9 @@ class DataExtractor():
             presentation_id = slides.get('ParentResourceId', '')
 
             slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
-            slides_urls = []
             slides_files_names = slides.get('FileNameWithExtension', '')
             slides_stream_type = slides.get('StreamType', '')
+            slides_urls = list()
             for i in range(int(slides.get('Length', '0'))):
                 # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
                 file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
