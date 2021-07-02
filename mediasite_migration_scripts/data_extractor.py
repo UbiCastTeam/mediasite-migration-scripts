@@ -6,7 +6,7 @@ import requests
 from datetime import datetime
 import time
 from pathlib import Path
-from collections import namedtuple
+from dataclasses import dataclass
 
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
@@ -14,7 +14,13 @@ import utils.common as utils
 import utils.media as media
 
 logger = logging.getLogger(__name__)
-Failed = namedtuple('Failed', ['presentation_id', 'reason', 'collected'])
+
+
+@dataclass
+class Failed():
+    presentation_id: str
+    reason: str
+    collected: str
 
 
 class DataExtractor():
@@ -38,7 +44,9 @@ class DataExtractor():
         self.failed_presentations = list()
         self.failure_reasons = {
             'request': 'Requesting Mediasite API gone wrong',
-            'slides_404': 'Slides not found',
+            'slides_video_404': 'Slides from video not found (detect slides will be lauch)',
+            'slides_jpeg_404': 'Slides from jpeg not found',
+            'slides_unknown_stream_404': 'Slides from unkown stream type not found',
             'slides_timecodes': 'Somes slides timecodes are greater than the video duration',
             'videos_404': 'No videos found',
             'some_videos_404': 'Some videos not found',
@@ -158,13 +166,12 @@ class DataExtractor():
         logger.debug(f'Gettings infos for {len(children_presentations)} presentations for folder: {folder_id}')
 
         for p in children_presentations:
+            pid = p.get('Id')
             try:
                 infos = self.get_presentation_infos(p)
-                presentations_infos.append(infos)
             except Exception:
-                pid = p.get('Id')
-                # logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
-                # time.sleep(5 * 60)
+                logger.error(f'Getting presentation info for {pid} failed, sleeping 5 minutes before retrying')
+                time.sleep(5 * 60)
                 try:
                     infos = self.get_presentation_infos(p)
                     logger.info(f'Second try for {pid} passed')
@@ -173,7 +180,15 @@ class DataExtractor():
                     logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
                     self.failed_presentations.append(Failed(pid, reason=self.failure_reasons['request'], collected=False))
 
-        return presentations_infos
+            to_collect = True
+            for failed_p in self.failed_presentations:
+                if failed_p.presentation_id == pid and not failed_p.collected:
+                    to_collect = False
+                    break
+            if infos and to_collect:
+                presentations_infos.append(infos)
+
+            return presentations_infos
 
     def get_presentation_infos(self, presentation):
         logger.debug('-' * 50)
@@ -492,6 +507,7 @@ class DataExtractor():
             slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{presentation_id}"
             slides_urls = []
             slides_files_names = slides.get('FileNameWithExtension', '')
+            slides_stream_type = slides.get('StreamType', '')
             for i in range(int(slides.get('Length', '0'))):
                 # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
                 file_name = slides_files_names.replace('{0:D4}', f'{i+1:04}')
@@ -500,9 +516,18 @@ class DataExtractor():
                 if file_found:
                     slides_urls.append(file_url)
                 else:
-                    logger.error(f'Slide file not found for presentation {presentation_id}: {file_url}')
-                    self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_404'], collected=True))
-                    slides_urls = {}
+                    if slides_stream_type == 'Slide':
+                        logger.error(f'Slide from jpeg not found for presentation {presentation_id}')
+                        self.failed_presentations.append(presentation_id, reason=self.failure_reasons['slides_jpeg_404'], collected=False)
+                    elif slides_stream_type.startswith('Video'):
+                        logger.warning(f'Slide file from video not found for presentation {presentation_id}: {file_url}')
+                        logger.warning(f'Detect slides will be lauch for presentation {presentation_id}')
+                        self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_video_404'], collected=True))
+                    else:
+                        logger.error(f'Slide file from unknown stream type [{slides_stream_type}] not found for presentation {presentation_id}: {file_url}')
+                        self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_unknown_stream_404']), collected=False)
+
+                    slides_urls = []
                     break
 
             slides_details = slides.get('SlideDetails', [])
@@ -513,7 +538,7 @@ class DataExtractor():
 
             nb_slides = len(slides_urls)
             slides_infos = {
-                'stream_type': slides.get('StreamType', ''),
+                'stream_type': slides_stream_type,
                 'length': nb_slides,
                 'urls': slides_urls,
                 'details': slides_details
