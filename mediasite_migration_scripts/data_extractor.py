@@ -317,10 +317,11 @@ class DataExtractor():
         videos = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
         videos_infos, nb_videos_not_found, videos_streams = self._get_videos_details(videos)
 
-        for stream in videos_streams:
-            if stream not in [v.get('stream_type') for v in videos_infos]:
-                self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['videos_composites_404'], collected=False))
-                return []
+        if len(videos_streams) > 1:
+            for stream in videos_streams:
+                if stream not in [v.get('stream_type') for v in videos_infos]:
+                    self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['videos_composites_404'], collected=False))
+                    return []
 
         if videos_infos and nb_videos_not_found:
             self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['some_videos_404'], collected=True))
@@ -342,7 +343,7 @@ class DataExtractor():
 
         for file in videos:
             stream = file['StreamType']
-            if stream not in videos_streams:
+            if stream not in videos_streams and stream.startswith('Video'):
                 videos_streams.append(stream)
 
             content_server = self.mediasite.content.get_content_server(file['ContentServerId'])
