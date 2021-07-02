@@ -157,7 +157,7 @@ class DataExtractor():
         return ''
 
     def get_folder_presentations_infos(self, folder_id):
-        presentations_infos = list()
+        folder_presentations_infos = list()
         children_presentations = list()
         # find presentations in folder
         for presentation in self.presentations:
@@ -176,7 +176,7 @@ class DataExtractor():
                 try:
                     infos = self.get_presentation_infos(p)
                     logger.info(f'Second try for {pid} passed')
-                    presentations_infos.append(infos)
+                    folder_presentations_infos.append(infos)
                 except Exception as e:
                     logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
                     self.failed_presentations.append(Failed(pid, reason=self.failure_reasons['request'], collected=False))
@@ -187,9 +187,9 @@ class DataExtractor():
                     to_collect = False
                     break
             if infos and to_collect:
-                presentations_infos.append(infos)
+                folder_presentations_infos.append(infos)
 
-            return presentations_infos
+        return folder_presentations_infos
 
     def get_presentation_infos(self, presentation):
         logger.debug('-' * 50)
