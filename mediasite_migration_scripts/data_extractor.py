@@ -8,8 +8,12 @@ import time
 from pathlib import Path
 from dataclasses import dataclass, asdict, fields
 
+<<<<<<< HEAD
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
+=======
+from mediasite_migration_scripts.assets.mediasite import controller as mediasite_client
+>>>>>>> refactor collect: csv writing, progress, getting mediasite auth refs #34128
 import utils.common as utils
 import utils.media as media
 
@@ -19,7 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Failed():
     presentation_id: str
-    reason: str
+    error: str
     collected: str
 
 
@@ -27,22 +31,16 @@ class DataExtractor():
 
     def __init__(self, config=dict(), force_slides_download=None, max_folders=None, e2e_tests=False):
         logger.info('Connecting...')
+        self.mediasite = mediasite_client.controller(config)
+        self.mediasite_auth = utils.get_mediasite_auth(config)
+        self.mediasite_config = config
+
         self.session = None
         self.max_folders = max_folders
-        self.e2e_tests = e2e_tests
-        self.config = {
-            'mediasite_base_url': config.get('mediasite_api_url'),
-            'mediasite_api_secret': config.get('mediasite_api_key'),
-            'mediasite_api_user': config.get('mediasite_api_user'),
-            'mediasite_api_password': config.get('mediasite_api_password'),
-            'whitelist': config.get('whitelist')
-        }
-        self.mediasite = mediasite_controller.controller(self.config)
-        self.mediasite_auth = requests.auth.HTTPBasicAuth(self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
 
         self.presentations = None
         self.failed_presentations = list()
-        self.failure_reasons = {
+        self.failed_presentations_errors = {
             'request': 'Requesting Mediasite API gone wrong',
             'slides_video_404': 'Slides from video not found (detect slides will be lauch)',
             'slides_jpeg_404': 'Slides from jpeg not found',
@@ -53,7 +51,7 @@ class DataExtractor():
             'timed_events_timecodes': 'Some timed events / chapters timecodes are greater than the video duration ',
             'videos_composites_404': 'A video is missing for video composition'
         }
-        self.failures_report_file = 'failed.csv'
+        self.failed_presentations_filename = 'failed.csv'
 
         self.users = list()
         self.linked_catalogs = list()
@@ -61,6 +59,7 @@ class DataExtractor():
         self.slides_download_folder = dl / 'slides'
         self.nb_all_slides = 0
         self.nb_all_downloaded_slides = 0
+
         self.timeit(self.run)
 
     def run(self):
@@ -88,7 +87,7 @@ class DataExtractor():
         fieldnames = [field.name for field in fields(Failed)]
         failed_presentations_dict_rows = [asdict(p) for p in self.failed_presentations]
         try:
-            utils.write_csv(self.failures_report_file, fieldnames, failed_presentations_dict_rows)
+            utils.write_csv(self.failed_presentations_filename, fieldnames, failed_presentations_dict_rows)
         except Exception as e:
             logger.error(f'Failed to write csv for failed presentations report: {e}')
 
@@ -136,7 +135,7 @@ class DataExtractor():
 
             for i, folder in enumerate(self.folders):
                 if i > 1:
-                    print(f'Requesting folders: [{i}]/[{len(self.folders)}] -- {round(i / len(self.folders) * 100, 1)}%', end='\r', flush=True)
+                    print(utils.get_progress_string(i, len(self.folders)), end='\r', flush=True)
 
                 path = self._find_folder_path(folder['id'])
                 logger.debug('-' * 50)
@@ -189,14 +188,9 @@ class DataExtractor():
                     folder_presentations_infos.append(infos)
                 except Exception as e:
                     logger.error(f'Failed to get info for presentation {pid}, moving to the next one: {e}')
-                    self.failed_presentations.append(Failed(pid, reason=self.failure_reasons['request'], collected=False))
+                    self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['request'], collected=False))
 
-            to_collect = True
-            for failed_p in self.failed_presentations:
-                if failed_p.presentation_id == pid and not failed_p.collected:
-                    to_collect = False
-                    break
-            if infos and to_collect:
+            if infos and self._to_collect(pid):
                 folder_presentations_infos.append(infos)
 
         return folder_presentations_infos
@@ -238,6 +232,12 @@ class DataExtractor():
         presentation_infos['timed_events'] = self.get_timed_events(presentation_infos)
 
         return presentation_infos
+
+    def _to_collect(self, presentation_id):
+        for failed_p in self.failed_presentations:
+            if failed_p.presentation_id == presentation_id and not failed_p.collected:
+                return False
+        return True
 
     def get_all_folders_infos(self):
         folders_infos = list()
@@ -346,15 +346,15 @@ class DataExtractor():
         if len(videos_streams) > 1:
             for stream in videos_streams:
                 if stream not in [v.get('stream_type') for v in videos_infos]:
-                    self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['videos_composites_404'], collected=False))
+                    self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['videos_composites_404'], collected=False))
                     return []
 
         if videos_infos and nb_videos_not_found:
-            self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['some_videos_404'], collected=True))
+            self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['some_videos_404'], collected=True))
             logger.warning(f'{nb_videos_not_found} videos files not found for presentation {presentation_id}')
         elif not videos_infos:
             logger.error(f'Failed to get a video file for presentation {presentation_id}, moving to next one')
-            self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['videos_404'], collected=False))
+            self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['videos_404'], collected=False))
 
         return videos_infos
 
@@ -529,14 +529,14 @@ class DataExtractor():
                 else:
                     if slides_stream_type == 'Slide':
                         logger.error(f'Slide from jpeg not found for presentation {presentation_id}')
-                        self.failed_presentations.append(presentation_id, reason=self.failure_reasons['slides_jpeg_404'], collected=False)
+                        self.failed_presentations.append(presentation_id, error=self.failed_presentations_errors['slides_jpeg_404'], collected=False)
                     elif slides_stream_type.startswith('Video'):
                         logger.warning(f'Slide file from video not found for presentation {presentation_id}: {file_url}')
                         logger.warning(f'Detect slides will be lauch for presentation {presentation_id}')
-                        self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_video_404'], collected=True))
+                        self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['slides_video_404'], collected=True))
                     else:
                         logger.error(f'Slide file from unknown stream type [{slides_stream_type}] not found for presentation {presentation_id}: {file_url}')
-                        self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_unknown_stream_404']), collected=False)
+                        self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['slides_unknown_stream_404']), collected=False)
 
                     slides_urls = []
                     break
@@ -544,7 +544,7 @@ class DataExtractor():
             slides_details = slides.get('SlideDetails', [])
             for s_details in slides_details:
                 if not self._is_correct_timecode(s_details['TimeMilliseconds'], presentation_infos):
-                    self.failed_presentations.append(Failed(presentation_id, reason=self.failure_reasons['slides_timecodes'], collected=True))
+                    self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['slides_timecodes'], collected=True))
                     return {}
 
             nb_slides = len(slides_urls)
@@ -586,7 +586,7 @@ class DataExtractor():
                         event_position = event.get('Position', 0)
                         if not self._is_correct_timecode(event_position, presentation_infos):
                             logger.warning(f'A timed event timecode is greater than the video duration for presentation {presentation_id}')
-                            self.failed_presentations(Failed(presentation_id, reason=self.failure_reasons['timed_events_timecodes'], collected=True))
+                            self.failed_presentations(Failed(presentation_id, error=self.failed_presentations_errors['timed_events_timecodes'], collected=True))
                             return []
 
                         timed_events.append({
@@ -611,7 +611,7 @@ class DataExtractor():
         self.nb_all_slides = self.get_nb_all_slides()
         for folder in self.all_data:
             path = self._find_folder_path(folder['id'])
-            if utils.is_folder_to_add(path, config=self.config):
+            if utils.is_folder_to_add(path, config=self.mediasite_config):
                 for presentation in folder.get('presentations', []):
                     ok = self._download_slides(presentation.get('id'), presentation['slides'].get('urls', []))
                 # if at least one is false, all is false
@@ -668,7 +668,7 @@ class DataExtractor():
         nb_slides = 0
         for folder in self.all_data:
             path = self._find_folder_path(folder['id'])
-            if utils.is_folder_to_add(path, config=self.config):
+            if utils.is_folder_to_add(path, config=self.mediasite_config):
                 for presentation in folder.get('presentations', []):
                     nb_slides += len(presentation['slides'].get('urls', []))
         return nb_slides

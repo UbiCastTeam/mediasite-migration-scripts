@@ -118,12 +118,19 @@ for f in folders_to_process:
 
 print()
 print(f'{skipped_presentations}/{total_presentations} presentations have not been migrated')
+
 print('Writing csv')
+<<<<<<< HEAD
 with open('report.csv', 'w', newline='') as csvfile:
     fieldnames = ['mediasite_path', 'mediaserver_path', 'mediasite_url', 'mediaserver_url']
     writer = csv.DictWriter(csvfile, delimiter='|', fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(rows)
+=======
+csv_filename = 'report.csv'
+fieldnames = ['mediasite_path', 'mediaserver_path', 'mediasite_url', 'mediaserver_url']
+utils.write_csv(csv_filename, fieldnames, rows)
+>>>>>>> refactor collect: csv writing, progress, getting mediasite auth refs #34128
 
 if redirections_copy != redirections:
     fixed_redirections_path = 'redirections_fixed.json'

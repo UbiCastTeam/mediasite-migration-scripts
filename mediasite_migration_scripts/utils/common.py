@@ -4,7 +4,7 @@ import os
 import logging
 from datetime import datetime
 import csv
-
+from requests import auth
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,10 @@ class ColoredFormatter(logging.Formatter):
             levelname_color = COLOR_SEQ % (30 + COLORS[levelname]) + levelname + RESET_SEQ
             record.levelname = levelname_color
         return logging.Formatter.format(self, record)
+
+
+def get_mediasite_auth(config):
+    return auth.HTTPBasicAuth(config.get('mediasite_api_user'), config.get('mediasite_api_password'))
 
 
 def parse_mediasite_date(date_str):
@@ -117,6 +121,19 @@ def read_json(path):
         return json.load(f)
 
 
+def write_json(path, data):
+    with open(path, 'r') as file:
+        json.dump(file, data)
+
+
+def write_csv(filename, fieldnames, rows):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        writer.writerows(rows)
+
+
 def to_mediaserver_conf(config):
     msconfig = {
         'API_KEY': config.get('mediaserver_api_key', ''),
@@ -128,11 +145,6 @@ def to_mediaserver_conf(config):
         'MAX_RETRY': 3,
     }
     return msconfig
-def write_csv(file, fieldnames, rows):
-    with open(file, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 # FIXME: unify
@@ -160,6 +172,7 @@ def get_timecode_from_sec(seconds):
 
 def get_mediasite_host(url):
     return url.split('/')[2]
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 
@@ -174,3 +187,5 @@ def get_argparser():
     return parser
 =======
 >>>>>>> write failed presentations report into CSV refs #34128
+=======
+>>>>>>> refactor collect: csv writing, progress, getting mediasite auth refs #34128

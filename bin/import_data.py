@@ -90,9 +90,4 @@ if __name__ == '__main__':
         logger.info('--------- Data collection finished --------- ')
         failed_count = len(extractor.failed_presentations)
         if failed_count:
-            logger.info(f'Some errors on collect for {failed_count} presentations:')
-            for p in extractor.failed_presentations:
-                row = f'{p.presentation_id} | {p.reason} | Collected: {p.collected}'
-                sep = '-' * len(row)
-                print(sep)
-                print(row)
+            logger.warning(f'Some errors on collect for {failed_count} presentations. Report in failed.csv')
