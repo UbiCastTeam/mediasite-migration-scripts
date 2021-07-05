@@ -74,6 +74,7 @@ def set_logger(options=None, verbose=False, run_path=None):
     formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
 
+    level = logging.INFO
     if verbose:
         level = logging.DEBUG
     elif options:
@@ -81,8 +82,6 @@ def set_logger(options=None, verbose=False, run_path=None):
             level = logging.DEBUG
         elif options.quiet:
             level = logging.ERROR
-    else:
-        level = logging.INFO
 
     root_logger = logging.getLogger('root')
     root_logger.setLevel(level)
