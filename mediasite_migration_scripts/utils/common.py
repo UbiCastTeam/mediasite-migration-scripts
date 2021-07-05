@@ -3,6 +3,8 @@ import json
 import os
 import logging
 from datetime import datetime
+import csv
+
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +74,15 @@ def set_logger(options=None, verbose=False, run_path=None):
     formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
 
-    level = logging.INFO
-    if options:
+    if verbose:
+        level = logging.DEBUG
+    elif options:
         if options.verbose:
             level = logging.DEBUG
         elif options.quiet:
             level = logging.ERROR
-    elif verbose:
-        level = logging.DEBUG
+    else:
+        level = logging.INFO
 
     root_logger = logging.getLogger('root')
     root_logger.setLevel(level)
@@ -126,6 +129,11 @@ def to_mediaserver_conf(config):
         'MAX_RETRY': 3,
     }
     return msconfig
+def write_csv(file, fieldnames, rows):
+    with open(file, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 # FIXME: unify
@@ -154,6 +162,7 @@ def get_timecode_from_sec(seconds):
 def get_mediasite_host(url):
     return url.split('/')[2]
 
+<<<<<<< HEAD
 
 def get_argparser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -164,3 +173,5 @@ def get_argparser():
         help='Print all information to stdout.',
     )
     return parser
+=======
+>>>>>>> write failed presentations report into CSV refs #34128

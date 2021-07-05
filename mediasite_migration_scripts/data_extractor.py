@@ -6,7 +6,7 @@ import requests
 from datetime import datetime
 import time
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, fields
 
 
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
@@ -50,9 +50,10 @@ class DataExtractor():
             'slides_timecodes': 'Somes slides timecodes are greater than the video duration',
             'videos_404': 'No videos found',
             'some_videos_404': 'Some videos not found',
-            'timed_events_timecodes': 'Some timed events / chapters timecode are greater thant the video duration ',
+            'timed_events_timecodes': 'Some timed events / chapters timecodes are greater than the video duration ',
             'videos_composites_404': 'A video is missing for video composition'
         }
+        self.failures_report_file = 'failed.csv'
 
         self.users = list()
         self.linked_catalogs = list()
@@ -67,6 +68,7 @@ class DataExtractor():
         self.all_catalogs = self.get_all_catalogs()
         self.all_data = self.timeit(self.extract_mediasite_data)
         self.download_all_slides()
+        self.report()
 
     def timeit(self, method):
         before = time.time()
@@ -81,6 +83,14 @@ class DataExtractor():
         else:
             logger.info(f'{method} took {took_min} minutes')
         return results
+
+    def report(self):
+        fieldnames = [field.name for field in fields(Failed)]
+        failed_presentations_dict_rows = [asdict(p) for p in self.failed_presentations]
+        try:
+            utils.write_csv(self.failures_report_file, fieldnames, failed_presentations_dict_rows)
+        except Exception as e:
+            logger.error(f'Failed to write csv for failed presentations report: {e}')
 
     def get_all_presentations(self, already_fetched=False):
         presentations = self.timeit(self.mediasite.presentation.get_all_presentations)

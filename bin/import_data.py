@@ -24,7 +24,7 @@ if __name__ == '__main__':
                             dest='config_file', action='store_true', default=None,
                             help='add custom config file.')
         parser.add_argument('-mf', '--mediasite-file',
-                            dest='mediasite_file', action='store_true', default=None,
+                            dest='mediasite_file', action='store_true', default='mediasite_data.json',
                             help='add custom mediasite data file.')
         parser.add_argument('--max-folders', dest='max_folders', default=None,
                             help='specify maximum folders to collect infos'),
@@ -38,9 +38,6 @@ if __name__ == '__main__':
     logger = utils.set_logger(options)
 
     mediasite_file = options.mediasite_file
-    if mediasite_file is None:
-        mediasite_file = 'mediasite_data.json'
-
     try:
         with open(mediasite_file) as f:
             data = json.load(f)
