@@ -8,12 +8,7 @@ import time
 from pathlib import Path
 from dataclasses import dataclass, asdict, fields
 
-<<<<<<< HEAD
-
-from mediasite_migration_scripts.assets.mediasite import controller as mediasite_controller
-=======
 from mediasite_migration_scripts.assets.mediasite import controller as mediasite_client
->>>>>>> refactor collect: csv writing, progress, getting mediasite auth refs #34128
 import utils.common as utils
 import utils.media as media
 
