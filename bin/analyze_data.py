@@ -77,7 +77,7 @@ if __name__ == '__main__':
         run_import = input('No data to analyze. Do you want to run import data ? [y/N] ').lower()
         if run_import == 'y' or run_import == 'yes':
             args = ' '.join(sys.argv[1:])
-            returncode = os.system(f'python3 bin/import_data.py {args}')
+            returncode = os.system(f'python3 bin/collect.py {args}')
             if returncode != 0:
                 logging.error('Failed to import data')
                 sys.exit(1)

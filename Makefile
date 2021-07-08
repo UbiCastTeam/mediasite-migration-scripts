@@ -13,11 +13,11 @@ shell: build
 		--rm mediasite \
 		/bin/bash
 
-import_data: build
+collect: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
-		python3 bin/import_data.py $(ARGS)
+		python3 bin/collect.py $(ARGS)
 
 analyze_data: build
 	docker run -it \

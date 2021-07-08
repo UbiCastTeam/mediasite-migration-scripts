@@ -97,7 +97,7 @@ if __name__ == '__main__':
         run_import = run_import.lower()
         if run_import == 'y' or run_import == 'yes':
             args = ' '.join(sys.argv[1:])
-            os.system(f'python3 bin/import_data.py {args}')
+            os.system(f'python3 bin/collect.py {args}')
         else:
             logger.error('--------- Aborted ---------')
             sys.exit(1)

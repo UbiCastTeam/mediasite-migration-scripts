@@ -8,24 +8,16 @@ from requests import auth
 
 logger = logging.getLogger(__name__)
 
+# codes colors
 RED, GREEN, YELLOW, BLUE, WHITE, LIGHT_RED = [1, 2, 3, 4, 67, 61]
 
-# The background is set with 40 plus the number of the color, and the foreground with 30
-#  31 Red 32 Green 33 Yellow 34 Blue 91 Light Red 97 White
+# The background is set with 40 plus the code color:
+# 31 : Red, 32 : Green, 33 : Yellow, 34 : Blue, 91 : Light Red, 97 : White
 
 #These are the sequences need to get colored ouput
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 BOLD_SEQ = "\033[1m"
-
-
-def formatter_message(message, use_color=True):
-    if use_color:
-        message = message.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
-    else:
-        message = message.replace("$RESET", "").replace("$BOLD", "")
-    return message
-
 
 COLORS = {
     'WARNING': YELLOW,
@@ -106,7 +98,7 @@ def set_logger(options=None, verbose=False, run_path=None):
     return root_logger
 
 
-def is_folder_to_add(path, config={}):
+def is_folder_to_add(path, config=dict()):
     if config.get('whitelist'):
         for fw in config['whitelist']:
             if fw in path:
@@ -121,9 +113,9 @@ def read_json(path):
         return json.load(f)
 
 
-def write_json(path, data):
-    with open(path, 'r') as file:
-        json.dump(file, data)
+def write_json(data, path, open_text_option='w'):
+    with open(path, open_text_option) as file:
+        json.dump(data, file)
 
 
 def write_csv(filename, fieldnames, rows):
@@ -172,9 +164,7 @@ def get_timecode_from_sec(seconds):
 
 def get_mediasite_host(url):
     return url.split('/')[2]
-<<<<<<< HEAD
 
-<<<<<<< HEAD
 
 def get_argparser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -185,7 +175,3 @@ def get_argparser():
         help='Print all information to stdout.',
     )
     return parser
-=======
->>>>>>> write failed presentations report into CSV refs #34128
-=======
->>>>>>> refactor collect: csv writing, progress, getting mediasite auth refs #34128

@@ -29,14 +29,14 @@ class Failed():
 
 class DataExtractor():
 
-    def __init__(self, config=dict(), force_slides_download=None, max_folders=None, e2e_tests=False):
+    def __init__(self, config, options):
         logger.info('Connecting...')
         self.mediasite = mediasite_client.controller(config)
         self.mediasite_auth = utils.get_mediasite_auth(config)
         self.mediasite_config = config
 
         self.session = None
-        self.max_folders = max_folders
+        self.max_folders = options.max_folders
 
         self.presentations = None
         self.failed_presentations = list()
@@ -51,7 +51,7 @@ class DataExtractor():
             'timed_events_timecodes': 'Some timed events / chapters timecodes are greater than the video duration ',
             'videos_composites_404': 'A video is missing for video composition'
         }
-        self.failed_presentations_filename = 'failed.csv'
+        self.failed_presentations_filename = options.failed_csvfile
 
         self.users = list()
         self.linked_catalogs = list()
