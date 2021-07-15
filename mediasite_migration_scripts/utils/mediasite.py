@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-import requests
+from xml.dom.minidom import parse
+import utils.http as http
+from datetime import datetime
 
 
 class MediasiteClient:
     def __init__(self, config):
-        self.headers = {
-            'sfapikey': config['mediasite_api_key'],
-        }
-        self.auth = requests.auth.HTTPBasicAuth(config['mediasite_api_user'], config['mediasite_api_password'])
+        self.session = http.get_session(config['mediasite_api_user'],
+                                        config['mediasite_api_password'],
+                                        headers={'sfapikey': config['mediasite_api_key']})
         self.url_prefix = config['mediasite_api_url'].rstrip('/')
-        self.session = requests.Session()
 
     def get_presentation(self, presentation_id):
         r = self.do_request(f"/Presentations('{presentation_id}')?$select=full")
@@ -20,17 +20,15 @@ class MediasiteClient:
 
     def do_request(self, suffix):
         url = f"{self.url_prefix}/{suffix.lstrip('/')}"
-        return self.session.get(url, headers=self.headers, auth=self.auth).json()
+        return self.session.get(url).json()
 
     def close(self):
         self.session.close()
 
 
-def get_slides_count(presentation):
-    count = 0
-    if presentation.get('slides'):
-        count = len(presentation['slides'].get('urls', []))
-    return count
+def get_slides_count(presentation_infos):
+    count = presentation_infos.get('Slides', {}).get('Length', 0)
+    return int(count)
 
 
 def get_duration_h(videos):
@@ -67,3 +65,43 @@ def get_best_video_file(video, allow_wmv=False):
         if width >= max_width:
             video_file = preferred_file
     return video_file
+
+
+def parse_mediasite_date(date_str):
+    #2010-05-26T07:16:57Z
+    if '.' in date_str:
+        # some media have msec included
+        #2016-12-07T13:07:27.58Z
+        date_str = date_str.split('.')[0] + 'Z'
+    if not date_str.endswith('Z'):
+        date_str += 'Z'
+    return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+
+
+def format_mediasite_date(date):
+    return date.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+def get_most_distant_date(presentation_infos):
+    most_distant_date_str = str()
+    date_types = ['CreationDate', 'RecordDate']
+    dates = list()
+
+    for d_type in date_types:
+        date_str = presentation_infos.get(d_type)
+        if date_str:
+            date = parse_mediasite_date(date_str)
+            dates.append(date)
+    most_distant_date = min(dates)
+    most_distant_date_str = format_mediasite_date(most_distant_date)
+
+    return most_distant_date_str
+
+
+def strip_milliseconds(self, date):
+    return date[:-1].split('.')[0]
+
+
+def get_age_days(date_str):
+    days = (datetime.now() - parse_mediasite_date(date_str)).days
+    return days

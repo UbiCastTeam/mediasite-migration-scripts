@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), download_folder=None, slides_download=None, unit_test=False, e2e_test=False, root_channel_oid=None):
+    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), slides_download=None, unit_test=False, e2e_test=False, root_channel_oid=None):
         self.config = config
 
         self.compositor = None
@@ -33,13 +33,12 @@ class MediaTransfer():
         self.media_with_missing_slides = list()
         self.failed = list()
 
-        if download_folder:
-            self.download_folder = dl = Path(download_folder)
-        elif config.get('download_folder'):
+        if config.get('download_folder'):
             self.download_folder = dl = Path(config.get('download_folder'))
         else:
             logger.error('Please provide a download folder path. Not found in config.json or in argument.')
             sys.exit(1)
+
         self.slides_folder = dl / 'slides'
         self.composites_folder = dl / 'composite'
 
@@ -500,7 +499,7 @@ class MediaTransfer():
             del user['api_key']
 
             if not user_id:
-                logger.warning(f"MediaServer dit not return an id when creating user {user.get('username')}")
+                logger.warning(f"MediaServer did not return an id when creating user {user.get('username')}")
 
             result = self.ms_client.api('perms/edit/', method='post', data={'type': 'user', 'id': user_id, 'can_have_personal_channel': 'True'})
             if not result.get('success'):

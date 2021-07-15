@@ -45,9 +45,9 @@ if __name__ == '__main__':
         mst_file_path = Path(options.mediasite_file)
 
         if mst_file_path.is_file():
-            logger.info(f'{mst_file_path} already found')
+            logger.info(f'Found collected data in {mst_file_path}')
 
-            should_collect = input('Do you want to run data collect anyway (collected data will be overwritten) ? [y/N]')
+            should_collect = input('Do you want to run data collect anyway (collected data will be overwritten) ? [y/N] ')
             if should_collect not in ['y', 'yes']:
                 logger.info('Aborting script')
                 sys.exit(0)
@@ -60,11 +60,14 @@ if __name__ == '__main__':
             mediasite_filename = ''.join(['mediasite_', data_attr, '.json'])
             utils.write_json(data=getattr(extractor, data_attr), path=mediasite_filename, open_text_option='w')
 
-    except Exception as e:
-        logger.error(f'Import data failed: {e}')
-        sys.exit(1)
-    finally:
         logger.info('--------- Data collection finished --------- ')
         failed_count = len(extractor.failed_presentations)
         if failed_count:
             logger.warning(f'Some errors on data collect for {failed_count} presentations. See report in failed.csv')
+
+    except KeyboardInterrupt:
+        logger.info('Collect interrupted by user. Not keeping collected data.')
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f'Import data failed: {e}')
+        sys.exit(1)

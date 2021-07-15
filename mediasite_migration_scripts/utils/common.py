@@ -41,31 +41,9 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
-def get_mediasite_auth(config):
-    return auth.HTTPBasicAuth(config.get('mediasite_api_user'), config.get('mediasite_api_password'))
-
-
-def parse_mediasite_date(date_str):
-    #2010-05-26T07:16:57Z
-    if '.' in date_str:
-        # some media have msec included
-        #2016-12-07T13:07:27.58Z
-        date_str = date_str.split('.')[0] + 'Z'
-    if not date_str.endswith('Z'):
-        date_str += 'Z'
-    return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
-
-
-def get_age_days(date_str):
-    days = (datetime.now() - parse_mediasite_date(date_str)).days
-    return days
-
-
-def set_logger(options=None, verbose=False, run_path=None):
-    if run_path is None:
-        run_path = os.path.dirname(os.path.realpath(__file__))
+def set_logger(options=None, verbose=False):
     current_datetime_string = '{dt.month}-{dt.day}-{dt.year}'.format(dt=datetime.now())
-    logging_format = '%(asctime)s - %(levelname)s - %(message)s'
+    logging_format = '%(asctime)s - %(levelname)s - %(message)s - [%(funcName)s]'
     logging_datefmt = '%m/%d/%Y - %I:%M:%S %p'
     formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
@@ -88,7 +66,7 @@ def set_logger(options=None, verbose=False, run_path=None):
 
         logs_folder = 'logs/'
         os.makedirs(logs_folder, exist_ok=True)
-        logfile_path = os.path.join(logs_folder, f'test_{current_datetime_string}.log')
+        logfile_path = os.path.join(logs_folder, f'{current_datetime_string}.log')
         logfile = logging.FileHandler(logfile_path)
         logfile.setFormatter(formatter)
 
@@ -153,6 +131,11 @@ def setup_logging(verbose=False):
 def get_progress_string(index, total):
     percent = 100 * (index) / total
     return f'[{index + 1}/{total} ({percent:.1f}%)]'
+
+
+def print_progress_string(index, total):
+    progress_string = get_progress_string(index, total)
+    print(progress_string, end='\r')
 
 
 def get_timecode_from_sec(seconds):

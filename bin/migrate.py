@@ -126,7 +126,7 @@ if __name__ == '__main__':
         logger.error('--------- Aborted ---------')
         sys.exit(1)
 
-    mediatransfer = MediaTransfer(config, mediasite_data, options.ommit_migration_files)
+    mediatransfer = MediaTransfer(config, mediasite_data)
 
     logger.info('Uploading videos')
     try:
