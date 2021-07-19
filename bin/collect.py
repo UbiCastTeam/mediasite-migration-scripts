@@ -66,7 +66,7 @@ if __name__ == '__main__':
             logger.warning(f'Some errors on data collect for {failed_count} presentations. See report in failed.csv')
 
     except KeyboardInterrupt:
-        logger.info('Collect interrupted by user. Not keeping collected data.')
+        logger.warning('Interrupted by user. Not keeping collected data.')
         sys.exit(0)
     except Exception as e:
         logger.error(f'Import data failed: {e}')

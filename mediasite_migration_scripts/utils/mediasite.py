@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 from xml.dom.minidom import parse
+import logging
 import utils.http as http
 from datetime import datetime
+
+
+logger = logging.getLogger(__name__)
 
 
 class MediasiteClient:
@@ -29,6 +33,35 @@ class MediasiteClient:
 def get_slides_count(presentation_infos):
     count = presentation_infos.get('Slides', {}).get('Length', 0)
     return int(count)
+
+
+def get_slides_urls(presentation_infos):
+    slides_urls = list()
+
+    pid = presentation_infos['Id']
+    logger.debug(f'Getting slides urls for presentation {pid}')
+
+    slides = presentation_infos.get('Slides')
+    if slides:
+        content_server_id = slides['ContentServerId']
+        content_server_url = slides['ContentServer']['Url']
+        slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{pid}"
+
+        for i in range(int(slides.get('Length', '0'))):
+            # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
+            file_name = slides.get('FileNameWithExtension', '').replace('{0:D4}', f'{i+1:04}')
+            file_url = f'{slides_base_url}/{file_name}'
+            slides_urls.append(file_url)
+
+    return slides_urls
+
+
+def slides_urls_exists(presentation_infos):
+    urls = get_slides_urls(presentation_infos)
+    for u in urls:
+        if not http.url_exists(u):
+            return False
+    return True
 
 
 def get_duration_h(videos):

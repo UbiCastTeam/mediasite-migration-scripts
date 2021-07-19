@@ -4,7 +4,6 @@ import os
 import logging
 from datetime import datetime
 import csv
-from requests import auth
 
 logger = logging.getLogger(__name__)
 
@@ -42,24 +41,21 @@ class ColoredFormatter(logging.Formatter):
 
 
 def set_logger(options=None, verbose=False):
+    logging_format = '%(asctime)s - %(levelname)s - %(message)s'
+    level = logging.INFO
+    if verbose or options.verbose:
+        level = logging.DEBUG
+        logging_format += ' - [%(funcName)s]'
+    elif options.quiet:
+        level = logging.ERROR
+
     current_datetime_string = '{dt.month}-{dt.day}-{dt.year}'.format(dt=datetime.now())
-    logging_format = '%(asctime)s - %(levelname)s - %(message)s - [%(funcName)s]'
     logging_datefmt = '%m/%d/%Y - %I:%M:%S %p'
     formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
 
-    level = logging.INFO
-    if verbose:
-        level = logging.DEBUG
-    elif options:
-        if options.verbose:
-            level = logging.DEBUG
-        elif options.quiet:
-            level = logging.ERROR
-
     root_logger = logging.getLogger('root')
     root_logger.setLevel(level)
-
     if not root_logger.handlers:
         console = logging.StreamHandler()
         console.setFormatter(colored_formatter)

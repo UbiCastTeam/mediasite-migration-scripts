@@ -11,6 +11,7 @@ from mediasite_migration_scripts.assets.mediasite import controller as mediasite
 import utils.common as utils
 import utils.media as media
 import utils.http as http
+import utils.mediasite as mediasite_utils
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +51,14 @@ class DataExtractor():
         self.failed_presentations = list()
         self.failed_presentations_errors = {
             'request': 'Requesting Mediasite API gone wrong',
-            'slides_video_404': 'Slides from video not found (detect slides will be lauch)',
-            'slides_jpeg_404': 'Slides from jpeg not found',
-            'slides_unknown_stream_404': 'Slides from unkown stream type not found',
+            'slides_video_missing': 'Slides from video are missing (detect slides will be lauch)',
+            'slides_jpeg_missing': 'Slides from jpeg are missing',
+            'slides_unknown_stream_missing': 'Slides from unkown stream type are missing',
             'slides_timecodes': 'Somes slides timecodes are greater than the video duration',
-            'videos_404': 'No videos found',
-            'some_videos_404': 'Some videos not found',
+            'videos_missing': 'All videos are missing',
+            'some_videos_missing': 'Some videos are missing',
             'timed_events_timecodes': 'Some timed events / chapters timecodes are greater than the video duration ',
-            'videos_composites_404': 'A video is missing for video composition'
+            'videos_composites_missing': 'One video is missing for video composition'
         }
         self.failed_presentations_filename = options.failed_csvfile
 
@@ -283,32 +284,32 @@ class DataExtractor():
 
         videos_infos = list()
         videos = self.mediasite.presentation.get_content(presentation_id, 'OnDemandContent')
-        videos_infos, nb_videos_not_found, videos_streams = self._get_videos_details(videos)
+        videos_infos, videos_not_found_count, videos_streams_types = self._get_videos_details(videos)
 
-        if len(videos_streams) > 1:
-            for stream in videos_streams:
-                if stream not in [v.get('stream_type') for v in videos_infos]:
-                    self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['videos_composites_404'], collected=False))
+        if len(videos_streams_types) > 1:
+            for stream_type in videos_streams_types:
+                if stream_type not in [v.get('stream_type') for v in videos_infos]:
+                    self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['videos_composites_missing'], collected=False))
                     return []
 
-        if videos_infos and nb_videos_not_found:
-            self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['some_videos_404'], collected=True))
-            logger.warning(f'{nb_videos_not_found} videos files not found for presentation {presentation_id}')
+        if videos_infos and videos_not_found_count:
+            self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['some_videos_missing'], collected=True))
+            logger.warning(f'{videos_not_found_count} videos files not found for presentation {presentation_id}')
         elif not videos_infos:
             logger.error(f'Failed to get a video file for presentation {presentation_id}, moving to next one')
-            self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['videos_404'], collected=False))
+            self.failed_presentations.append(Failed(presentation_id, error=self.failed_presentations_errors['videos_missing'], collected=False))
 
         return videos_infos
 
     def _get_videos_details(self, videos):
         videos_list = list()
-        videos_streams = list()
-        videos_not_found = int()
+        videos_streams_types = list()
+        videos_not_found_count = int()
 
         for file in videos:
-            stream = file['StreamType']
-            if stream not in videos_streams and stream.startswith('Video'):
-                videos_streams.append(stream)
+            file_stream_type = file['StreamType']
+            if file_stream_type not in videos_streams_types and file_stream_type.startswith('Video'):
+                videos_streams_types.append(file_stream_type)
 
             file_infos = self._filter_by_fields_names('video_files', file)
 
@@ -321,36 +322,36 @@ class DataExtractor():
             file_name = file['FileNameWithExtension']
             file_url = os.path.join(storage_url, file_name) if file_name and storage_url else None
 
-            file_found = http.url_exists(file_url)
+            file_found = http.url_exists(file_url, self.session)
             if not file_found:
                 logger.warning(f'Video file not found: {file_url}')
-                videos_not_found += 1
+                videos_not_found_count += 1
             else:
                 if file_infos['ContentMimeType'] == 'video/mp4' or file_infos['ContentMimeType'] == 'video/x-ms-wmv':
                     if file.get('ContentEncodingSettingsId'):
-                        file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_infos['url'])
+                        file_infos['encoding_infos'] = self._get_encoding_infos_from_api(file['ContentEncodingSettingsId'], file_url)
 
                     if not file_infos.get('encoding_infos'):
                         logger.debug(f"Video encoding infos not found in API for presentation: {file['ParentResourceId']}")
-                        if file_infos.get('url'):
-                            file_infos['encoding_infos'] = self._parse_encoding_infos(file_infos['url'])
+                        if file_url is not None:
+                            file_infos['encoding_infos'] = self._parse_encoding_infos(file_url)
                         elif 'LocalUrl' in content_server:
                             logger.debug(f"File stored in local server. A duplicate probably exist on distribution file server. Presentation: {file['ParentResourceId']}")
                         else:
                             logger.warning(f"No distribution url for this video file. Presentation: {file['ParentResourceId']}")
 
-                stream_index = self._get_video_stream_index(stream, videos_list)
+                stream_index = self._get_video_stream_index(file_stream_type, videos_list)
                 if stream_index is None:
-                    videos_list.append({'stream_type': stream,
+                    videos_list.append({'stream_type': file_stream_type,
                                        'files': [file_infos]})
                 else:
                     videos_list[stream_index].append(file_infos)
 
-        return videos_list, videos_not_found, videos_streams
+        return videos_list, videos_not_found_count, videos_streams_types
 
-    def _get_video_stream_index(self, stream, videos_list):
+    def _get_video_stream_index(self, stream_type, videos_list):
         for index, video in enumerate(videos_list):
-            if stream == video.get('stream_type'):
+            if stream_type == video.get('stream_type'):
                 return index
         return None
 
@@ -411,9 +412,9 @@ class DataExtractor():
         except Exception as e:
             logger.debug(f'Failed to get media info for {video_url}. Error: {e}')
             try:
-                response = self.session.head(video_url)
-                if not response.ok:
-                    logger.debug(f'Video {video_url} not reachable: {response.status_code}, content: {response.text}')
+                media_exists = http.url_exists(video_url)
+                if not media_exists:
+                    logger.debug(f'Video {video_url} not reachable.')
             except Exception as e:
                 logger.debug(e)
 
@@ -446,41 +447,20 @@ class DataExtractor():
                     slides_infos = {}
                     break
 
-        return slides_infos
-
-    def _get_slides_urls(self, presentations_infos):
-        pid = presentations_infos['Id']
-        slides = presentations_infos['Slides']
-        content_server_id = slides.get('ContentServerId', '')
-        content_server = self.mediasite.content.get_content_server(content_server_id, slide=True)
-        content_server_url = content_server.get('Url', '')
-        slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{pid}"
-
-        slides_urls = list()
-        for i in range(int(slides.get('Length', '0'))):
-            # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
-            file_name = slides.get('FileNameWithExtension', '').replace('{0:D4}', f'{i+1:04}')
-            file_url = f'{slides_base_url}/{file_name}'
-            file_found = http.url_exists(file_url)
-            if file_found:
-                slides_urls.append(file_url)
-            else:
+            if not mediasite_utils.slides_urls_exists(presentation_infos):
                 slides_stream_type = slides.get('StreamType', '')
                 if slides_stream_type == 'Slide':
                     logger.error(f'Slide from jpeg not found for presentation {pid}')
-                    self.failed_presentations.append(pid, error=self.failed_presentations_errors['slides_jpeg_404'], collected=False)
+                    self.failed_presentations.append(pid, error=self.failed_presentations_errors['slides_jpeg_missing'], collected=False)
                 elif slides_stream_type.startswith('Video'):
-                    logger.warning(f'Slide file from video not found for presentation {pid}: {file_url}')
+                    logger.warning(f'Slide file created from video stream not found for presentation {pid}')
                     logger.warning(f'Detect slides will be lauched for presentation {pid}')
-                    self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['slides_video_404'], collected=True))
+                    self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['slides_video_missing'], collected=True))
                 else:
-                    logger.error(f'Slide file from unknown stream type [{slides_stream_type}] not found for presentation {pid}: {file_url}')
-                    self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['slides_unknown_stream_404']), collected=False)
+                    logger.error(f'Slide file from unknown stream type [{slides_stream_type}] not found for presentation {pid}')
+                    self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['slides_unknown_stream_missing']), collected=False)
 
-                slides_urls = []
-                break
-
-        return slides_urls
+        return slides_infos
 
     def _has_slides_details(self, presentation_infos):
         for stream_type in presentation_infos.get('Streams'):
@@ -536,12 +516,12 @@ class DataExtractor():
 
     def download_all_slides(self):
         all_ok = True
-        self.nb_all_slides = self.get_nb_all_slides()
         for folder in self.all_data:
-            for presentation in folder.get('presentations', []):
-                ok = self._download_slides(presentation.get('Id'), presentation['slides'].get('urls', []))
-            # if at least one is false, all is false
-            all_ok *= ok
+            for p_infos in folder.get('Presentations', []):
+                self.nb_all_slides += mediasite_utils.get_slides_count(p_infos)
+                ok = self._download_presentation_slides(p_infos)
+                # if at least one is false, all is false
+                all_ok *= ok
 
         if all_ok:
             logger.info(f'Sucessfully downloaded all slides: [{self.nb_all_slides}]')
@@ -549,40 +529,45 @@ class DataExtractor():
             logger.error(f'Failed to download all slides from Mediasite: [{self.nb_all_downloaded_slides}] / [{self.nb_all_slides}]')
         return all_ok
 
-    def _download_slides(self, presentation_id, presentation_slides_urls):
+    def _download_presentation_slides(self, presentation_infos):
         ok = False
-        nb_slides_downloaded = 0
-        nb_slides = len(presentation_slides_urls)
+        if len(presentation_infos.get('Slides', [])) <= 0:
+            ok = True
+        else:
+            pid = presentation_infos['Id']
+            presentation_slides_urls = mediasite_utils.get_slides_urls(presentation_infos)
+            if presentation_slides_urls:
+                nb_slides_downloaded = 0
+                nb_slides = len(presentation_slides_urls)
 
-        presentation_slides_download_folder = self.slides_download_folder / presentation_id
-        presentation_slides_download_folder.mkdir(parents=True, exist_ok=True)
+                presentation_slides_download_folder = self.slides_download_folder / pid
+                presentation_slides_download_folder.mkdir(parents=True, exist_ok=True)
 
-        logger.debug(f'Downloading slides for presentation: {presentation_id}')
-        for url in presentation_slides_urls:
-            filename = url.split('/').pop()
-            file_path = presentation_slides_download_folder / filename
+                logger.debug(f'Downloading slides for presentation: {pid}')
+                for url in presentation_slides_urls:
+                    filename = url.split('/').pop()
+                    file_path = presentation_slides_download_folder / filename
 
-            print('Downloading slides : ', end='')
-            utils.print_progress_string(self.nb_all_downloaded_slides, self.nb_all_slides)
+                    print('Downloading slides : ', end='')
+                    utils.print_progress_string(self.nb_all_downloaded_slides, self.nb_all_slides)
 
-            # do not re-download
-            if file_path.is_file():
-                nb_slides_downloaded += 1
-            else:
-                r = self.session.get(url, auth=self.mediasite_auth)
-                if r.ok:
-                    with open(file_path, 'wb') as f:
-                        f.write(r.content)
-                    nb_slides_downloaded += 1
-                    self.nb_all_downloaded_slides += 1
-                else:
-                    logger.error(f'Failed to download {url}')
+                    # do not re-download
+                    if file_path.is_file():
+                        nb_slides_downloaded += 1
+                    else:
+                        r = self.session.get(url)
+                        if r.ok:
+                            with open(file_path, 'wb') as f:
+                                f.write(r.content)
+                            nb_slides_downloaded += 1
+                            self.nb_all_downloaded_slides += 1
+                        else:
+                            logger.error(f'Failed to download {url}')
 
-        logger.debug(f'Downloaded [{nb_slides_downloaded}] / [{nb_slides}] slides.')
-
-        ok = (nb_slides_downloaded == nb_slides)
-        if not ok:
-            logger.error(f'Failed to download all slides for presentation {presentation_id}: [{nb_slides_downloaded}] / [{nb_slides}]')
+                logger.debug(f'Downloaded [{nb_slides_downloaded}] / [{nb_slides}] slides.')
+                ok = (nb_slides_downloaded == nb_slides)
+                if not ok:
+                    logger.error(f'Failed to download all slides for presentation {pid}: [{nb_slides_downloaded}] / [{nb_slides}]')
 
         return ok
 
