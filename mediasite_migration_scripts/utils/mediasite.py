@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-from xml.dom.minidom import parse
 import logging
 import utils.http as http
 from datetime import datetime
-
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +27,49 @@ class MediasiteClient:
 
     def close(self):
         self.session.close()
+
+
+def get_video_url(video_file):
+    video_file_url = str()
+
+    content_server = video_file['ContentServer']
+    distribution_url = content_server.get('DistributionUrl')
+    if distribution_url:
+        # popping odata query params, we just need the route
+        base_url_splitted = distribution_url.split('/')
+        base_url_splitted.pop()
+        base_url = '/'.join(base_url_splitted)
+    video_file_name = video_file['FileNameWithExtension']
+    video_file_url = (base_url + video_file_name) if video_file_name and base_url else None
+
+    return video_file_url
+
+
+def valid_videos_urls_exists(videos, session):
+    exists = True
+    videos_found = list()
+    videos_stream_types = set()
+
+    for video_file in videos:
+        videos_stream_types.update(video_file['StreamType'])
+
+        video_file_url = get_video_url(video_file)
+        video_file_found = http.url_exists(video_file_url, session)
+        if not video_file_found:
+            logger.warning(f'Video file not found: {video_file_url}')
+            videos_found.append(video_file)
+
+    # check if all streams types have a video with a valid url (in composites videos case, there's at least 2 videos streams)
+    for stream_type in videos_stream_types:
+        stream_type_found = False
+        for v in videos_found:
+            if stream_type == v['StreamType']:
+                stream_type_found = True
+                break
+            if not stream_type_found:
+                exists = False
+
+    return exists
 
 
 def get_slides_count(presentation_infos):
@@ -56,10 +98,10 @@ def get_slides_urls(presentation_infos):
     return slides_urls
 
 
-def slides_urls_exists(presentation_infos):
+def slides_urls_exists(presentation_infos, session):
     urls = get_slides_urls(presentation_infos)
     for u in urls:
-        if not http.url_exists(u):
+        if not http.url_exists(u, session):
             return False
     return True
 

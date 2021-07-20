@@ -154,3 +154,8 @@ def get_argparser():
         help='Print all information to stdout.',
     )
     return parser
+
+
+def replace_item_in_list(raw_list, item_to_replace, new_item):
+    new_list = [new_item if item == item_to_replace else item for item in raw_list]
+    return new_list
