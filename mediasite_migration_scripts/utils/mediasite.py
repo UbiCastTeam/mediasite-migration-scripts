@@ -38,14 +38,14 @@ def find_folder_path(self, folder_id, path=''):
     return ''
 
 
-def filter_by_fields_names(self, raw_data, fields_to_filter):
+def filter_by_fields_names(raw_data, fields_to_filter):
     fields = dict()
-    for field in fields_to_filter:
-        fields[field] = raw_data.get(field)
+    for fieldname in fields_to_filter:
+        fields[fieldname] = raw_data.get(fieldname)
     return fields
 
 
-def timecode_is_correct(self, timecode, presentation):
+def timecode_is_correct(timecode, presentation):
     for video_file in presentation['OnDemandContent']:
         if timecode > video_file['Length']:
             return False
@@ -80,12 +80,13 @@ def check_videos_urls(videos, session):
 
         return:
             video_urls_ok -> bool : a url exists for each video
-            videos_urls_missing -> bool : some urls are not reachable
+            videos_urls_missing -> int : count of urls not reachables
+            videos_stream_types_count -> int : count of videos streams types (> 1 if composites) 
     """
 
     videos_found = list()
     videos_stream_types = set()
-    videos_total = len(videos)
+    videos_total_count = len(videos)
 
     for video_file in videos:
         # one video stream can have multiple files
@@ -107,9 +108,9 @@ def check_videos_urls(videos, session):
                 break
 
     videos_urls_ok = (len(videos_stream_types) == len(videos_stream_types_found))
-    videos_urls_missing = (videos_found != videos_total)
-
-    return videos_urls_ok, videos_urls_missing
+    videos_urls_missing_count = videos_total_count - len(videos_found)
+    videos_stream_types_count = len(videos_stream_types)
+    return videos_urls_ok, videos_urls_missing_count, videos_stream_types_count
 
 
 def get_slides_count(presentation_infos):

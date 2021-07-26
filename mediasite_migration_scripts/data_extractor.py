@@ -29,6 +29,7 @@ class DataExtractor():
         self.session = http.get_session(config['mediasite_api_user'], config['mediasite_api_password'])
         self.max_folders = options.max_folders
 
+        self.should_filter_resources_data = True
         self.data_fields_to_filter = {
             'Folders': ['Id', 'ParentFolderId', 'Name', 'Owner', 'Description'],
             'Catalogs': ['Id', 'Name', 'Description', 'CatalogUrl', 'Owner', 'CreationDate'],
@@ -48,9 +49,9 @@ class DataExtractor():
             'slides_unknown_stream_missing': 'Slides from unkown stream type are missing',
             'slides_timecodes': 'Somes slides timecodes are greater than the video duration',
             'videos_missing': 'All videos are missing',
+            'composites_videos_missing': 'One video is missing for video composition',
             'some_videos_missing': 'Some videos are missing',
             'timed_events_timecodes': 'Some timed events / chapters timecodes are greater than the video duration ',
-            'videos_composites_missing': 'One video is missing for video composition'
         }
         self.failed_presentations_filename = options.failed_csvfile
 
@@ -116,12 +117,7 @@ class DataExtractor():
 
         logger.info('Extracting and ordering metadata.')
 
-        resources = dict()
-        self.folders = resources['Folders'] = self.mediasite_client.folder.get_all_folders(self.max_folders)
-        self.all_catalogs = resources['Catalogs'] = self.get_all_catalogs()
-        self.presentations = resources['Presentations'] = self.get_all_presentations()
-        if filtered:
-            self._filter_resources_data_fields(resources)
+        self.get_resources()
 
         for i, folder in enumerate(self.folders):
             if i > 1:
@@ -129,14 +125,13 @@ class DataExtractor():
 
             logger.debug('-' * 50)
             logger.debug(f"Found folder : {folder['Name']}")
-            catalogs = self.get_folder_catalogs_data(folder['Id'])
-            presentation_data = self.get_folder_presentations_data(folder['Id'])
+            catalogs = self.get_folder_catalogs(folder['Id'])
+            presentation_data = self.get_folder_presentations(folder['Id'])
             presentations_folders.append({
                 **folder,
                 'Catalogs': catalogs,
                 'Presentations': presentation_data
             })
-
             if catalogs:
                 self.linked_catalogs.extend(catalogs)
 
@@ -145,10 +140,17 @@ class DataExtractor():
 
         return presentations_folders
 
-    def _filter_resources_data_fields(self, resources):
-        for resource_name, resource_data_list in resources.items():
-            for element in resource_data_list:
-                resources[resource_name] = mediasite_utils.filter_by_fields_names(resource_name, element, self.data_fields_to_filter)
+    def get_resources(self):
+        self.folders = self.mediasite_client.folder.get_all_folders(self.max_folders)
+        self.catalogs = self.get_all_catalogs()
+        self.presentations = self.get_all_presentations()
+
+        if self.should_filter_resources_data:
+            for resource_name, data_fieldsnames in self.data_fields_to_filter.items():
+                attr = resource_name.lower()
+                for element in getattr(self, attr):
+                    setattr(self, attr, mediasite_utils.filter_by_fields_names(element, data_fieldsnames))
+
 
     def get_folder_catalogs(self, folder_id):
         folder_catalogs = list()
@@ -205,8 +207,9 @@ class DataExtractor():
         # getting content server for urls
         for video_file in videos:
             video_file['ContentServer'] = self.get_content_server(video_file['ContentServerId'])
+            breakpoint()
 
-        if not self.videos_urls_ok(pid, videos):
+        if not self.videos_urls_are_ok(presentation):
             presentation = {}
         else:
             for video_file in videos:
@@ -236,17 +239,21 @@ class DataExtractor():
     def get_content_server(self, *args):
         return self.mediasite_client.content.get_content_server(*args)
 
-    def videos_urls_ok(self, presentation):
+    def videos_urls_are_ok(self, presentation):
         pid = presentation['Id']
         videos = presentation['OnDemandContent']
 
-        videos_urls_ok, videos_urls_missing = mediasite_utils.check_videos_urls(videos, self.session)
+        videos_urls_ok, videos_urls_missing_count, videos_stream_types_count = mediasite_utils.check_videos_urls(videos, self.session)
         if not videos_urls_ok:
             logger.error(f'Failed to get a video file for presentation {pid}, moving to next one')
             self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['videos_missing'], collected=False))
-        elif videos_urls_missing:
-            self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['some_videos_missing'], collected=True))
-            logger.warning(f'Some videos files not found for presentation {pid}')
+        elif videos_urls_missing_count > 0:
+            if videos_stream_types_count > 1:
+                self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['composites_videos_missing'], collected=True))
+                logger.error(f'At least one file is missing for composite video for presentation {pid}')
+            else:
+                self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['some_videos_missing'], collected=True))
+                logger.warning(f'Some videos files not found for presentation {pid}')
 
         return videos_urls_ok
 

@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 import logging
+from copy import copy
 
 import mediasite_migration_scripts.utils.common as utils
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
@@ -101,6 +102,40 @@ def set_test_data():
                 break
 
     return new_data
+
+
+def anonymize_data(self, data):
+    anon_data = copy(data)
+    fields = [
+
+    ]
+    if isinstance(anon_data, dict):
+        for key, val in anon_data.items():
+            new_val = None
+            if isinstance(val, dict):
+                new_val = self.anonymize_data(val)
+            elif isinstance(val, list):
+                new_val = [self.anonymize_data(i) for i in val]
+            else:
+                if key in fields:
+                    if 'url' in key:
+                        new_val = f'https://anon.com/{key}'
+                    elif 'mail' in key:
+                        new_val = 'john.doe@server.com'
+                    else:
+                        new_val = f'anonymized {key}'
+            if new_val is not None:
+                anon_data[key] = new_val
+    elif isinstance(anon_data, list):
+        for i in anon_data:
+            i = self.anonymize_data(i)
+    elif isinstance(anon_data, str):
+        if 'http' and '://' in anon_data:
+            anon_data = 'https://anon.com/fake'
+        else:
+            anon_data = 'anon text'
+
+    return anon_data
 
 
 class MediaServerTestUtils():
