@@ -2,7 +2,7 @@
 import logging
 import utils.http as http
 from datetime import datetime
-from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,47 +29,87 @@ class MediasiteClient:
         self.session.close()
 
 
-def get_video_url(video_file):
-    video_file_url = str()
+def find_folder_path(self, folder_id, path=''):
+    for folder in self.folders:
+        if folder['Id'] == folder_id:
+            path += self._find_folder_path(folder['ParentFolderId'], path)
+            path += '/' + folder['Name']
+            return path
+    return ''
 
-    content_server = video_file['ContentServer']
-    distribution_url = content_server.get('DistributionUrl')
-    if distribution_url:
-        # popping odata query params, we just need the route
-        base_url_splitted = distribution_url.split('/')
-        base_url_splitted.pop()
-        base_url = '/'.join(base_url_splitted)
-    video_file_name = video_file['FileNameWithExtension']
-    video_file_url = (base_url + video_file_name) if video_file_name and base_url else None
+
+def filter_by_fields_names(self, raw_data, fields_to_filter):
+    fields = dict()
+    for field in fields_to_filter:
+        fields[field] = raw_data.get(field)
+    return fields
+
+
+def timecode_is_correct(self, timecode, presentation):
+    for video_file in presentation['OnDemandContent']:
+        if timecode > video_file['Length']:
+            return False
+    return True
+
+
+def get_video_url(video_file, playback_ticket=str(), site=str()):
+    video_file_url = str()
+    # we skip smoothstreaming videos as it's not handled
+    if not video_file['ContentMimeType'] == 'video/x-mp4-fragmented':
+        content_server = video_file['ContentServer']
+        distribution_url = content_server.get('DistributionUrl')
+        if distribution_url:
+            # distribution url pattern example: https://host.com/MediasiteDeliver/MP4Video/$$NAME$$?playbackTicket=$$PBT$$&site=$$SITE$$
+            # playbackTicket is not handled yet, only works if file protection is deactivated, then playback ticket and site are optionnal
+            url_mapping = {
+                '$$NAME$$': video_file['FileNameWithExtension'],
+                '$$PBT$$': playback_ticket,
+                '$$SITE$$': site
+            }
+            video_file_url = distribution_url
+            for param_name, param_value in url_mapping.items():
+                video_file_url = video_file_url.replace(param_name, param_value)
 
     return video_file_url
 
 
-def valid_videos_urls_exists(videos, session):
-    exists = True
+def check_videos_urls(videos, session):
+    """
+        Check if at least one valid url exists for a video.
+        In case of composites videos, all videos streams will be checked.
+
+        return:
+            video_urls_ok -> bool : a url exists for each video
+            videos_urls_missing -> bool : some urls are not reachable
+    """
+
     videos_found = list()
     videos_stream_types = set()
+    videos_total = len(videos)
 
     for video_file in videos:
-        videos_stream_types.update(video_file['StreamType'])
+        # one video stream can have multiple files
+        videos_stream_types.add(video_file['StreamType'])
 
         video_file_url = get_video_url(video_file)
-        video_file_found = http.url_exists(video_file_url, session)
-        if not video_file_found:
-            logger.warning(f'Video file not found: {video_file_url}')
+        if video_file_url:
+            video_file_found = http.url_exists(video_file_url, session)
+            if not video_file_found:
+                logger.warning(f'Video file not found: {video_file_url}')
             videos_found.append(video_file)
 
-    # check if all streams types have a video with a valid url (in composites videos case, there's at least 2 videos streams)
+    # all videos streams must have at least one video file with a valid url (in composites videos case, there's at least 2 videos streams)
+    videos_stream_types_found = set()
     for stream_type in videos_stream_types:
-        stream_type_found = False
         for v in videos_found:
             if stream_type == v['StreamType']:
-                stream_type_found = True
+                videos_stream_types_found.add(stream_type)
                 break
-            if not stream_type_found:
-                exists = False
 
-    return exists
+    videos_urls_ok = (len(videos_stream_types) == len(videos_stream_types_found))
+    videos_urls_missing = (videos_found != videos_total)
+
+    return videos_urls_ok, videos_urls_missing
 
 
 def get_slides_count(presentation_infos):
@@ -104,6 +144,13 @@ def slides_urls_exists(presentation_infos, session):
         if not http.url_exists(u, session):
             return False
     return True
+
+
+def has_slides_details(presentation_infos):
+    for stream_type in presentation_infos.get('Streams'):
+        if stream_type.get('StreamType') == 'Slide':
+            return True
+    return False
 
 
 def get_duration_h(videos):
