@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
+from mediasite_migration_scripts.data_filter import DataFilter
+
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
@@ -36,6 +38,8 @@ if __name__ == '__main__':
                             help='add custom mediasite data file.'),
         parser.add_argument('--max-folders',
                             help='specify maximum folders to collect infos'),
+        parser.add_argument('--no-filter',
+                            help='Skip filtering mediasite data fields')
 
         return parser.parse_args()
     options = manage_opts()
@@ -55,10 +59,20 @@ if __name__ == '__main__':
         config = utils.read_json(options.config_file)
         extractor = DataExtractor(config, options)
 
-        mediasite_data_to_store_attributs = ['all_data', 'linked_catalogs', 'users']
+        mediasite_data_to_store_attributs = ['all_data', 'folders_presentations', 'users']
         for data_attr in mediasite_data_to_store_attributs:
-            mediasite_filename = ''.join(['mediasite_', data_attr, '.json'])
-            utils.write_json(data=getattr(extractor, data_attr), path=mediasite_filename, open_text_option='w')
+            utils.store_object_data_in_json(obj=extractor, data_attr=data_attr, prefix_filename='data/mediasite')
+
+            if not options.no_filter:
+                logger.info(f'Filtering {data_attr}')
+                try:
+                    data_filter = DataFilter(options)
+                    data = getattr(extractor, data_attr)
+                    filtered_data = data_filter.filter_data(data)
+                    utils.store_object_data_in_json(obj=data_filter, data_attr='filtered_data', prefix_filename=f'data/mediasite_{data_attr}')
+                except Exception as e:
+                    logger.error(f'Filtering data failed: {e}')
+                    sys.exit(1)
 
         logger.info('--------- Data collection finished --------- ')
         failed_count = len(extractor.failed_presentations)

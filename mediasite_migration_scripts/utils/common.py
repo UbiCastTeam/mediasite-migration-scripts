@@ -100,6 +100,12 @@ def write_csv(filename, fieldnames, rows):
         writer.writerows(rows)
 
 
+def store_object_data_in_json(obj, data_attr, prefix_filename=str()):
+    mediasite_filename = ''.join([prefix_filename, '_', data_attr, '.json'])
+    mediasite_data = getattr(obj, data_attr)
+    write_json(data=mediasite_data, path=mediasite_filename)
+
+
 def to_mediaserver_conf(config):
     msconfig = {
         'API_KEY': config.get('mediaserver_api_key', ''),
@@ -159,3 +165,14 @@ def get_argparser():
 def replace_item_in_list(raw_list, item_to_replace, new_item):
     new_list = [new_item if item == item_to_replace else item for item in raw_list]
     return new_list
+
+
+def to_snake_case(camel_case_string):
+    snake_case_string = str()
+    camel_string_list = list(camel_case_string)
+    for i, letter in enumerate(camel_string_list):
+        if i > 0 and letter.isupper():
+            camel_string_list.insert(i, '_')
+
+    snake_case_string = ''.join(camel_string_list).lower()
+    return snake_case_string

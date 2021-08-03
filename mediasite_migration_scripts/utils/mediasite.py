@@ -2,6 +2,7 @@
 import logging
 import utils.http as http
 from datetime import datetime
+import xml.dom.minidom as xml
 
 
 logger = logging.getLogger(__name__)
@@ -29,25 +30,18 @@ class MediasiteClient:
         self.session.close()
 
 
-def find_folder_path(self, folder_id, path=''):
-    for folder in self.folders:
+def find_folder_path(self, folder_id, folders, path=''):
+    for folder in folders:
         if folder['Id'] == folder_id:
-            path += self._find_folder_path(folder['ParentFolderId'], path)
+            path += self._find_folder_path(folder['ParentFolderId'], folders, path)
             path += '/' + folder['Name']
             return path
     return ''
 
 
-def filter_by_fields_names(raw_data, fields_to_filter):
-    fields = dict()
-    for fieldname in fields_to_filter:
-        fields[fieldname] = raw_data.get(fieldname)
-    return fields
-
-
 def timecode_is_correct(timecode, presentation):
     for video_file in presentation['OnDemandContent']:
-        if timecode > video_file['Length']:
+        if timecode > int(video_file['Length']):
             return False
     return True
 
@@ -81,7 +75,7 @@ def check_videos_urls(videos, session):
         return:
             video_urls_ok -> bool : a url exists for each video
             videos_urls_missing -> int : count of urls not reachables
-            videos_stream_types_count -> int : count of videos streams types (> 1 if composites) 
+            videos_stream_types_count -> int : count of videos streams types (> 1 if composites)
     """
 
     videos_found = list()
@@ -118,18 +112,16 @@ def get_slides_count(presentation_infos):
     return int(count)
 
 
-def get_slides_urls(presentation_infos):
+def get_slides_urls(slides):
     slides_urls = list()
 
-    pid = presentation_infos['Id']
-    logger.debug(f'Getting slides urls for presentation {pid}')
-
-    slides = presentation_infos.get('Slides')
     if slides:
+        pid = slides['ParentResourceId']
+        logger.debug(f'Getting slides urls for presentation {pid}')
+
         content_server_id = slides['ContentServerId']
         content_server_url = slides['ContentServer']['Url']
         slides_base_url = f"{content_server_url}/{content_server_id}/Presentation/{pid}"
-
         for i in range(int(slides.get('Length', '0'))):
             # Transform string format (from C# to Python syntax) -> slides_{0:04}.jpg
             file_name = slides.get('FileNameWithExtension', '').replace('{0:D4}', f'{i+1:04}')
@@ -139,8 +131,8 @@ def get_slides_urls(presentation_infos):
     return slides_urls
 
 
-def slides_urls_exists(presentation_infos, session):
-    urls = get_slides_urls(presentation_infos)
+def slides_urls_exists(slides, session):
+    urls = get_slides_urls(slides)
     for u in urls:
         if not http.url_exists(u, session):
             return False
@@ -228,3 +220,68 @@ def strip_milliseconds(self, date):
 def get_age_days(date_str):
     days = (datetime.now() - parse_mediasite_date(date_str)).days
     return days
+
+
+def parse_encoding_settings_xml(encoding_settings):
+    encoding_infos = dict()
+    settings_id = encoding_settings['Id']
+    serialized_settings = encoding_settings['SerializedSettings']
+    try:
+        settings_data = xml.parseString(serialized_settings).documentElement
+        # Tag 'Settings' is a XML string to be parsed again...
+        settings_node = settings_data.getElementsByTagName('Settings')[0]
+        settings = xml.parseString(settings_node.firstChild.nodeValue)
+
+        width = int(settings.getElementsByTagName('PresentationAspectX')[0].firstChild.nodeValue)
+        height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
+        # sometimes resolution values given by the API are reversed, it's better to use MediaInfo in that case
+        if width < height:
+            logger.debug('Resolution values given by the API may be reversed...')
+            return {}
+
+        codecs_settings = settings.getElementsByTagName('StreamProfiles')[0]
+        audio_codec = str()
+        video_codec = str()
+        for element in codecs_settings.childNodes:
+            if element.getAttribute('i:type') == 'AudioEncoderProfile':
+                audio_codec = element.getElementsByTagName('FourCC')[0].firstChild.nodeValue
+                audio_codec = 'AAC' if audio_codec == 'AACL' else audio_codec
+            elif element.getAttribute('i:type') == 'VideoEncoderProfile':
+                video_codec = element.getElementsByTagName('FourCC')[0].firstChild.nodeValue
+
+        encoding_infos = {
+            'video_codec': video_codec,
+            'audio_codec': audio_codec,
+            'width': width,
+            'height': height,
+        }
+    except Exception as e:
+        logger.debug(f'XML could not be parsed for video encoding settings for settings ID : {settings_id}')
+        logger.debug(e)
+
+    return encoding_infos
+
+def parse_timed_events_xml(self, timed_events, presentation):
+    parsed_timed_events = list()
+    for event in timed_events:
+        event_data = dict()
+        if event.get('Payload'):
+            try:
+                event_xml = xml.parseString(event['Payload']).documentElement
+
+                event_position = event.get('Position', 0)
+                if timecode_is_correct(event_position, presentation):
+                    event_data['Position'] = event_position
+                    event_payload_tags = ['Number', 'Title']
+                    for tag in event_payload_tags:
+                        event_data[tag] = event_xml.getElementsByTagName(tag)[0].firstChild.nodeValue
+                    timed_events.append(event_data)
+                else:
+                    logger.warning(f'A timed event timecode is greater than the video duration for presentation {pid}')
+                    self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['timed_events_timecodes'], critical=False))
+                    timed_events = []
+
+            except Exception as e:
+                logger.debug(f'Failed to get timed event for presentation {pid}: {e}')
+
+    return parsed_timed_events

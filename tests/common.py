@@ -22,118 +22,32 @@ def set_logger(*args, **kwargs):
     return utils.set_logger(*args, **kwargs)
 
 
-def set_test_users():
-    users = list()
-
-    file = MEDIASERVER_DATA_E2E_FILE
-    if os.path.exists(file):
-        with open(file) as f:
-            data = json.load(f)
-
-    file = MEDIASITE_USERS_FILE
-    for media in data:
-        media_data = media.get('data', {})
-        already_added = False
-        for u in users:
-            if media_data.get('speaker_email') == u.get('mail'):
-                already_added = True
-                break
-        if not already_added:
-            users.append({
-                "mail": media_data.get('speaker_email'),
-                "username": media_data.get('speaker_name'),
-                "display_name": media_data.get('speaker_id')
-            })
-
-    with open(file, 'w') as f:
-        json.dump(users, f)
-
-    return users
-
-
-def set_test_data():
-    new_data = list()
-    file = MEDIASITE_DATA_FILE
-
-    if os.path.exists(file):
-        with open(file) as f:
-            new_data = json.load(f)
-    else:
-        data = list()
-        with open(file) as f:
-            data = json.load(f)
-
-        i = 0
-        for folder in data:
-            presentations = folder['presentations']
-            folder['presentations'] = []
-            j = 0
-            for p in presentations:
-                if p['slides']:
-                    slides_urls = p['slides']['urls']
-                    p['slides']['urls'] = []
-                    k = 0
-                    for u in slides_urls:
-                        p['slides']['urls'].append(u)
-                        k += 1
-                        if k >= 2:
-                            break
-
-                    slides_details = p['slides']['details']
-                    if not slides_details:
-                        slides_details = []
-                    p['slides']['details'] = []
-                    x = 0
-                    for d in slides_details:
-                        p['slides']['details'].append(d)
-                        x += 1
-                        if x >= 2:
-                            break
-
-                folder['presentations'].append(p)
-                j += 1
-                if j >= 2:
-                    break
-
-            new_data.append(folder)
-
-            i += 1
-            if i >= 2:
-                break
-
-    return new_data
-
-
-def anonymize_data(self, data):
-    anon_data = copy(data)
-    fields = [
-
+def anonymize_data(data):
+    fields_to_anonymize = [
+        'Title',
+        'Name',
+        'Owner',
+        'Creator',
+        'PrimaryPresenter',
+        'DisplayName',
+        'Email',
+        'UserName',
+        'ParentFolderName'
     ]
+
+    anon_data = copy(data)
     if isinstance(anon_data, dict):
         for key, val in anon_data.items():
-            new_val = None
-            if isinstance(val, dict):
-                new_val = self.anonymize_data(val)
-            elif isinstance(val, list):
-                new_val = [self.anonymize_data(i) for i in val]
-            else:
-                if key in fields:
-                    if 'url' in key:
-                        new_val = f'https://anon.com/{key}'
-                    elif 'mail' in key:
-                        new_val = 'john.doe@server.com'
-                    else:
-                        new_val = f'anonymized {key}'
-            if new_val is not None:
-                anon_data[key] = new_val
+            if isinstance(val, dict) or isinstance(val, list):
+                anon_data[key] = anonymize_data(val)
+            elif isinstance(val, str):
+                if key in fields_to_anonymize:
+                    anon_data[key] = f'anon {key}'
+                elif 'http' and '://' in val:
+                    anon_data[key] = 'https://anon.com/fake'
     elif isinstance(anon_data, list):
-        for i in anon_data:
-            i = self.anonymize_data(i)
-    elif isinstance(anon_data, str):
-        if 'http' and '://' in anon_data:
-            anon_data = 'https://anon.com/fake'
-        else:
-            anon_data = 'anon text'
+        for i, item in enumerate(anon_data):
+            anon_data[i] = anonymize_data(item)
 
     return anon_data
 
