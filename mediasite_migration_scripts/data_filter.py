@@ -7,12 +7,6 @@ logger = logging.getLogger(__name__)
 
 class DataFilter():
     def __init__(self, options):
-        slide_filter = [
-            'FileNameWithExtension',
-            'Length',
-            'StreamType',
-            {'ContentServer': ['Id', 'Url']}
-        ]
         self.filter_fields = {
             'Folders': [
                 'Id',
@@ -50,10 +44,21 @@ class DataFilter():
                             ]
                         },
                         {
-                            'SlideContent': slide_filter
+                            'SlideContent': [
+                                'FileNameWithExtension',
+                                'Length',
+                                'StreamType',
+                                {'ContentServer': ['Id', 'Url']}
+                            ]
                         },
                         {
-                            'SlideDetailsContent': slide_filter + ['SlideDetailsContent']
+                            'SlideDetailsContent': [
+                                'FileNameWithExtension',
+                                'Length',
+                                'StreamType',
+                                'SlideDetailsContent',
+                                {'ContentServer': ['Id', 'Url']}
+                            ]
                         }
                     ]
                 }

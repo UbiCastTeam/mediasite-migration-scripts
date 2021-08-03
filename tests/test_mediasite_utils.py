@@ -43,13 +43,22 @@ class TestMediasiteUtils(TestCase):
                 'ParentFolderId': '2',
             },
             {
-                'Id': '0',
+                'Id': '4',
                 'Name': 'GrandSon',
                 'ParentFolderId': '3',
             },
+            {
+                'Id': '5',
+                'Name': 'Orphan',
+                'ParentFolderId': '3',
+            }
         ]
 
         path = ''
-        for folder in folders_list_example:
+        for folder in folders_list_example[:4]:
             path += ('/' + folder.get('Name'))
-            self.assertEqual(mediasite_utils.find_folder_path(folder), path)
+            path_found = mediasite_utils.find_folder_path(folder['Id'], folders_list_example[:4])
+            self.assertEqual(path_found, path)
+
+        orphan_path = mediasite_utils.find_folder_path(folders_list_example[5], folders_list_example)
+        self.assertEqual(orphan_path, '/Orphan')

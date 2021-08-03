@@ -30,10 +30,10 @@ class MediasiteClient:
         self.session.close()
 
 
-def find_folder_path(self, folder_id, folders, path=''):
+def find_folder_path(folder_id, folders, path=''):
     for folder in folders:
         if folder['Id'] == folder_id:
-            path += self._find_folder_path(folder['ParentFolderId'], folders, path)
+            path += find_folder_path(folder['ParentFolderId'], folders, path)
             path += '/' + folder['Name']
             return path
     return ''

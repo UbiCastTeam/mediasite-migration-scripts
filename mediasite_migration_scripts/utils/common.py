@@ -88,15 +88,20 @@ def read_json(path):
 
 
 def write_json(data, path, open_text_option='w'):
-    with open(path, open_text_option) as file:
-        json.dump(data, file)
+    try:
+        with open(path, open_text_option) as file:
+            json.dump(data, file)
+    except IOError:
+        os.makedirs(path, exist_ok=True)
+        write_json(data, path)
+    else:
+        logger.error(f'Failed to write json {path}: {e}')
 
 
 def write_csv(filename, fieldnames, rows):
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
-
         writer.writerows(rows)
 
 
