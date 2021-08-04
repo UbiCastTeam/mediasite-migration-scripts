@@ -58,15 +58,14 @@ if __name__ == '__main__':
 
         config = utils.read_json(options.config_file)
         extractor = DataExtractor(config, options)
+        data_filter = DataFilter(options)
 
         mediasite_data_to_store_attributs = ['all_data', 'folders_presentations', 'users']
         for data_attr in mediasite_data_to_store_attributs:
             utils.store_object_data_in_json(obj=extractor, data_attr=data_attr, prefix_filename='data/mediasite')
-
             if not options.no_filter:
                 logger.info(f'Filtering {data_attr}')
                 try:
-                    data_filter = DataFilter(options)
                     data = getattr(extractor, data_attr)
                     filtered_data = data_filter.filter_data(data)
                     utils.store_object_data_in_json(obj=data_filter, data_attr='filtered_data', prefix_filename=f'data/mediasite_{data_attr}')

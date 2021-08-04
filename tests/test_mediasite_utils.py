@@ -1,5 +1,6 @@
 from unittest import TestCase
 import logging
+import requests
 
 import mediasite_migration_scripts.utils.common as utils
 import mediasite_migration_scripts.utils.mediasite as mediasite_utils
@@ -8,6 +9,7 @@ import tests.common as tests_utils
 
 utils.set_logger(verbose=True)
 logger = logging.getLogger(__name__)
+session = requests.session()
 
 
 def setUpModule():
@@ -18,7 +20,6 @@ class TestMediasiteUtils(TestCase):
 
     def setUp(self):
         super(TestMediasiteUtils)
-        self.mediasite_test_data = utils.read_json('tests/mediasite_test_data.json')
 
     def test_find_folder_path(self):
         folders_list_example = [
@@ -50,15 +51,125 @@ class TestMediasiteUtils(TestCase):
             {
                 'Id': '5',
                 'Name': 'Orphan',
-                'ParentFolderId': '3',
+                'ParentFolderId': '404',
             }
         ]
 
         path = ''
         for folder in folders_list_example[:4]:
             path += ('/' + folder.get('Name'))
-            path_found = mediasite_utils.find_folder_path(folder['Id'], folders_list_example[:4])
-            self.assertEqual(path_found, path)
+            folder_id = folder['Id']
+            path_found = mediasite_utils.find_folder_path(folder_id, folders_list_example[:4])
+            self.assertEqual(path_found, path, msg=f'Folder id = {folder_id}')
 
-        orphan_path = mediasite_utils.find_folder_path(folders_list_example[5], folders_list_example)
-        self.assertEqual(orphan_path, '/Orphan')
+        orphan_folder_id = folders_list_example[5]['Id']
+        orphan_path = mediasite_utils.find_folder_path(orphan_folder_id, folders_list_example)
+        self.assertEqual(orphan_path, '/Orphan', msg=f'Folder id = {orphan_folder_id}')
+
+    def test_timecode_is_correct(self):
+        presentations_examples = [
+            {
+                'Id': '0',
+                'OnDemandContent': [
+                    {
+                        'Id': '0',
+                        'Length': '2973269',
+                        'FileNameWithExtension': 'v0.mp4',
+                        'FileLength': '2091246582',
+                        'StreamType': 'Video1',
+                    }],
+            },
+            {
+                'Id': '1',
+                'OnDemandContent': [
+                    {
+                        'Id': '0',
+                        'Length': '3100000',
+                        'FileNameWithExtension': 'v1.mp4',
+                        'FileLength': '1991246582',
+                        'StreamType': 'Video1',
+                    },
+                    {
+                        'Id': '1',
+                        'Length': '3100000',
+                        'FileNameWithExtension': 'v2.mp4',
+                        'FileLength': '1991246582',
+                        'StreamType': 'Video3',
+                    }
+                ]
+            }
+        ]
+
+        test_timecode = '3000000'
+        self.assertFalse(mediasite_utils.timecode_is_correct(test_timecode, presentations_examples[0]))
+        self.assertTrue(mediasite_utils.timecode_is_correct(test_timecode, presentations_examples[1]))
+
+    def test_get_video_url(self):
+        video_file_examples = [
+            {
+                'Id': 'f0',
+                'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4',
+                'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
+                'StreamType': 'Video1',
+                'ContentMimeType': 'video/mp4',
+                'ContentServer': {
+                    'Id': 'ad0fce8edc61432998839c3f860b6d4429',
+                    'Name': 'anon Name',
+                    'DistributionUrl': 'https://anon.com/fake/$$NAME$$?playbackTicket=$$PBT$$&site=$$SITE$$'
+                }
+            },
+            {
+                'Id': 'f1',
+                'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.ism',
+                'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
+                'StreamType': 'Video3',
+                'ContentMimeType': 'video/x-mp4-fragmented',
+                'ContentServer': {
+                    'Id': 'ad0fce8edc61432998839c3f860b6d4429',
+                    'Name': 'anon Name',
+                    'DistributionUrl': 'https://anon.com/fake/$$NAME$$?playbackTicket=$$PBT$$&site=$$SITE$$'
+                }
+            }
+        ]
+
+        self.assertEqual(mediasite_utils.get_video_url(video_file_examples[0]),
+                         'https://anon.com/fake/bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4?playbackTicket=&site=')
+        self.assertEqual(mediasite_utils.get_video_url(video_file_examples[0], playback_ticket='pbt0', site='test.com'),
+                         'https://anon.com/fake/bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4?playbackTicket=pbt0&site=test.com')
+        self.assertEqual(mediasite_utils.get_video_url(video_file_examples[1]), '')
+
+    def test_check_videos_urls(self):
+        videos_files_examples = [
+            {
+                'Id': 'f0',
+                'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4',
+                'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
+                'StreamType': 'Video1',
+                'ContentMimeType': 'video/mp4',
+                'Url': 'https://beta.ubicast.net'
+            },
+            {
+                'Id': 'f1',
+                'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.ism',
+                'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
+                'StreamType': 'Video3',
+                'ContentMimeType': 'video/mp4',
+                'Url': 'https://beta.ubicast.net'
+            }
+        ]
+
+        urls_ok, missing_count, streams_count = mediasite_utils.check_videos_urls(videos_files_examples, session)
+        self.assertTrue(urls_ok)
+        self.assertEqual(missing_count, 0)
+        self.assertEqual(streams_count, 2)
+
+    def test_get_slides_count(self):
+        slides_example = {
+            'Length': '45',
+            'Key': 'Str'
+        }
+
+        self.assertEqual(mediasite_utils.get_slides_count(slides_example), 45)
+
+    def test_slides_urls(self):
+        return

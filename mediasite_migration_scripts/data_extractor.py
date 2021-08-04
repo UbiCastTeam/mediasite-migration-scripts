@@ -55,7 +55,7 @@ class DataExtractor():
 
         self.download_folder = dl = Path(config.get('download_folder', '/downloads'))
         self.slides_download_folder = dl / 'slides'
-        self.nb_all_slides = 0
+        self.all_slides_count = 0
         self.nb_all_downloaded_slides = 0
 
         self.timeit(self.run)
@@ -355,55 +355,58 @@ class DataExtractor():
         all_ok = True
         for folder in self.folders_presentations['Folders']:
             for p in folder.get('Presentations', []):
-                self.nb_all_slides += mediasite_utils.get_slides_count(p)
-                ok = self._download_presentation_slides(p)
-                # if at least one is false, all is false
-                all_ok *= ok
+                slides = p.get('SlideContent', p.get('SlideDetailsContent'))
+                slides_count = int(slides.get('Length', '0'))
+                if slides_count > 0:
+                    self.all_slides_count += slides_count
+                    ok = self._download_presentation_slides(slides)
+                    # if at least one is false, all is false
+                    all_ok *= ok
 
         if all_ok:
-            logger.info(f'Sucessfully downloaded all slides: [{self.nb_all_slides}]')
+            logger.info(f'Sucessfully downloaded all slides: [{self.all_slides_count}]')
         else:
-            logger.error(f'Failed to download all slides from Mediasite: [{self.nb_all_downloaded_slides}] / [{self.nb_all_slides}]')
+            logger.error(f'Failed to download all slides from Mediasite: [{self.nb_all_downloaded_slides}] / [{self.all_slides_count}]')
         return all_ok
 
-    def _download_presentation_slides(self, presentation):
+    def _download_presentation_slides(self, slides):
         ok = False
-        if len(presentation.get('Slides', [])) <= 0:
-            ok = True
-        else:
-            pid = presentation['Id']
-            presentation_slides_urls = mediasite_utils.get_slides_urls(presentation)
-            if presentation_slides_urls:
-                nb_slides_downloaded = 0
-                nb_slides = len(presentation_slides_urls)
+        if isinstance(slides, list()):
+            slides = slides[0]
+        pid = slides['ParentResourceId']
 
-                presentation_slides_download_folder = self.slides_download_folder / pid
-                presentation_slides_download_folder.mkdir(parents=True, exist_ok=True)
+        presentation_slides_urls = mediasite_utils.get_slides_urls(slides)
+        if presentation_slides_urls:
+            nb_slides_downloaded = 0
+            nb_slides = len(presentation_slides_urls)
 
-                logger.debug(f'Downloading slides for presentation: {pid}')
-                for url in presentation_slides_urls:
-                    filename = url.split('/').pop()
-                    file_path = presentation_slides_download_folder / filename
+            presentation_slides_download_folder = self.slides_download_folder / pid
+            presentation_slides_download_folder.mkdir(parents=True, exist_ok=True)
 
-                    print('Downloading slides : ', end='')
-                    utils.print_progress_string(self.nb_all_downloaded_slides, self.nb_all_slides)
+            logger.debug(f'Downloading slides for presentation: {pid}')
+            for url in presentation_slides_urls:
+                filename = url.split('/').pop()
+                file_path = presentation_slides_download_folder / filename
 
-                    # do not re-download
-                    if file_path.is_file():
+                print('Downloading slides : ', end='')
+                utils.print_progress_string(self.nb_all_downloaded_slides, self.all_slides_count)
+
+                # do not re-download
+                if file_path.is_file():
+                    nb_slides_downloaded += 1
+                else:
+                    r = self.session.get(url)
+                    if r.ok:
+                        with open(file_path, 'wb') as f:
+                            f.write(r.content)
                         nb_slides_downloaded += 1
+                        self.nb_all_downloaded_slides += 1
                     else:
-                        r = self.session.get(url)
-                        if r.ok:
-                            with open(file_path, 'wb') as f:
-                                f.write(r.content)
-                            nb_slides_downloaded += 1
-                            self.nb_all_downloaded_slides += 1
-                        else:
-                            logger.error(f'Failed to download {url}')
+                        logger.error(f'Failed to download {url}')
 
-                logger.debug(f'Downloaded [{nb_slides_downloaded}] / [{nb_slides}] slides.')
-                ok = (nb_slides_downloaded == nb_slides)
-                if not ok:
-                    logger.error(f'Failed to download all slides for presentation {pid}: [{nb_slides_downloaded}] / [{nb_slides}]')
+            logger.debug(f'Downloaded [{nb_slides_downloaded}] / [{nb_slides}] slides.')
+            ok = (nb_slides_downloaded == nb_slides)
+            if not ok:
+                logger.error(f'Failed to download all slides for presentation {pid}: [{nb_slides_downloaded}] / [{nb_slides}]')
 
         return ok

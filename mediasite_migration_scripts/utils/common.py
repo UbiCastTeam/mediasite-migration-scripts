@@ -4,6 +4,7 @@ import os
 import logging
 from datetime import datetime
 import csv
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +93,14 @@ def write_json(data, path, open_text_option='w'):
         with open(path, open_text_option) as file:
             json.dump(data, file)
     except IOError:
-        os.makedirs(path, exist_ok=True)
-        write_json(data, path)
-    else:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(path, open_text_option) as file:
+                json.dump(data, file)
+        except Exception as e:
+            logger.error(f'Failed to write json {path}: {e}')
+    except Exception as e:
         logger.error(f'Failed to write json {path}: {e}')
 
 

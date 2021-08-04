@@ -41,7 +41,7 @@ def find_folder_path(folder_id, folders, path=''):
 
 def timecode_is_correct(timecode, presentation):
     for video_file in presentation['OnDemandContent']:
-        if timecode > int(video_file['Length']):
+        if int(timecode) > int(video_file['Length']):
             return False
     return True
 
@@ -86,7 +86,10 @@ def check_videos_urls(videos, session):
         # one video stream can have multiple files
         videos_stream_types.add(video_file['StreamType'])
 
-        video_file_url = get_video_url(video_file)
+        video_file_url = video_file.get('Url')
+        if video_file_url is None:
+            video_file_url = get_video_url(video_file)
+
         if video_file_url:
             video_file_found = http.url_exists(video_file_url, session)
             if not video_file_found:
@@ -107,8 +110,8 @@ def check_videos_urls(videos, session):
     return videos_urls_ok, videos_urls_missing_count, videos_stream_types_count
 
 
-def get_slides_count(presentation_infos):
-    count = presentation_infos.get('Slides', {}).get('Length', 0)
+def get_slides_count(slides):
+    count = slides.get('Length', 0)
     return int(count)
 
 
@@ -213,10 +216,6 @@ def get_most_distant_date(presentation_infos):
     return most_distant_date_str
 
 
-def strip_milliseconds(self, date):
-    return date[:-1].split('.')[0]
-
-
 def get_age_days(date_str):
     days = (datetime.now() - parse_mediasite_date(date_str)).days
     return days
@@ -260,6 +259,7 @@ def parse_encoding_settings_xml(encoding_settings):
         logger.debug(e)
 
     return encoding_infos
+
 
 def parse_timed_events_xml(self, timed_events, presentation):
     parsed_timed_events = list()

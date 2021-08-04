@@ -1,6 +1,5 @@
 import logging
 import utils.mediasite as mediasite_utils
-import utils.common as utils
 
 logger = logging.getLogger(__name__)
 
@@ -74,21 +73,21 @@ class DataFilter():
         filtered_data = dict()
         for key, val in data.items():
             if key in filter_fields.keys():
-                filtered_data[key] = self._filter(val, filter_fields[key])
+                filtered_data[key] = self._filter_fields(val, filter_fields[key])
         return filtered_data
 
-    def _filter(self, data, filter_fields):
+    def _filter_fields(self, data, filter_fields):
         filtered_data = None
         if isinstance(data, list):
             filtered_data = list()
             for item in data:
-                filtered_data.append(self._filter(item, filter_fields))
+                filtered_data.append(self._filter_fields(item, filter_fields))
         elif isinstance(data, dict):
             filtered_data = dict()
             for field in filter_fields:
                 if isinstance(field, dict):
                     for key, val in field.items():
-                        filtered_data[key] = self._filter(data.get(key), val)
+                        filtered_data[key] = self._filter_fields(data.get(key), val)
                 elif isinstance(field, str):
                     filtered_data[field] = data.get(field)
 
