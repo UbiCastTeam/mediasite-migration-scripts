@@ -140,36 +140,45 @@ class TestMediasiteUtils(TestCase):
 
     def test_check_videos_urls(self):
         videos_files_examples = [
-            {
-                'Id': 'f0',
-                'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4',
-                'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
-                'StreamType': 'Video1',
-                'ContentMimeType': 'video/mp4',
-                'Url': 'https://beta.ubicast.net'
-            },
-            {
-                'Id': 'f1',
-                'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.ism',
-                'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
-                'StreamType': 'Video3',
-                'ContentMimeType': 'video/mp4',
-                'Url': 'https://beta.ubicast.net'
-            }
+            [
+                {
+                    'Id': 'f0',
+                    'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4',
+                    'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
+                    'StreamType': 'Video1',
+                    'ContentMimeType': 'video/mp4',
+                    'Url': 'https://beta.ubicast.net'
+                },
+                {
+                    'Id': 'f1',
+                    'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4',
+                    'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
+                    'StreamType': 'Video3',
+                    'ContentMimeType': 'video/mp4',
+                    'Url': 'https://beta.ubicast.net'
+                }
+            ],
+            [
+                {
+                    'Id': 'f3',
+                    'FileNameWithExtension': 'bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4',
+                    'ContentServerId': 'ad0fce8edc61432998839c3f860b6d4429',
+                    'StreamType': 'Video1',
+                    'ContentMimeType': 'video/mp4',
+                    'Url': 'http://hopethatneverexists123456789654123654789.com/'
+                }
+            ]
         ]
 
-        urls_ok, missing_count, streams_count = mediasite_utils.check_videos_urls(videos_files_examples, session)
+        urls_ok, missing_count, streams_count = mediasite_utils.check_videos_urls(videos_files_examples[0], session)
         self.assertTrue(urls_ok)
         self.assertEqual(missing_count, 0)
         self.assertEqual(streams_count, 2)
 
-    def test_get_slides_count(self):
-        slides_example = {
-            'Length': '45',
-            'Key': 'Str'
-        }
+        urls_ok, missing_count, streams_count = mediasite_utils.check_videos_urls(videos_files_examples[1], session)
+        self.assertFalse(urls_ok, msg=f'missing count = {missing_count} | streams count = {streams_count}')
+        self.assertEqual(missing_count, 1)
+        self.assertEqual(streams_count, 1)
 
-        self.assertEqual(mediasite_utils.get_slides_count(slides_example), 45)
-
-    def test_slides_urls(self):
+    def test_get_slides_urls(self):
         return

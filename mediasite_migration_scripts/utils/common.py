@@ -93,8 +93,8 @@ def write_json(data, path, open_text_option='w'):
         with open(path, open_text_option) as file:
             json.dump(data, file)
     except IOError:
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        parent = Path(path).parent
+        parent.mkdir(parents=True, exist_ok=True)
         try:
             with open(path, open_text_option) as file:
                 json.dump(data, file)

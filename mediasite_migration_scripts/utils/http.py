@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_session(user, password, headers=dict()):
@@ -10,5 +13,9 @@ def get_session(user, password, headers=dict()):
 
 
 def url_exists(url, session):
-    r = session.head(url)
+    try:
+        r = session.head(url)
+    except Exception as e:
+        logger.error(f'Failed to reach url {url} : {e}')
+        return False
     return r.ok and int(r.headers.get('Content-Length', 0)) > 0

@@ -92,9 +92,10 @@ def check_videos_urls(videos, session):
 
         if video_file_url:
             video_file_found = http.url_exists(video_file_url, session)
-            if not video_file_found:
+            if video_file_found:
+                videos_found.append(video_file)
+            else:
                 logger.warning(f'Video file not found: {video_file_url}')
-            videos_found.append(video_file)
 
     # all videos streams must have at least one video file with a valid url (in composites videos case, there's at least 2 videos streams)
     videos_stream_types_found = set()
@@ -186,10 +187,10 @@ def get_best_video_file(video, allow_wmv=False):
 
 
 def parse_mediasite_date(date_str):
-    #2010-05-26T07:16:57Z
+    # 2010-05-26T07:16:57Z
     if '.' in date_str:
         # some media have msec included
-        #2016-12-07T13:07:27.58Z
+        # 2016-12-07T13:07:27.58Z
         date_str = date_str.split('.')[0] + 'Z'
     if not date_str.endswith('Z'):
         date_str += 'Z'
@@ -235,7 +236,8 @@ def parse_encoding_settings_xml(encoding_settings):
         height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
         # sometimes resolution values given by the API are reversed, it's better to use MediaInfo in that case
         if width < height:
-            logger.debug('Resolution values given by the API may be reversed...')
+            logger.debug(
+                'Resolution values given by the API may be reversed...')
             return {}
 
         codecs_settings = settings.getElementsByTagName('StreamProfiles')[0]
@@ -255,7 +257,8 @@ def parse_encoding_settings_xml(encoding_settings):
             'height': height,
         }
     except Exception as e:
-        logger.debug(f'XML could not be parsed for video encoding settings for settings ID : {settings_id}')
+        logger.debug(
+            f'XML could not be parsed for video encoding settings for settings ID : {settings_id}')
         logger.debug(e)
 
     return encoding_infos
@@ -274,14 +277,17 @@ def parse_timed_events_xml(self, timed_events, presentation):
                     event_data['Position'] = event_position
                     event_payload_tags = ['Number', 'Title']
                     for tag in event_payload_tags:
-                        event_data[tag] = event_xml.getElementsByTagName(tag)[0].firstChild.nodeValue
+                        event_data[tag] = event_xml.getElementsByTagName(
+                            tag)[0].firstChild.nodeValue
                     timed_events.append(event_data)
                 else:
-                    logger.warning(f'A timed event timecode is greater than the video duration for presentation {pid}')
+                    logger.warning(
+                        f'A timed event timecode is greater than the video duration for presentation {pid}')
                     self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['timed_events_timecodes'], critical=False))
                     timed_events = []
 
             except Exception as e:
-                logger.debug(f'Failed to get timed event for presentation {pid}: {e}')
+                logger.debug(
+                    f'Failed to get timed event for presentation {pid}: {e}')
 
     return parsed_timed_events
