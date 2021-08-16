@@ -268,7 +268,7 @@ class Merger:
             result['sample_rate'] = ainfo.get_sample_rate()
             result['a_codec'] = GstPbutils.pb_utils_get_codec_description(ainfo.get_caps())
         except IndexError:
-            logging.warning('File {media_file} contains no audio stream')
+            logging.warning(f'File {media_file} contains no audio stream')
         return result
 
 

@@ -14,8 +14,8 @@ def get_session(user, password, headers=dict()):
 
 def url_exists(url, session):
     try:
-        r = session.head(url)
+        r = session.head(url, headers={'Accept-Encoding': None})
     except Exception as e:
-        logger.error(f'Failed to reach url {url} : {e}')
+        logger.error(f'Failed to reach url [{url}] : {e}')
         return False
     return r.ok and int(r.headers.get('Content-Length', 0)) > 0

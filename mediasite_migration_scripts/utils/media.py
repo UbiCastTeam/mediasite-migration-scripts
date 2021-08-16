@@ -47,3 +47,7 @@ def parse_encoding_infos_with_mediainfo(video_url):
             logger.debug(e)
 
     return encoding_infos
+
+
+def get_duration_h(videos):
+    return videos[0]['files'][0].get('duration_ms', 0) / (3600 * 1000)

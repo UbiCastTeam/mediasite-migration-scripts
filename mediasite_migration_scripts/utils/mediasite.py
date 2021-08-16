@@ -131,7 +131,6 @@ def get_slides_urls(slides):
             file_name = slides.get('FileNameWithExtension', '').replace('{0:D4}', f'{i+1:04}')
             file_url = f'{slides_base_url}/{file_name}'
             slides_urls.append(file_url)
-
     return slides_urls
 
 
@@ -143,22 +142,22 @@ def slides_urls_exists(slides, session):
     return True
 
 
-def has_slides_details(presentation_infos):
-    for stream_type in presentation_infos.get('Streams'):
+def has_slides_details(presentation):
+    for stream_type in presentation.get('Streams'):
         if stream_type.get('StreamType') == 'Slide':
             return True
     return False
 
 
-def get_duration_h(videos):
-    return videos[0]['files'][0].get('duration_ms', 0) / (3600 * 1000)
-
-
 def is_composite(presentation):
-    videos = presentation['videos']
-    video_count = len(videos)
+    pid = presentation['Id']
+    streams = presentation['Streams']
+    video_count = 0
+    for s in streams:
+        if s.get('StreamType').startswith('Video'):
+            video_count += 1
     if video_count > 2:
-        raise Exception('Unimplemented: more than 2 video sources')
+        logger.error(f'Unimplemented: presentation {pid} has more than 2 video sources')
     return video_count == 2
 
 
@@ -187,27 +186,34 @@ def get_best_video_file(video, allow_wmv=False):
 
 
 def parse_mediasite_date(date_str):
-    # 2010-05-26T07:16:57Z
+    date_format = '%Y-%m-%dT%H:%M:%S'
     if '.' in date_str:
         # some media have msec included
         # 2016-12-07T13:07:27.58Z
-        date_str = date_str.split('.')[0] + 'Z'
-    if not date_str.endswith('Z'):
-        date_str += 'Z'
-    return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+        date_format += '.%f'
+
+        date_str = date_str.replace('Z', '')
+        ms = date_str.split('.')[1]
+        # ms in datetime are in 6 digits
+        ms = '{ms:06}'.format(ms=int(ms))
+        date_str = date_str.split('.')[0] + '.' + ms
+    try:
+        return datetime.strptime(date_str, date_format)
+    except Exception as e:
+        logger.error(f'Failed to parse mediasite date {date_str}: {e}')
 
 
 def format_mediasite_date(date):
     return date.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def get_most_distant_date(presentation_infos):
+def get_most_distant_date(presentation):
     most_distant_date_str = str()
     date_types = ['CreationDate', 'RecordDate']
     dates = list()
 
     for d_type in date_types:
-        date_str = presentation_infos.get(d_type)
+        date_str = presentation.get(d_type)
         if date_str:
             date = parse_mediasite_date(date_str)
             dates.append(date)

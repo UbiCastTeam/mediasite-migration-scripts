@@ -1,6 +1,7 @@
 from unittest import TestCase
 import logging
 import requests
+from datetime import datetime
 
 import mediasite_migration_scripts.utils.common as utils
 import mediasite_migration_scripts.utils.mediasite as mediasite_utils
@@ -20,6 +21,90 @@ class TestMediasiteUtils(TestCase):
 
     def setUp(self):
         super(TestMediasiteUtils)
+        self.slides_example = {
+            'odata.id': 'https://anon.com/fake',
+            'IsGeneratedFromVideoStream': True,
+            'Id': 'ea0552005e69482d99bbd0e4d34b7ec730',
+            'ParentResourceId': '0e2710f9f0bb4397a841ed64af41474b1d',
+            'ContentType': 'Slides',
+            'Status': 'Completed',
+            'ContentMimeType': 'image/jpeg',
+            'EncodingOrder': 1,
+            'Length': '25',
+            'FileNameWithExtension': 'slide_{0:D4}_1fd0eb59e96341caa517319a41f54a4d.jpg',
+            'ContentEncodingSettingsId': '9bfd69f8cc7e48219aff3638aa43089328',
+            'ContentServerId': '2127f2fa7dee41aba6cf64c777e5611829',
+            'ArchiveType': 0,
+            'IsTranscodeSource': False,
+            'ContentRevision': 2,
+            'FileLength': '2664478',
+            'StreamType': 'Video1',
+            'LastModified': '2013-10-04T17:09:47.57Z',
+            'ContentServer': {
+                'odata.metadata': 'https://anon.com/fake',
+                'odata.id': 'https://anon.com/fake',
+                'ContentServerId': '2127f2fa7dee41aba6cf64c777e5611829',
+                'EndpointType': 'Storage',
+                'UseMediasiteFileServer': True,
+                'EnableFileServerSecurity': True,
+                'LocalUrl': 'https://anon.com/fake',
+                'Url': 'https://anon.com/fake'
+            }
+        }
+        self.presentation_videos_streams_examples = [
+            {
+                'Id': 'p0',
+                'Streams': [
+                    {
+                        'StreamType': 'Video1',
+                        'StreamName': None
+                    }
+                ]
+            },
+            {
+                'Id': 'p1',
+                'Streams': [
+                    {
+                        'StreamType': 'Slide',
+                        'StreamName': 'Slide with details'
+                    },
+                    {
+                        'StreamType': 'Video3',
+                        'StreamName': None
+                    }
+                ]
+            },
+            {
+                'Id': 'p2',
+                'Streams': [
+                    {
+                        'StreamType': 'Video1',
+                        'StreamName': '1rst video composite'
+                    },
+                    {
+                        'StreamType': 'Video3',
+                        'StreamName': '2nd video composite'
+                    }
+                ]
+            },
+            {
+                'Id': 'p3',
+                'Streams': [
+                    {
+                        'StreamType': 'Video1',
+                        'StreamName': '1rst video composite'
+                    },
+                    {
+                        'StreamType': 'Video2',
+                        'StreamName': '2nd video composite'
+                    },
+                    {
+                        'StreamType': 'Video3',
+                        'StreamName': '3rd video composite'
+                    }
+                ]
+            }
+        ]
 
     def test_find_folder_path(self):
         folders_list_example = [
@@ -171,7 +256,7 @@ class TestMediasiteUtils(TestCase):
         ]
 
         urls_ok, missing_count, streams_count = mediasite_utils.check_videos_urls(videos_files_examples[0], session)
-        self.assertTrue(urls_ok)
+        self.assertTrue(urls_ok, msg=f'missing count = {missing_count} | streams count = {streams_count}')
         self.assertEqual(missing_count, 0)
         self.assertEqual(streams_count, 2)
 
@@ -181,4 +266,44 @@ class TestMediasiteUtils(TestCase):
         self.assertEqual(streams_count, 1)
 
     def test_get_slides_urls(self):
-        return
+        slides_urls = mediasite_utils.get_slides_urls(self.slides_example)
+        self.assertEqual(len(slides_urls), int(self.slides_example['Length']))
+        # url pattern : {content_server_url}/{content_server_id}/Presentation/{pid}/{filename}
+        self.assertEqual(slides_urls[0],
+                         'https://anon.com/fake/2127f2fa7dee41aba6cf64c777e5611829/Presentation/0e2710f9f0bb4397a841ed64af41474b1d/slide_0001_1fd0eb59e96341caa517319a41f54a4d.jpg')
+
+    def test_slides_urls_exists(self):
+        self.assertFalse(mediasite_utils.slides_urls_exists(self.slides_example, session))
+
+    def test_has_slides_details(self):
+        self.assertFalse(mediasite_utils.has_slides_details(self.presentation_videos_streams_examples[0]))
+        self.assertTrue(mediasite_utils.has_slides_details(self.presentation_videos_streams_examples[1]))
+
+    def test_is_composite(self):
+        for i, p in enumerate(self.presentation_videos_streams_examples):
+            if i == 2:
+                self.assertTrue(mediasite_utils.is_composite(p))
+            else:
+                self.assertFalse(mediasite_utils.is_composite(p))
+
+    def test_parse_mediasite_data(self):
+        dates_tests_set = [
+            {
+                'example': '2016-12-07T13:07:27.58Z',
+                'expected': datetime(2016, 12, 7, 13, 7, 27, 58)
+            },
+            {
+                'example': '2016-12-07T13:07:27',
+                'expected': datetime(2016, 12, 7, 13, 7, 27)
+            },
+            {
+                'example': '2016-12-07T13:07:27.58',
+                'expected': datetime(2016, 12, 7, 13, 7, 27, 58)
+            },
+        ]
+        for date in dates_tests_set:
+            date_parsed = mediasite_utils.parse_mediasite_date(date['example'])
+            self.assertEqual(date_parsed, date['expected'])
+
+        wrong_date_parsed = mediasite_utils.parse_mediasite_date('2016-12-07T13')
+        self.assertIsNone(wrong_date_parsed)

@@ -302,7 +302,6 @@ class DataExtractor():
                     **slides_content,
                     'ContentServer': self.get_content_server(slides_content['ContentServerId'], slide=True)
                 }
-
         return slides
 
     def _slides_are_correct(self, slides):
@@ -310,10 +309,10 @@ class DataExtractor():
             Check if slides were created from a slides presentation or computer stream.
             Sometimes users use their camera as a stream source by mistake for slides detection.
         """
-        encoding_settings = self.mediasite_client.content.get_content_encoding_settings(slides.get('ContentEncodingSettingsId', ''))
+        encoding_settings = self.mediasite_client.content.get_content_encoding_settings(slides['ContentEncodingSettingsId'])
         if encoding_settings:
             source = encoding_settings.get('Name', '')
-            return (source != '[Default] Use Recorder\'s Settings' and slides.get('SlideDetails'))
+            return (source != '[Default] Use Recorder\'s Settings')
         return False
 
     def slides_are_ok(self, presentation):
@@ -371,8 +370,6 @@ class DataExtractor():
 
     def _download_presentation_slides(self, slides):
         ok = False
-        if isinstance(slides, list()):
-            slides = slides[0]
         pid = slides['ParentResourceId']
 
         presentation_slides_urls = mediasite_utils.get_slides_urls(slides)
