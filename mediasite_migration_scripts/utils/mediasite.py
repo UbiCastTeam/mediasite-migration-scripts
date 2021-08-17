@@ -194,7 +194,7 @@ def parse_mediasite_date(date_str):
 
         date_str = date_str.replace('Z', '')
         ms = date_str.split('.')[1]
-        # ms in datetime are in 6 digits
+        # in datetime obj, ms are in 6 digits
         ms = '{ms:06}'.format(ms=int(ms))
         date_str = date_str.split('.')[0] + '.' + ms
     try:
@@ -203,12 +203,7 @@ def parse_mediasite_date(date_str):
         logger.error(f'Failed to parse mediasite date {date_str}: {e}')
 
 
-def format_mediasite_date(date):
-    return date.strftime('%Y-%m-%dT%H:%M:%SZ')
-
-
 def get_most_distant_date(presentation):
-    most_distant_date_str = str()
     date_types = ['CreationDate', 'RecordDate']
     dates = list()
 
@@ -217,10 +212,8 @@ def get_most_distant_date(presentation):
         if date_str:
             date = parse_mediasite_date(date_str)
             dates.append(date)
-    most_distant_date = min(dates)
-    most_distant_date_str = format_mediasite_date(most_distant_date)
 
-    return most_distant_date_str
+    return min(dates)
 
 
 def get_age_days(date_str):
@@ -229,6 +222,12 @@ def get_age_days(date_str):
 
 
 def parse_encoding_settings_xml(encoding_settings):
+    """
+        Parse encoding settings XML provided by MediaSite API
+
+        returns:
+            video codec, audio codec, width and height
+    """
     encoding_infos = dict()
     settings_id = encoding_settings['Id']
     serialized_settings = encoding_settings['SerializedSettings']
@@ -242,8 +241,7 @@ def parse_encoding_settings_xml(encoding_settings):
         height = int(settings.getElementsByTagName('PresentationAspectY')[0].firstChild.nodeValue)
         # sometimes resolution values given by the API are reversed, it's better to use MediaInfo in that case
         if width < height:
-            logger.debug(
-                'Resolution values given by the API may be reversed...')
+            logger.debug('Resolution values given by the API may be reversed...')
             return {}
 
         codecs_settings = settings.getElementsByTagName('StreamProfiles')[0]
@@ -270,30 +268,21 @@ def parse_encoding_settings_xml(encoding_settings):
     return encoding_infos
 
 
-def parse_timed_events_xml(self, timed_events, presentation):
+def parse_timed_events_xml(timed_events):
     parsed_timed_events = list()
     for event in timed_events:
         event_data = dict()
         if event.get('Payload'):
             try:
                 event_xml = xml.parseString(event['Payload']).documentElement
+                event_data['Position'] = event.get('Position', 0)
+                event_payload_tags = ['Number', 'Title']
+                for tag in event_payload_tags:
+                    event_data[tag] = event_xml.getElementsByTagName(tag)[0].firstChild.nodeValue
 
-                event_position = event.get('Position', 0)
-                if timecode_is_correct(event_position, presentation):
-                    event_data['Position'] = event_position
-                    event_payload_tags = ['Number', 'Title']
-                    for tag in event_payload_tags:
-                        event_data[tag] = event_xml.getElementsByTagName(
-                            tag)[0].firstChild.nodeValue
-                    timed_events.append(event_data)
-                else:
-                    logger.warning(
-                        f'A timed event timecode is greater than the video duration for presentation {pid}')
-                    self.failed_presentations.append(Failed(pid, error=self.failed_presentations_errors['timed_events_timecodes'], critical=False))
-                    timed_events = []
-
+                timed_events.append(event_data)
             except Exception as e:
-                logger.debug(
-                    f'Failed to get timed event for presentation {pid}: {e}')
+                pid = timed_events['PresentationId']
+                logger.debug(f'Failed to get timed event for presentation {pid}: {e}')
 
     return parsed_timed_events

@@ -105,6 +105,20 @@ class TestMediasiteUtils(TestCase):
                 ]
             }
         ]
+        self.dates_examples = [
+            {
+                'str': '2016-12-07T13:07:27.58Z',
+                'datetime': datetime(2016, 12, 7, 13, 7, 27, 58)
+            },
+            {
+                'str': '2016-12-07T13:07:27',
+                'datetime': datetime(2016, 12, 7, 13, 7, 27)
+            },
+            {
+                'str': '2016-12-07T13:07:27.58',
+                'datetime': datetime(2016, 12, 7, 13, 7, 27, 58)
+            },
+        ]
 
     def test_find_folder_path(self):
         folders_list_example = [
@@ -287,23 +301,77 @@ class TestMediasiteUtils(TestCase):
                 self.assertFalse(mediasite_utils.is_composite(p))
 
     def test_parse_mediasite_data(self):
-        dates_tests_set = [
-            {
-                'example': '2016-12-07T13:07:27.58Z',
-                'expected': datetime(2016, 12, 7, 13, 7, 27, 58)
-            },
-            {
-                'example': '2016-12-07T13:07:27',
-                'expected': datetime(2016, 12, 7, 13, 7, 27)
-            },
-            {
-                'example': '2016-12-07T13:07:27.58',
-                'expected': datetime(2016, 12, 7, 13, 7, 27, 58)
-            },
-        ]
-        for date in dates_tests_set:
-            date_parsed = mediasite_utils.parse_mediasite_date(date['example'])
-            self.assertEqual(date_parsed, date['expected'])
+        for date in self.dates_examples:
+            date_parsed = mediasite_utils.parse_mediasite_date(date['str'])
+            self.assertEqual(date_parsed, date['datetime'])
 
         wrong_date_parsed = mediasite_utils.parse_mediasite_date('2016-12-07T13')
         self.assertIsNone(wrong_date_parsed)
+
+    def test_get_most_distant_date(self):
+        presentations_examples = [
+            {
+                'Id': '0',
+                'CreationDate': '2016-12-07T13:07:27.58Z',
+                'RecordDate': '2016-12-07T06:07:27.58Z'
+            },
+            {
+                'Id': '1',
+                'CreationDate': '2016-12-07T13:07:27',
+                'RecordDate': '2016-11-07T06:07:27.58Z'
+            },
+            {
+                'Id': '2',
+                'CreationDate': '2016-01-07T13:07:27',
+                'RecordDate': '2016-11-07T06:07:27'
+            }
+        ]
+
+        self.assertEqual(mediasite_utils.get_most_distant_date(presentations_examples[0]), datetime(2016, 12, 7, 6, 7, 27, 58))
+        self.assertEqual(mediasite_utils.get_most_distant_date(presentations_examples[1]), datetime(2016, 11, 7, 6, 7, 27, 58))
+        self.assertEqual(mediasite_utils.get_most_distant_date(presentations_examples[2]), datetime(2016, 1, 7, 13, 7, 27))
+
+    def test_parse_encoding_settings_xml(self):
+        encoding_settings_example = {
+            'Id': '87bc9b59ecc34e0b85b8c18d1caa383128',
+            'MimeType': 'video/mp4',
+            'SerializedSettings': '<EncodingSettings xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><UserMaximumDeviceClass>-1</UserMaximumDeviceClass><StreamDescriptions><EncodingStreamDescription><Number>1</Number><StreamType>Audio</StreamType><DeviceClass>1</DeviceClass><Description>AACL,64000 bps 16 bit stereo 44100 hz</Description><StreamWeight>12</StreamWeight></EncodingStreamDescription><EncodingStreamDescription><Number>2</Number><StreamType>Video</StreamType><DeviceClass>2</DeviceClass><Description>H264,700000 bps 640x360 25.000 fps</Description><StreamWeight>12</StreamWeight></EncodingStreamDescription></StreamDescriptions><Filters><EncodingSettingsFilter><FilterType>AspectRatio</FilterType><FilterValue>16x9</FilterValue></EncodingSettingsFilter><EncodingSettingsFilter><FilterType>FrameRate</FilterType><FilterValue>25</FilterValue></EncodingSettingsFilter></Filters><Settings>&lt;MediaProfile xmlns=\"http://www.SonicFoundry.com/Mediasite/Services/RecorderManagement/05/01//Data\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\"&gt;&lt;PresentationAspectX&gt;640&lt;/PresentationAspectX&gt;&lt;PresentationAspectY&gt;360&lt;/PresentationAspectY&gt;&lt;StreamProfiles xmlns:a=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\"&gt;&lt;a:anyType i:type=\"AudioEncoderProfile\"&gt;&lt;BitRate&gt;64000&lt;/BitRate&gt;&lt;FourCC&gt;AACL&lt;/FourCC&gt;&lt;HexEncodedCodecPrivateData&gt;1210&lt;/HexEncodedCodecPrivateData&gt;&lt;MinimumMachineClass&gt;1&lt;/MinimumMachineClass&gt;&lt;SampleRate&gt;44100&lt;/SampleRate&gt;&lt;BitsPerChannel&gt;16&lt;/BitsPerChannel&gt;&lt;BlockAlign&gt;4&lt;/BlockAlign&gt;&lt;Channels&gt;2&lt;/Channels&gt;&lt;/a:anyType&gt;&lt;a:anyType i:type=\"VideoEncoderProfile\"&gt;&lt;BitRate&gt;700000&lt;/BitRate&gt;&lt;FourCC&gt;H264&lt;/FourCC&gt;&lt;HexEncodedCodecPrivateData&gt;000000016742801E965201405FF2FFE08000800A100000030010000003032604000AAE400055737F18E30200055720002AB9BF8C70ED0913240000000168CB8D48&lt;/HexEncodedCodecPrivateData&gt;&lt;MinimumMachineClass&gt;2&lt;/MinimumMachineClass&gt;&lt;SampleRate&gt;25&lt;/SampleRate&gt;&lt;Height&gt;360&lt;/Height&gt;&lt;StreamWeight&gt;12&lt;/StreamWeight&gt;&lt;VariableRate&gt;false&lt;/VariableRate&gt;&lt;Width&gt;640&lt;/Width&gt;&lt;/a:anyType&gt;&lt;/StreamProfiles&gt;&lt;/MediaProfile&gt;</Settings></EncodingSettings>'
+        }
+
+        encoding_settings_parsed = mediasite_utils.parse_encoding_settings_xml(encoding_settings_example)
+        self.assertDictEqual(encoding_settings_parsed, {
+            'width': 640,
+            'height': 360,
+            'audio_codec': 'AAC',
+            'video_codec': 'H264'
+        })
+        encoding_settings_example = {
+            'Id': '7079dee9833a4587bd25ff6c6fb1105528',
+            'MimeType': 'video/mp4',
+            'SerializedSettings': '<EncodingSettings xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><UserMaximumDeviceClass>-1</UserMaximumDeviceClass><StreamDescriptions><EncodingStreamDescription><Number>1</Number><StreamType>Audio</StreamType><DeviceClass>1</DeviceClass><Description>AACL,64000 bps 16 bit stereo 44100 hz</Description><StreamWeight>0</StreamWeight></EncodingStreamDescription><EncodingStreamDescription><Number>2</Number><StreamType>Video</StreamType><DeviceClass>1</DeviceClass><Description>H264,4500000 bps 1280x960 15.000 fps</Description><StreamWeight>0</StreamWeight></EncodingStreamDescription></StreamDescriptions><Filters><EncodingSettingsFilter><FilterType>AspectRatio</FilterType><FilterValue>4x3</FilterValue></EncodingSettingsFilter><EncodingSettingsFilter><FilterType>FrameRate</FilterType><FilterValue>15</FilterValue></EncodingSettingsFilter></Filters><Settings>&lt;MediaProfile xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"http://www.SonicFoundry.com/Mediasite/Services/RecorderManagement/05/01//Data\"&gt;&lt;PresentationAspectX&gt;960&lt;/PresentationAspectX&gt;&lt;PresentationAspectY&gt;1280&lt;/PresentationAspectY&gt;&lt;StreamProfiles xmlns:d2p1=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\"&gt;&lt;d2p1:anyType i:type=\"AudioEncoderProfile\"&gt;&lt;BitRate&gt;64000&lt;/BitRate&gt;&lt;FourCC&gt;AACL&lt;/FourCC&gt;&lt;HexEncodedCodecPrivateData&gt;1210&lt;/HexEncodedCodecPrivateData&gt;&lt;MinimumMachineClass&gt;1&lt;/MinimumMachineClass&gt;&lt;SampleRate&gt;44100&lt;/SampleRate&gt;&lt;BitsPerChannel&gt;16&lt;/BitsPerChannel&gt;&lt;BlockAlign&gt;4&lt;/BlockAlign&gt;&lt;Channels&gt;2&lt;/Channels&gt;&lt;/d2p1:anyType&gt;&lt;d2p1:anyType i:type=\"VideoEncoderProfile\"&gt;&lt;BitRate&gt;4500000&lt;/BitRate&gt;&lt;FourCC&gt;H264&lt;/FourCC&gt;&lt;HexEncodedCodecPrivateData&gt;00000001674D4020965602803CDFF82000200284000003000400000300798A80008954000112A9FC638C5400044AA00008954FE31C3B4244A70000000168EA5352&lt;/HexEncodedCodecPrivateData&gt;&lt;MinimumMachineClass&gt;5&lt;/MinimumMachineClass&gt;&lt;SampleRate&gt;15&lt;/SampleRate&gt;&lt;Height&gt;960&lt;/Height&gt;&lt;VariableRate&gt;false&lt;/VariableRate&gt;&lt;Width&gt;1280&lt;/Width&gt;&lt;/d2p1:anyType&gt;&lt;/StreamProfiles&gt;&lt;/MediaProfile&gt;</Settings></EncodingSettings>'
+        }
+
+        self.assertDictEqual(mediasite_utils.parse_encoding_settings_xml(encoding_settings_example), {})
+
+    def test_parse_timed_events_xml(self):
+        timed_events_example = [
+            {
+                'Id': str(i),
+                'Payload': f'<ChapterEntry xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"> \
+                                <Number>{str(i + 1)}</Number> \
+                                <Time>0</Time>  \
+                                <Title>Title {str(i + 1)}</Title> \
+                            </ChapterEntry>',
+                'Position': (i * 1500),
+                'PresentationId': 'p' + str(i)
+            }
+            for i in range(3)
+        ]
+
+        timed_events_parsed = mediasite_utils.parse_timed_events_xml(timed_events_example)
+        for i, event_parsed in enumerate(timed_events_parsed):
+            self.assertDictEqual(event_parsed, {
+                'Position': timed_events_example[i]['Position'],
+                'Number': str(i + 1),
+                'Title': 'Title ' + str(i + 1)
+            })
