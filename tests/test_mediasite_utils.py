@@ -6,7 +6,6 @@ from datetime import datetime
 import mediasite_migration_scripts.utils.common as utils
 import mediasite_migration_scripts.utils.mediasite as mediasite_utils
 
-import tests.common as tests_utils
 
 utils.set_logger(verbose=True)
 logger = logging.getLogger(__name__)
