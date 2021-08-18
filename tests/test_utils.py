@@ -27,7 +27,7 @@ class TestUtils(TestCase):
         super(TestUtils)
         sample_dir = 'tests/samples'
         self.media_with_sound = f'{sample_dir}/MEDIA_WITHSOUND.mp4'
-        self.media_wmv_with_no_sound = f'{sample_dir}/MEDIA_WMV_640x360.wmv'
+        self.media_wmv_with_no_sound = f'{sample_dir}/MEDIA_WMV_NOSOUND.wmv'
 
     def test_is_folder_to_add(self):
         config_example = {'whitelist': ['/folder/example', '/another_folder']}
@@ -204,3 +204,7 @@ class TestUtils(TestCase):
             'height': 360,
             'width': 640
         })
+
+    def test_url_exists(self):
+        self.assertTrue(http.url_exists('https://beta.ubicast.net', session))
+        self.assertFalse(http.url_exists('wrong-url.com_fr.you', session))
