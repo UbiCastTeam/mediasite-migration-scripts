@@ -198,8 +198,8 @@ class TestUtils(TestCase):
             'width': 1280
         })
 
-        encoding_infos_with_no_sound_example = media.parse_encoding_infos_with_mediainfo(self.media_wmv_with_no_sound)
-        self.assertDictEqual(encoding_infos_with_no_sound_example, {
+        encoding_infos_wmv_with_no_sound_example = media.parse_encoding_infos_with_mediainfo(self.media_wmv_with_no_sound)
+        self.assertDictEqual(encoding_infos_wmv_with_no_sound_example, {
             'video_codec': 'MPEG-4 Visual',
             'height': 360,
             'width': 640

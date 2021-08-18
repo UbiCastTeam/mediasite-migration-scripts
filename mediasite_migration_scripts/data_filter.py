@@ -39,7 +39,8 @@ class DataFilter():
                                 'FileLength',
                                 'Length',
                                 'IsTranscodeSource',
-                                {'ContentServer': ['Id', 'DistributionUrl']}
+                                {'ContentServer': ['Id', 'DistributionUrl']},
+                                {'ContentEncodingSettings': ['Id', 'SerializedSettings']}
                             ]
                         },
                         {
