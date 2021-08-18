@@ -7,6 +7,20 @@ import utils.http as http
 logger = logging.getLogger(__name__)
 
 
+def get_tracks(url):
+    tracks = []
+    try:
+        tracks = MediaInfo.parse(url, mediainfo_options={'Ssl_IgnoreSecurity': '1'}).tracks
+    except RuntimeError:
+        logging.error(f'Could not analyze with mediainfo {url}')
+    except FileNotFoundError:
+        logger.error(f'File not found with mediainfo : {url}')
+    except Exception as e:
+        logger.error(f'Failed to analyze with mediainfo {url}: {e}')
+
+    return tracks
+
+
 def has_h264_video_track(url):
     tracks = get_tracks(url)
     for track in tracks:
@@ -14,13 +28,15 @@ def has_h264_video_track(url):
             return track.format == 'AVC'
 
 
-def get_tracks(url):
-    tracks = []
-    try:
-        tracks = MediaInfo.parse(url, mediainfo_options={'Ssl_IgnoreSecurity': '1'}).tracks
-    except RuntimeError:
-        logging.error(f'Could not analyze {url}')
-    return tracks
+def get_duration_h(videos):
+    # from milliseconds
+    duration_h = 0
+    duration_ms = int(videos[0].get('Length'))
+    if duration_ms < 0:
+        logger.error('Video duration provided is below zero')
+    else:
+        duration_h = duration_ms / (3600 * 1000)
+    return round(duration_h, 2)
 
 
 def parse_encoding_infos_with_mediainfo(video_url):
@@ -47,7 +63,3 @@ def parse_encoding_infos_with_mediainfo(video_url):
             logger.debug(e)
 
     return encoding_infos
-
-
-def get_duration_h(videos):
-    return videos[0]['files'][0].get('duration_ms', 0) / (3600 * 1000)
