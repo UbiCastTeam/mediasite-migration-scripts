@@ -131,6 +131,7 @@ dmypy.json
 *.json
 !tests/anon_data.json
 !tests/anon_data_filtered.json
+!tests/anon_ordered_videos.json
 tests/content/
 config.json.backup
 *.txt

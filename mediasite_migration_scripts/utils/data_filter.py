@@ -44,7 +44,7 @@ def order_and_filter_videos(presentation_infos):
 
     videos_infos = list()
     videos = presentation_infos['OnDemandContent']
-    videos_infos, videos_not_found_count, videos_streams_types = order_by_stream_type(videos)
+    videos_infos = order_by_stream_type(videos)
 
     return videos_infos
 
@@ -52,7 +52,6 @@ def order_and_filter_videos(presentation_infos):
 def order_by_stream_type(videos):
     videos_list = list()
     videos_streams_types = list()
-    videos_not_found_count = int()
 
     for file in videos:
         file_stream_type = file['StreamType']
@@ -61,9 +60,6 @@ def order_by_stream_type(videos):
 
         file_url = mediasite_utils.get_video_url(file)
         if file_url:
-            if not file.get('encoding_infos'):
-                logger.debug(f"Video encoding infos not found in API for presentation: {file['ParentResourceId']}")
-
             stream_index = get_video_stream_index(file_stream_type, videos_list)
             if stream_index is None:
                 videos_list.append({'stream_type': file_stream_type,
@@ -71,7 +67,7 @@ def order_by_stream_type(videos):
             else:
                 videos_list[stream_index].append(file)
 
-    return videos_list, videos_not_found_count, videos_streams_types
+    return videos_list
 
 
 def get_video_stream_index(stream_type, videos_list):

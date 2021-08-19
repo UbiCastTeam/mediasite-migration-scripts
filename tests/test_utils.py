@@ -1,6 +1,3 @@
-from dataclasses import field
-import json
-from mediasite_migration_scripts.utils.data_filter import DataFilter
 from unittest import TestCase
 import logging
 from pymediainfo import Track
@@ -8,6 +5,8 @@ import requests
 from pathlib import Path
 import os
 
+
+import mediasite_migration_scripts.utils.data_filter as order
 import mediasite_migration_scripts.utils.common as utils
 import mediasite_migration_scripts.utils.media as media
 import mediasite_migration_scripts.utils.http as http
@@ -29,6 +28,8 @@ class TestUtils(TestCase):
         sample_dir = 'tests/samples'
         self.media_with_sound = f'{sample_dir}/MEDIA_WITHSOUND.mp4'
         self.media_wmv_with_no_sound = f'{sample_dir}/MEDIA_WMV_NOSOUND.wmv'
+        self.data = utils.read_json('tests/anon_data.json')
+        self.filtered_data = utils.read_json('tests/anon_data_filtered.json')
 
     def test_is_folder_to_add(self):
         config_example = {'whitelist': ['/folder/example', '/another_folder']}
@@ -211,7 +212,7 @@ class TestUtils(TestCase):
         self.assertFalse(http.url_exists('wrong-url.com_fr.you', session))
 
     def test_filter_data(self):
-        data = utils.read_json('tests/anon_data.json')
+        data = self.data
         filters = {
             'Folders': [
                 'Id',
@@ -224,6 +225,8 @@ class TestUtils(TestCase):
                         {
                             'OnDemandContent': [
                                 'FileNameWithExtension',
+                                'StreamType',
+                                'ContentMimeType',
                                 {'ContentServer': ['Id', 'DistributionUrl']}
                             ]
                         }
@@ -231,9 +234,9 @@ class TestUtils(TestCase):
                 }
             ]
         }
-        data_filter = DataFilter(filters)
+        data_filter = order.DataFilter(filters)
         filtered_data = data_filter.filter_data(data)
-        expected_filtered_data = utils.read_json('tests/anon_data_filtered.json')
+        expected_filtered_data = self.filtered_data
         self.assertDictEqual(filtered_data, expected_filtered_data)
 
         filtered_folders = filtered_data.get('Folders')
@@ -261,3 +264,15 @@ class TestUtils(TestCase):
                     v_origin = p_origin['OnDemandContent'][v_index]
                     self.assertEqual(video.get('FileNameWithExtension'), v_origin['FileNameWithExtension'])
                     self.assertEqual(video.get('ContentServer', {}).get('Id'), v_origin['ContentServer']['Id'])
+
+    def test_order_and_filter_videos(self):
+        folders = self.filtered_data['Folders']
+        ordered_videos = list()
+        for f in folders:
+            for p in f['Presentations']:
+                video = order.order_and_filter_videos(p)
+                if video:
+                    ordered_videos.append(video)
+
+        expected_ordered_videos = utils.read_json('tests/anon_ordered_videos.json')
+        self.assertListEqual(ordered_videos, expected_ordered_videos)
