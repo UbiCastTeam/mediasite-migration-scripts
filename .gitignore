@@ -129,8 +129,8 @@ dmypy.json
 
 # MediaTransfer client
 *.json
-!tests/mediasite_data_test.json
-!tests/e2e/mediaserver_data_e2e.json
+!tests/anon_data.json
+!tests/anon_data_filtered.json
 tests/content/
 config.json.backup
 *.txt

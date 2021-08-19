@@ -1,0 +1,58 @@
+{
+    "Folders": [
+        "Id",
+        "ParentFolderId",
+        "Name",
+        "Owner",
+        "Description",
+        {"Catalogs": ["Id", "Name", "Description", "CatalogUrl", "Owner", "CreationDate", "LinkedFolderId"]},
+        {
+            "Presentations": [
+                "Id",
+                "Title",
+                "ParentFolderId",
+                "CreationDate",
+                "RecordDate",
+                "Owner",
+                "Creator",
+                "PrimaryPresenter",
+                "Status",
+                "Private",
+                "Description",
+                "TagList",
+                "Streams",
+                "#Play",
+                {"Presenters": ["DisplayName"]},
+                {"PresentationAnalytics": ["TotalViews", "LastWatched"]},
+                {
+                    "OnDemandContent": [
+                        "FileNameWithExtension",
+                        "ContentMimeType",
+                        "FileLength",
+                        "Length",
+                        "IsTranscodeSource",
+                        {"ContentServer": ["Id", "DistributionUrl"]},
+                        {"ContentEncodingSettings": ["Id", "SerializedSettings"]}
+                    ]
+                },
+                {
+                    "SlideContent": [
+                        "FileNameWithExtension",
+                        "Length",
+                        "StreamType",
+                        {"ContentServer": ["ContentServerId", "Url"]}
+                    ]
+                },
+                {
+                    "SlideDetailsContent": [
+                        "FileNameWithExtension",
+                        "Length",
+                        "StreamType",
+                        "SlideDetailsContent",
+                        {"ContentServer": ["ContentServerId", "Url"]}
+                    ]
+                }
+            ]
+        }
+    ]
+}

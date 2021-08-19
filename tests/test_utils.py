@@ -1,5 +1,6 @@
 from dataclasses import field
 import json
+from mediasite_migration_scripts.utils.data_filter import DataFilter
 from unittest import TestCase
 import logging
 from pymediainfo import Track
@@ -138,8 +139,8 @@ class TestUtils(TestCase):
             {
                 'example': [
                     {
-                        "Id": "v0",
-                        "Length": "2973269",
+                        'Id': 'v0',
+                        'Length': '2973269',
                     },
                 ],
                 'expected': 0.83
@@ -147,12 +148,12 @@ class TestUtils(TestCase):
             {
                 'example': [
                     {
-                        "Id": "v1",
-                        "Length": "5616000",
+                        'Id': 'v1',
+                        'Length': '5616000',
                     },
                     {
-                        "Id": "v1b",
-                        "Length": "5616000",
+                        'Id': 'v1b',
+                        'Length': '5616000',
                     }
                 ],
                 'expected': 1.56
@@ -160,8 +161,8 @@ class TestUtils(TestCase):
             {
                 'example': [
                     {
-                        "Id": "v2",
-                        "Length": "0",
+                        'Id': 'v2',
+                        'Length': '0',
                     },
                 ],
                 'expected': 0
@@ -169,8 +170,8 @@ class TestUtils(TestCase):
             {
                 'example': [
                     {
-                        "Id": "v3",
-                        "Length": "-500",
+                        'Id': 'v3',
+                        'Length': '-500',
                     },
                 ],
                 'expected': 0
@@ -178,8 +179,8 @@ class TestUtils(TestCase):
             {
                 'example': [
                     {
-                        "Id": "v4",
-                        "Length": "-500",
+                        'Id': 'v4',
+                        'Length': '-500',
                     },
                 ],
                 'expected': 0
@@ -208,3 +209,55 @@ class TestUtils(TestCase):
     def test_url_exists(self):
         self.assertTrue(http.url_exists('https://beta.ubicast.net', session))
         self.assertFalse(http.url_exists('wrong-url.com_fr.you', session))
+
+    def test_filter_data(self):
+        data = utils.read_json('tests/anon_data.json')
+        filters = {
+            'Folders': [
+                'Id',
+                'Name',
+                {'Catalogs': ['Id', 'Name']},
+                {
+                    'Presentations': [
+                        'Id',
+                        'Title',
+                        {
+                            'OnDemandContent': [
+                                'FileNameWithExtension',
+                                {'ContentServer': ['Id', 'DistributionUrl']}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        data_filter = DataFilter(filters)
+        filtered_data = data_filter.filter_data(data)
+        expected_filtered_data = utils.read_json('tests/anon_data_filtered.json')
+        self.assertDictEqual(filtered_data, expected_filtered_data)
+
+        filtered_folders = filtered_data.get('Folders')
+        self.assertIsNotNone(filtered_folders)
+        folders = data['Folders']
+
+        for f_index, filt_folder in enumerate(filtered_folders):
+            f_origin = folders[f_index]
+            self.assertEqual(filt_folder.get('Id'), f_origin['Id'])
+
+            catalogs = filt_folder.get('Catalogs')
+            self.assertIsNotNone(catalogs)
+            for c_index, c in enumerate(catalogs):
+                self.assertEqual(c.get('Id'), f_origin['Catalogs'][c_index]['Id'])
+
+            presentations = filt_folder.get('Presentations')
+            self.assertIsNotNone(presentations)
+            for p_index, p in enumerate(presentations):
+                p_origin = f_origin['Presentations'][p_index]
+                self.assertEqual(p.get('Id'), p_origin['Id'])
+
+                ondemand_content = p.get('OnDemandContent')
+                self.assertIsNotNone(ondemand_content)
+                for v_index, video in enumerate(ondemand_content):
+                    v_origin = p_origin['OnDemandContent'][v_index]
+                    self.assertEqual(video.get('FileNameWithExtension'), v_origin['FileNameWithExtension'])
+                    self.assertEqual(video.get('ContentServer', {}).get('Id'), v_origin['ContentServer']['Id'])

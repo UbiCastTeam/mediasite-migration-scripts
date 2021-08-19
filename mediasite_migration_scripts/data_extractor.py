@@ -43,8 +43,7 @@ class DataExtractor():
             'slides_timecodes': 'Somes slides timecodes are greater than the video duration',
             'videos_missing': 'All videos files are missing',
             'composites_videos_missing': 'One video file is missing for video composition',
-            'some_videos_missing': 'Some videos files are missing',
-            'timed_events_timecodes': 'Some timed events / chapters timecodes are greater than the video duration ',
+            'some_videos_missing': 'Some videos files are missing'
         }
         self.failed_presentations_filename = options.failed_csvfile
 
@@ -297,17 +296,20 @@ class DataExtractor():
                 # SlideDetailsContent returns a dict whereas SlideContent return a list (key 'value' in JSON response)
                 slides_content = slides_content[0]
 
-            if self._slides_are_correct(slides_content):
+            if self._slides_are_valid(slides_content):
                 slides = {
                     **slides_content,
                     'ContentServer': self.get_content_server(slides_content['ContentServerId'], slide=True)
                 }
         return slides
 
-    def _slides_are_correct(self, slides):
+    def _slides_are_valid(self, slides):
         """
             Check if slides were created from a slides presentation or computer stream.
             Sometimes users use their camera as a stream source by mistake for slides detection.
+
+            returns:
+                -> bool : slide stream source is not from camera
         """
         encoding_settings = self.mediasite_client.content.get_content_encoding_settings(slides['ContentEncodingSettingsId'])
         if encoding_settings:
@@ -348,6 +350,9 @@ class DataExtractor():
             if presentation_failure:
                 self.failed_presentations.append(presentation_failure)
                 slides_ok = not presentation_failure.critical
+            else:
+                self.all_slides_count += int(slides.get('Length'))
+
         return slides_ok
 
     def download_all_slides(self):
@@ -357,13 +362,11 @@ class DataExtractor():
                 slides = p.get('SlideContent', p.get('SlideDetailsContent'))
                 slides_count = int(slides.get('Length', '0'))
                 if slides_count > 0:
-                    self.all_slides_count += slides_count
                     ok = self._download_presentation_slides(slides)
-                    # if at least one is false, all is false
                     all_ok *= ok
 
         if all_ok:
-            logger.info(f'Sucessfully downloaded all slides: [{self.all_slides_count}]')
+            logger.info(f'Sucessfully downloaded all slides: [{self.nb_all_downloaded_slides}]')
         else:
             logger.error(f'Failed to download all slides from Mediasite: [{self.nb_all_downloaded_slides}] / [{self.all_slides_count}]')
         return all_ok

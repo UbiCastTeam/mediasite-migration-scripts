@@ -6,8 +6,7 @@ import sys
 from pathlib import Path
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
-from mediasite_migration_scripts.data_filter import DataFilter
-
+import mediasite_migration_scripts.utils.data_filter as data_filter
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
@@ -38,6 +37,10 @@ if __name__ == '__main__':
                             help='add custom mediasite data file.'),
         parser.add_argument('--max-folders',
                             help='specify maximum folders to collect infos'),
+        parser.add_argument('--filter-file',
+                            action='store_true',
+                            default='filters.json',
+                            help='add custom mediasite data file.'),
         parser.add_argument('--no-filter',
                             help='Skip filtering mediasite data fields')
 
@@ -58,7 +61,8 @@ if __name__ == '__main__':
 
         config = utils.read_json(options.config_file)
         extractor = DataExtractor(config, options)
-        data_filter = DataFilter(options)
+        filter_fields = utils.read_json(options.filter_file)
+        data_filter = data_filter.DataFilter(filter_fields)
 
         mediasite_data_to_store_attributs = ['all_data', 'folders_presentations', 'users']
         for data_attr in mediasite_data_to_store_attributs:
