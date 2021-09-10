@@ -1,5 +1,4 @@
 from unittest import TestCase, SkipTest
-import json
 import logging
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
@@ -16,80 +15,99 @@ def setUpModule():
 class TestMediaTransfer(TestCase):
 
     def setUp(self):
-        raise SkipTest('Work in progress')
+        raise SkipTest('Work in Progress')
         super(TestMediaTransfer)
-        self.mediasite_data = common.set_test_data()
-        self.mediatransfer = MediaTransfer(mediasite_data=self.mediasite_data, unit_test=True)
-        self.mediaserver_data = self.mediatransfer.mediaserver_data
+        self.config = {
+            'mediaserver_url': 'https://mediatransfer.test.com',
+            'mediaserver_api_key': '123-abc',
+            'download_folder': "download"
+        }
+        self.mediasite_data = {
+            'Folders': [
+                {
+                    'Id': '1',
+                    'Name': 'GrandParent',
+                    'ParentFolderId': '0',
+                },
+                {
+                    'Id': '2',
+                    'Name': 'Parent',
+                    'ParentFolderId': '1',
+                },
+                {
+                    'Id': '3',
+                    'Name': 'Son',
+                    'ParentFolderId': '2',
+                },
+                {
+                    'Id': '4',
+                    'Name': 'GrandSon',
+                    'ParentFolderId': '3',
+                },
+                {
+                    'Id': '5',
+                    'Name': 'Orphan',
+                    'ParentFolderId': '404',
+                }
+            ]
+        }
+
+        self.mediatransfer = MediaTransfer(self.config, self.mediasite_data)
 
     def tearDown(self):
-        try:
-            with open(common.MEDIASERVER_DATA_FILE, 'w') as f:
-                json.dump(self.mediaserver_data, f)
-        except Exception as e:
-            logger.error(f'Failed to save mediaserver data file: {e}')
+        self.mediatransfer.dl_session.close()
 
-    def test_to_mediaserver_keys(self):
-        mediaserver_data = self.mediatransfer.to_mediaserver_keys()
-        try:
-            with open('tests/mediaserver_data_test.json', 'w') as f:
-                json.dump(mediaserver_data, f)
-        except Exception as e:
-            logger.error(e)
+    def test_find_folder_path(self):
+        folders_list_example = self.mediasite_data
+        path = ''
+        for folder in folders_list_example[:4]:
+            path += ('/' + folder.get('Name'))
+            folder_id = folder['Id']
+            path_found = self.mediatransfer.find_folder_path(folder_id, folders_list_example[:4])
+            self.assertEqual(path_found, path, msg=f'Folder id = {folder_id}')
 
-        len_presentations = 0
-        for folder in self.mediasite_data:
-            for index, presentation in enumerate(folder.get('presentations')):
-                len_presentations += 1
-                for media in self.mediaserver_data:
-                    data = media.get('data', {})
-                    if data['slug'] == 'mediasite-' + presentation['id']:
-                        has_catalog = len(folder.get('catalogs', [])) > 0
-                        channel_name = folder['catalogs'][0].get('name') if has_catalog else folder.get('name')
+        orphan_folder_id = folders_list_example[4]['Id']
+        orphan_path = self.mediatransfer.find_folder_path(orphan_folder_id, folders_list_example)
+        self.assertEqual(orphan_path, '/Orphan', msg=f'Folder id = {orphan_folder_id}')
 
-                        self.assertEqual(data['channel_title'], channel_name)
-                        self.assertIn('channel_unlisted', data)
+    def test_create_channels(self):
+        print('-> test_create_channels', 20 * '-')
 
-                        has_catalog = (len(folder.get('catalogs', [])) > 0)
-                        is_unlisted_channel = not has_catalog
-                        for p in self.mediatransfer.public_paths:
-                            if folder['path'].startswith(p):
-                                is_unlisted_channel = False
-                                break
-                        self.assertEqual(data['channel_unlisted'], is_unlisted_channel)
+        paths_examples = ['/RATM', '/Bob Marley/Uprising', '/Pink Floyd/The Wall/Comfortably Numb', '/Tarentino/Kill Bill/Uma Turman/Katana']
+        channels_examples_titles = ''.join(paths_examples).split('/')[1:]
+        channels_created_oids = list()
 
-                        if has_catalog:
-                            channel_path_splitted = folder['path'].split('/')
-                            channel_path_splitted[-1] = channel_name
-                            path = '/'.join(channel_path_splitted)
-                        else:
-                            path = folder['path']
-                        self.assertEqual(media['ref']['channel_path'], path)
+        for p in paths_examples:
+            channels_created_oids.extend(self.mediatransfer.create_channels(p))
+        self.assertEqual(len(channels_created_oids), len(channels_examples_titles))
 
-                        self.assertEqual(data['title'], presentation['title'])
-                        self.assertEqual(data['creation'], presentation['creation_date'])
-                        self.assertEqual(data['speaker_id'], presentation['owner_username'])
-                        self.assertEqual(data['speaker_name'], presentation['owner_display_name'])
-                        self.assertEqual(data['speaker_name'], presentation['owner_display_name'])
-                        self.assertEqual(data['speaker_email'], presentation['owner_mail'])
-                        self.assertEqual(data['validated'], 'yes' if presentation['published_status'] else 'no')
-                        self.assertEqual(data['keywords'], ','.join(presentation['tags']))
-                        self.assertEqual(data['transcode'], 'yes' if data['video_type'] in ('composite_slides', 'composite_slides', 'audio_only') else 'no',
-                                         msg=f"Video type: {data['video_type']}")
-                        self.assertEqual(data['detect_slides'], 'yes' if data['video_type'] in ('computer_slides', 'composite_slides') else 'no',
-                                         msg='Slide detection must be on if the media is "computer_slides" or "composites_slides" type')
+        for oid in channels_created_oids:
+            result = self.ms_client.api('channels/get', method='get', params={'oid': oid}, ignore_404=True)
+            self.assertIsNotNone(result)
+            if result:
+                self.assertIn(result.get('info').get('title'), channels_examples_titles)
+            else:
+                logger.error(f'Channel {oid} not found')
 
-                        if data['video_type'] == 'video_slides':
-                            self.assertEqual(data['layout'], 'webinar')
-                        elif data['video_type'] in ['composite_video', 'composite_slides']:
-                            self.assertEqual(data['layout'], 'composition')
-                        else:
-                            self.assertEqual(data['layout'], 'video')
+        longest_tree = paths_examples[-1].split('/')[1:]
+        parent_oid = channels_created_oids[-len(longest_tree)]
+        ms_tree = self.ms_client.api('channels/tree', method='get', params={'parent_oid': parent_oid})
+        # we pop the parent channel
+        longest_tree.pop(0)
+        for c_example in longest_tree:
+            found = False
+            for index, c_created in enumerate(ms_tree.get('channels')):
+                if c_example == c_created.get('title'):
+                    found = True
+                    c_found_index = index
+                    break
+            self.assertTrue(found)
+            ms_tree = ms_tree.get('channels')[c_found_index]
 
-                        self.assertEqual(data['chapters'], presentation['timed_events'])
-
-                        self.assertTrue(data['file_url'])
-                        if data['file_url'] == 'local_files_to_compose':
-                            self.assertTrue(data['videos_composites_urls'])
-
-        self.assertEqual(len_presentations, len(self.mediaserver_data))
+        channel_unlisted = self.mediatransfer.create_channels('/Baby/Love', is_unlisted=True)
+        result = self.ms_client.api('channels/get', method='get', params={'oid': channel_unlisted}, ignore_404=True)
+        self.assertIsNotNone(result)
+        if result:
+            self.assertTrue(result.get('info', {}).get('unlisted'))
+        else:
+            logger.error(f'Channel {channel_unlisted} not found')

@@ -31,6 +31,12 @@ migrate: build
 		--rm mediasite \
 		python3 bin/migrate.py $(ARGS)
 
+anonymize: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/anonymize.py $(ARGS)
+
 tests: build
 	docker run -it \
 		-v ${CURDIR}:/src \

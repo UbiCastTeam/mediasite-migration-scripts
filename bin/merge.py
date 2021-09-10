@@ -316,7 +316,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    utils.setup_logging(args.verbose)
+    utils.set_logger(verbose=args.verbose)
 
     mainloop = GLib.MainLoop()
 

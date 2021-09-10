@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
-import mediasite_migration_scripts.utils.data_filter as data_filter
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
@@ -29,7 +28,7 @@ if __name__ == '__main__':
                             help='add custom config file.')
         parser.add_argument('--mediasite-file',
                             action='store_true',
-                            default='mediasite_all_data.json',
+                            default='data/mediasite_all_data.json',
                             help='add custom mediasite data file.'),
         parser.add_argument('--failed-csvfile',
                             action='store_true',
@@ -37,12 +36,6 @@ if __name__ == '__main__':
                             help='add custom mediasite data file.'),
         parser.add_argument('--max-folders',
                             help='specify maximum folders to collect infos'),
-        parser.add_argument('--filter-file',
-                            action='store_true',
-                            default='filters.json',
-                            help='add custom mediasite data file.'),
-        parser.add_argument('--no-filter',
-                            help='Skip filtering mediasite data fields')
 
         return parser.parse_args()
     options = manage_opts()
@@ -50,7 +43,6 @@ if __name__ == '__main__':
 
     try:
         mst_file_path = Path(options.mediasite_file)
-
         if mst_file_path.is_file():
             logger.info(f'Found collected data in {mst_file_path}')
 
@@ -61,21 +53,10 @@ if __name__ == '__main__':
 
         config = utils.read_json(options.config_file)
         extractor = DataExtractor(config, options)
-        filter_fields = utils.read_json(options.filter_file)
-        data_filter = data_filter.DataFilter(filter_fields)
 
         mediasite_data_to_store_attributs = ['all_data', 'folders_presentations', 'users']
         for data_attr in mediasite_data_to_store_attributs:
             utils.store_object_data_in_json(obj=extractor, data_attr=data_attr, prefix_filename='data/mediasite')
-            if not options.no_filter:
-                logger.info(f'Filtering {data_attr}')
-                try:
-                    data = getattr(extractor, data_attr)
-                    filtered_data = data_filter.filter_data(data)
-                    utils.store_object_data_in_json(obj=data_filter, data_attr='filtered_data', prefix_filename=f'data/mediasite_{data_attr}')
-                except Exception as e:
-                    logger.error(f'Filtering data failed: {e}')
-                    sys.exit(1)
 
         logger.info('--------- Data collection finished --------- ')
         failed_count = len(extractor.failed_presentations)

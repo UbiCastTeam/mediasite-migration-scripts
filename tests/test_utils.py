@@ -6,12 +6,13 @@ from pathlib import Path
 import os
 
 
-import mediasite_migration_scripts.utils.data_filter as order
 import mediasite_migration_scripts.utils.common as utils
 import mediasite_migration_scripts.utils.media as media
 import mediasite_migration_scripts.utils.http as http
+from mediasite_migration_scripts.utils.data_filter import DataFilter
+import mediasite_migration_scripts.utils.order as order
 
-
+logging.getLogger('root').handlers = []
 utils.set_logger(verbose=True)
 logger = logging.getLogger(__name__)
 session = requests.session()
@@ -176,15 +177,6 @@ class TestUtils(TestCase):
                     },
                 ],
                 'expected': 0
-            },
-            {
-                'example': [
-                    {
-                        'Id': 'v4',
-                        'Length': '-500',
-                    },
-                ],
-                'expected': 0
             }
         ]
 
@@ -211,7 +203,19 @@ class TestUtils(TestCase):
         self.assertTrue(http.url_exists('https://beta.ubicast.net', session))
         self.assertFalse(http.url_exists('wrong-url.com_fr.you', session))
 
+    def test_order_and_filter_videos(self):
+        folders = self.data['Folders']
+        ordered_videos = list()
+        for f in folders:
+            for p in f['Presentations']:
+                video = order.order_and_filter_videos(p)
+                if video:
+                    ordered_videos.append(video)
+        expected_ordered_videos = utils.read_json('tests/anon_ordered_videos.json')
+        self.assertListEqual(ordered_videos, expected_ordered_videos)
+
     def test_filter_data(self):
+        self.skipTest(reason='Method not used')
         data = self.data
         filters = {
             'Folders': [
@@ -234,7 +238,7 @@ class TestUtils(TestCase):
                 }
             ]
         }
-        data_filter = order.DataFilter(filters)
+        data_filter = DataFilter(filters)
         filtered_data = data_filter.filter_data(data)
         expected_filtered_data = self.filtered_data
         self.assertDictEqual(filtered_data, expected_filtered_data)
@@ -243,36 +247,24 @@ class TestUtils(TestCase):
         self.assertIsNotNone(filtered_folders)
         folders = data['Folders']
 
-        for f_index, filt_folder in enumerate(filtered_folders):
+        for f_index, f_filtered in enumerate(filtered_folders):
             f_origin = folders[f_index]
-            self.assertEqual(filt_folder.get('Id'), f_origin['Id'])
+            self.assertEqual(f_filtered.get('Id'), f_origin['Id'])
 
-            catalogs = filt_folder.get('Catalogs')
+            catalogs = f_filtered.get('Catalogs')
             self.assertIsNotNone(catalogs)
-            for c_index, c in enumerate(catalogs):
-                self.assertEqual(c.get('Id'), f_origin['Catalogs'][c_index]['Id'])
+            for c_index, c_filtered in enumerate(catalogs):
+                self.assertEqual(c_filtered.get('Id'), f_origin['Catalogs'][c_index]['Id'])
 
-            presentations = filt_folder.get('Presentations')
+            presentations = f_filtered.get('Presentations')
             self.assertIsNotNone(presentations)
-            for p_index, p in enumerate(presentations):
+            for p_index, p_filtered in enumerate(presentations):
                 p_origin = f_origin['Presentations'][p_index]
-                self.assertEqual(p.get('Id'), p_origin['Id'])
+                self.assertEqual(p_filtered.get('Id'), p_origin['Id'])
 
-                ondemand_content = p.get('OnDemandContent')
-                self.assertIsNotNone(ondemand_content)
-                for v_index, video in enumerate(ondemand_content):
+                videos = p_filtered.get('OnDemandContent')
+                self.assertIsNotNone(videos)
+                for v_index, v_filtered in enumerate(videos):
                     v_origin = p_origin['OnDemandContent'][v_index]
-                    self.assertEqual(video.get('FileNameWithExtension'), v_origin['FileNameWithExtension'])
-                    self.assertEqual(video.get('ContentServer', {}).get('Id'), v_origin['ContentServer']['Id'])
-
-    def test_order_and_filter_videos(self):
-        folders = self.filtered_data['Folders']
-        ordered_videos = list()
-        for f in folders:
-            for p in f['Presentations']:
-                video = order.order_and_filter_videos(p)
-                if video:
-                    ordered_videos.append(video)
-
-        expected_ordered_videos = utils.read_json('tests/anon_ordered_videos.json')
-        self.assertListEqual(ordered_videos, expected_ordered_videos)
+                    self.assertEqual(v_filtered.get('FileNameWithExtension'), v_origin['FileNameWithExtension'])
+                    self.assertEqual(v_filtered.get('ContentServer', {}).get('Id'), v_origin['ContentServer']['Id'])

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
 import sys
 import logging
 import traceback
-
 
 from mediatransfer import MediaTransfer
 import mediasite_migration_scripts.utils.common as utils
@@ -43,19 +41,16 @@ if __name__ == '__main__':
         )
         parser.add_argument(
             '--mediasite-file',
-            default='mediasite_data.json',
+            default='data/mediasite_all_data.json',
             help='Path to mediasite data file.'
         )
         parser.add_argument(
-            '--mediaserver-file',
-            default='mediaserver_data.json',
-            help='Path to mediaserver data file (output).'
-        )
-        parser.add_argument(
-            '--ommit-migration-files',
+            '--always-check-remote',
             action='store_true',
             default=False,
-            help='Ommit mediaserver_data.json and redirection.json files (make more requests to check existing medias)'
+            help='''Do not skip uploads if they are referenced in mediaserver_data.json or redirection.json ;
+                 instead, MediaServer will be queried to check if media have already been uploaded.
+                 Use it if the redirection or mediaserver data files are outdated.'''
         )
         parser.add_argument(
             '--download-folder',
@@ -93,9 +88,9 @@ if __name__ == '__main__':
 
     mediasite_file = options.mediasite_file
     if not os.path.exists(mediasite_file):
-        run_import = input(f'No metadata file found at {mediasite_file}. You need to import Mediasite metadata first.\nDo you want to run import ? [y/N] ')
-        run_import = run_import.lower()
-        if run_import == 'y' or run_import == 'yes':
+        should_import = input(f'No metadata file found at {mediasite_file}. You need to import Mediasite metadata first.\nDo you want to run import ? [y/N] ')
+        should_import = should_import.lower()
+        if should_import == 'y' or should_import == 'yes':
             args = ' '.join(sys.argv[1:])
             os.system(f'python3 bin/collect.py {args}')
         else:
@@ -104,10 +99,8 @@ if __name__ == '__main__':
 
     config_file = options.config_file
     try:
-        with open(config_file) as f:
-            config = json.load(f)
-    except Exception as e:
-        logger.debug(e)
+        config = utils.read_json(config_file)
+    except Exception:
         logger.error(f'Failed to parse config file {config_file}.')
         logger.error('--------- Aborted ---------')
         sys.exit(1)
@@ -118,11 +111,9 @@ if __name__ == '__main__':
     config.update(vars(options))
 
     try:
-        with open(mediasite_file) as f:
-            mediasite_data = json.load(f)
-    except Exception as e:
+        mediasite_data = utils.read_json(mediasite_file)
+    except Exception:
         logger.error(f'Failed to parse Mediasite {mediasite_file}')
-        logger.error(e)
         logger.error('--------- Aborted ---------')
         sys.exit(1)
 
@@ -130,8 +121,8 @@ if __name__ == '__main__':
 
     logger.info('Uploading videos')
     try:
-        nb_uploaded_medias = mediatransfer.upload_medias(options.max_videos)
-        logger.info(f'Upload successful: uploaded {nb_uploaded_medias} medias')
+        uploaded_medias_stats = mediatransfer.upload_medias(options.max_videos)
+        logger.info(f'Upload successful: \n {uploaded_medias_stats}')
     except KeyboardInterrupt:
         logger.warning('Interrupted by the user')
     except Exception as e:
@@ -144,13 +135,10 @@ if __name__ == '__main__':
 
     if options.verbose:
         mediaserver_data = mediatransfer.mediaserver_data
-        mediaserver_file = options.mediaserver_file
         try:
-            with open(mediaserver_file, 'w') as f:
-                json.dump(mediaserver_data, f)
-        except Exception as e:
+            utils.write_json(mediaserver_data, 'data/mediaserver_data.json')
+        except Exception:
             logger.error('Failed to save Mediaserver mapping')
-            logger.debug(e)
             sys.exit(1)
 
     logger.info('----- END SCRIPT ' + 50 * '-' + '\n')

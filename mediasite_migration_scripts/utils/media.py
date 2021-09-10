@@ -40,7 +40,7 @@ def get_duration_h(videos):
 
 
 def parse_encoding_infos_with_mediainfo(video_url):
-    logger.debug(f'Parsing enconding infos with MediaInfo for: {video_url}')
+    logger.debug(f'Parsing encoding infos with MediaInfo for: {video_url}')
     encoding_infos = {}
     try:
         media_tracks = get_tracks(video_url)

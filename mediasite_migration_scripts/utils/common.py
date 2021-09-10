@@ -44,13 +44,18 @@ class ColoredFormatter(logging.Formatter):
 def set_logger(options=None, verbose=False):
     logging_format = '%(asctime)s - %(levelname)s - %(message)s'
     level = logging.INFO
-    if verbose or options.verbose:
+    if options is not None:
+        if options.verbose:
+            level = logging.DEBUG
+            logging_format += ' - [%(funcName)s]'
+        elif options.quiet:
+            level = logging.ERRORm
+    elif verbose:
         level = logging.DEBUG
         logging_format += ' - [%(funcName)s]'
-    elif options.quiet:
-        level = logging.ERROR
 
     current_datetime_string = '{dt.month}-{dt.day}-{dt.year}'.format(dt=datetime.now())
+
     logging_datefmt = '%m/%d/%Y - %I:%M:%S %p'
     formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
     colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
@@ -95,6 +100,7 @@ def read_json(path):
 
 
 def write_json(data, path, open_text_option='w'):
+    logger.info(f'Writing {path}')
     try:
         with open(path, open_text_option) as file:
             json.dump(data, file)
@@ -111,10 +117,14 @@ def write_json(data, path, open_text_option='w'):
 
 
 def write_csv(filename, fieldnames, rows):
-    with open(filename, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    logger.info(f'Writing {filename}')
+    try:
+        with open(filename, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+    except Exception as e:
+        logger.error(f'Failed to write csv {filename}: {e}')
 
 
 def store_object_data_in_json(obj, data_attr, prefix_filename=str()):
@@ -137,13 +147,15 @@ def to_mediaserver_conf(config):
 
 
 def get_progress_string(index, total):
+    if total <= 0:
+        return ''
     percent = 100 * (index) / total
     return f'[{index + 1}/{total} ({percent:.1f}%)]'
 
 
-def print_progress_string(index, total):
+def print_progress_string(index, total, title=str()):
     progress_string = get_progress_string(index, total)
-    print(progress_string, end='\r')
+    print(progress_string, title, end='\r')
 
 
 def get_timecode_from_sec(seconds):

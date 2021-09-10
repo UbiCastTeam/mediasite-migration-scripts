@@ -2,6 +2,7 @@ from unittest import TestCase
 import logging
 import sys
 import json
+from unittest.case import SkipTest
 
 from mediasite_migration_scripts.data_extractor import DataExtractor
 import tests.common as common
@@ -29,6 +30,7 @@ def setUpModule():
 class TestDataExtractorE2E(TestCase):
     def setUp(self):
         super().setUp()
+        raise SkipTest('Work in progress')
         try:
             self.extractor = DataExtractor(config, max_folders=10, e2e_tests=True)
         except Exception as e:

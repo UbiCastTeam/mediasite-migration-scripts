@@ -30,15 +30,6 @@ class MediasiteClient:
         self.session.close()
 
 
-def find_folder_path(folder_id, folders, path=''):
-    for folder in folders:
-        if folder['Id'] == folder_id:
-            path += find_folder_path(folder['ParentFolderId'], folders, path)
-            path += '/' + folder['Name']
-            return path
-    return ''
-
-
 def timecode_is_correct(timecode, presentation):
     for video_file in presentation['OnDemandContent']:
         if int(timecode) > int(video_file['Length']):
@@ -63,7 +54,6 @@ def get_video_url(video_file, playback_ticket=str(), site=str()):
             video_file_url = distribution_url
             for param_name, param_value in url_mapping.items():
                 video_file_url = video_file_url.replace(param_name, param_value)
-
     return video_file_url
 
 
@@ -203,6 +193,11 @@ def parse_mediasite_date(date_str):
         logger.error(f'Failed to parse mediasite date {date_str}: {e}')
 
 
+def format_mediasite_date(data):
+    date_format = '%Y-%m-%dT%H:%M:%S'
+    return data.strftime(date_format)
+
+
 def get_most_distant_date(presentation):
     date_types = ['CreationDate', 'RecordDate']
     dates = list()
@@ -213,7 +208,7 @@ def get_most_distant_date(presentation):
             date = parse_mediasite_date(date_str)
             dates.append(date)
 
-    return min(dates)
+    return format_mediasite_date(min(dates))
 
 
 def get_age_days(date_str):
@@ -229,9 +224,8 @@ def parse_encoding_settings_xml(encoding_settings):
             video codec, audio codec, width and height
     """
     encoding_infos = dict()
-    settings_id = encoding_settings['Id']
-    serialized_settings = encoding_settings['SerializedSettings']
     try:
+        serialized_settings = encoding_settings['SerializedSettings']
         settings_data = xml.parseString(serialized_settings).documentElement
         # Tag 'Settings' is a XML string to be parsed again...
         settings_node = settings_data.getElementsByTagName('Settings')[0]
@@ -261,9 +255,7 @@ def parse_encoding_settings_xml(encoding_settings):
             'height': height,
         }
     except Exception as e:
-        logger.debug(
-            f'XML could not be parsed for video encoding settings for settings ID : {settings_id}')
-        logger.debug(e)
+        logger.debug(f'XML could not be parsed for video encoding settings: {e}')
 
     return encoding_infos
 
@@ -280,7 +272,7 @@ def parse_timed_events_xml(timed_events):
                 for tag in event_payload_tags:
                     event_data[tag] = event_xml.getElementsByTagName(tag)[0].firstChild.nodeValue
 
-                timed_events.append(event_data)
+                parsed_timed_events.append(event_data)
             except Exception as e:
                 pid = timed_events['PresentationId']
                 logger.debug(f'Failed to get timed event for presentation {pid}: {e}')

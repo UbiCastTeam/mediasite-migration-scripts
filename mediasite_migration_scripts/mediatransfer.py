@@ -9,10 +9,13 @@ from pathlib import Path
 from functools import lru_cache
 
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
-from mediasite_migration_scripts.utils import common as utils
-import mediasite_migration_scripts.utils.http as http
-from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
 from mediasite_migration_scripts.video_compositor import VideoCompositor
+from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
+
+import mediasite_migration_scripts.utils.common as utils
+import mediasite_migration_scripts.utils.http as http
+import mediasite_migration_scripts.utils.mediasite as mediasite_utils
+import mediasite_migration_scripts.utils.order as order
 
 
 logger = logging.getLogger(__name__)
@@ -20,27 +23,13 @@ logger = logging.getLogger(__name__)
 
 class MediaTransfer():
 
-    def __init__(self, config=dict(), mediasite_data=dict(), mediasite_users=dict(), slides_download=None, unit_test=False, e2e_test=False, root_channel_oid=None):
+    def __init__(self, config=dict(), mediasite_data=dict()):
         self.config = config
-
-        self.compositor = None
-        self.composites_medias = list()
-        self.medias_folders = list()
-        self.created_channels = dict()
-        self.slide_annot_type = None
-        self.chapters_annot_type = None
-        self.processed_count = self.uploaded_count = self.composite_uploaded_count = self.skipped_count = self.uploaded_slides_count = self.skipped_slides_count = self.skipped_chapters_count = 0
-        self.media_with_missing_slides = list()
-        self.failed = list()
-
-        if config.get('download_folder'):
-            self.download_folder = dl = Path(config.get('download_folder'))
-        else:
-            logger.error('Please provide a download folder path. Not found in config.json or in argument.')
-            sys.exit(1)
-
-        self.slides_folder = dl / 'slides'
-        self.composites_folder = dl / 'composite'
+        self.mediasite_folders = mediasite_data.get('Folders')
+        self.mediasite_users = mediasite_data.get('UserProfiles')
+        self.mediasite_auth = requests.auth.HTTPBasicAuth(self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
+        self.mediasite_userfolder = self.config.get('mediasite_userfolder', '/Mediasite Users/')
+        self.formats_allowed = self.config.get('videos_formats_allowed', {})
 
         retry_strategy = Retry(
             total=3,
@@ -51,12 +40,37 @@ class MediaTransfer():
         self.dl_session = requests.Session()
         self.dl_session.mount('https://', adapter)
         self.dl_session.mount('http://', adapter)
+        if config.get('download_folder'):
+            self.download_folder = dl = Path(config.get('download_folder'))
+        else:
+            logger.error('Please provide a download folder path. Not found in config.json or in argument.')
+            sys.exit(1)
 
-        self.mediasite_data = mediasite_data
-        self.formats_allowed = self.config.get('videos_formats_allowed', {})
-        self.mediasite_auth = requests.auth.HTTPBasicAuth(self.config.get('mediasite_api_user'), self.config.get('mediasite_api_password'))
-        self.mediasite_userfolder = config.get('mediasite_userfolder', '/Mediasite Users/')
+        self.slides_folder = dl / 'slides'
+        self.composites_folder = dl / 'composite'
+
+        self.compositor = None
+        self.composites_medias = list()
+        self.medias_folders = list()
+        self.created_channels = dict()
+        self.slide_annot_type = None
+        self.chapters_annot_type = None
+        self.media_with_missing_slides = list()
+        self.failed = list()
+        self.stats = [
+            'processed_count',
+            'uploaded_count',
+            'composite_uploaded_count',
+            'skipped_count',
+            'uploaded_slides_count',
+            'skipped_slides_count',
+            'skipped_chapters_count'
+        ]
+        for stat in self.stats:
+            setattr(self, stat, 0)
+
         self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
+
         self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
         if self.redirections_file.is_file():
             print(f'Loading redirections file {self.redirections_file}')
@@ -65,22 +79,17 @@ class MediaTransfer():
         else:
             self.redirections = dict()
 
-        self.e2e_test = e2e_test
-        self.unit_test = unit_test
+        self.ms_config = utils.to_mediaserver_conf(self.config)
+        self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
 
-        if self.unit_test:
-            self.config['videos_format_allowed'] = {'video/mp4': True, "video/x-ms-wmv": False}
+        root_channel_oid = config.get('mediaserver_parent_channel')
+        if root_channel_oid:
+            self.root_channel = self.get_channel(root_channel_oid)
         else:
-            self.ms_config = utils.to_mediaserver_conf(self.config)
-            self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
+            self.root_channel = self.get_root_channel()
 
-            if root_channel_oid:
-                self.root_channel = self.get_channel(root_channel_oid)
-            else:
-                self.root_channel = self.get_root_channel()
-
-        self.public_paths = [folder.get('path', '') for folder in mediasite_data if len(folder.get('catalogs')) > 0]
-
+        self.all_paths = {folder['Id']: self.find_folder_path(folder['Id']) for folder in self.mediasite_folders}
+        self.public_paths = [self.find_folder_path(folder['Id']) for folder in self.mediasite_folders if len(folder.get('Catalogs', [])) > 0]
         self.mediaserver_data = self.to_mediaserver_keys()
 
     def write_redirections_file(self):
@@ -115,7 +124,7 @@ class MediaTransfer():
 
         for index, media in enumerate(self.mediaserver_data):
             if sys.stdout.isatty():
-                print(utils.get_progress_string(index, total_count) + ' Uploading non-composites presentations or preparing folders', end='\r')
+                utils.print_progress_string(index, total_count, title='Uploading non-composites presentations or preparing folders')
             self.processed_count += 1
 
             if max_videos and index >= max_videos:
@@ -124,7 +133,7 @@ class MediaTransfer():
             if not media.get('ref', {}).get('media_oid'):
                 try:
                     data = media.get('data', {})  # mediaserver data
-                    presentation_id = json.loads(data.get('external_data', '{}')).get('id')
+                    presentation_id = json.loads(data.get('external_data', {})).get('Id')
 
                     channel_path = media['ref'].get('channel_path')
                     if channel_path.startswith(self.mediasite_userfolder):
@@ -273,43 +282,6 @@ class MediaTransfer():
             target = f'mscpath-{self.unknown_users_channel_title}/{subfolders_path}'
         return target
 
-    def search_mediasite_id_in_redirections(self, mediasite_id):
-        # it is much faster to lookup the local redirections file than to perform an API request
-        for from_url, to_url in self.redirections.items():
-            if mediasite_id in from_url:
-                oid = to_url.split('/')[4]
-                return oid
-
-    def get_ms_media_by_ref(self, external_ref):
-        oid = self.search_mediasite_id_in_redirections(external_ref)
-        if oid:
-            return {'oid': oid}
-        return self.search_by_external_ref(external_ref, object_type='media')
-
-    def get_ms_channel_by_ref(self, external_ref):
-        oid = self.search_mediasite_id_in_redirections(external_ref)
-        if oid:
-            return {'oid': oid}
-        return self.search_by_external_ref(external_ref, object_type='channel')
-
-    @lru_cache
-    def search_by_external_ref(self, external_ref, object_type='channel'):
-        data = {
-            'search': external_ref,
-            'fields': 'extref',
-        }
-        if object_type == 'channel':
-            data['content'] = 'c'
-            rkey = 'channels'
-        elif object_type == 'media':
-            data['content'] = 'v'
-            rkey = 'videos'
-
-        result = self.ms_client.api('search/', method='get', params=data)
-        if result and result['success'] and result.get(rkey):
-            # search does not return the external_ref, so lets take the first result
-            return result[rkey][0]
-
     @lru_cache
     def _get_user_id(self, username):
         users = self.ms_client.api('users/', method='get', params={'search': username, 'search_in': 'username'})['users']
@@ -317,128 +289,6 @@ class MediaTransfer():
         for user in users:
             if user['username'] == username:
                 return user['id']
-
-    def migrate_composites_videos(self):
-        total_composite = len(self.composites_medias)
-        logger.info(f'Merging and migrating {total_composite} composite videos')
-
-        self.download_composites_videos()
-
-        for index, media in enumerate(self.composites_medias):
-            self.processed_count += 1
-            if sys.stdout.isatty():
-                print(utils.get_progress_string(index, total_composite) + ' Uploading composite', end='\r')
-
-            media_data = media.get('data', {})
-            presentation_id = json.loads(media_data.get('external_data', {})).get('id')
-            existing_media = self.get_ms_media_by_ref(presentation_id)
-            if existing_media:
-                logger.warning(f'Composite presentation {presentation_id} already found on MediaServer (oid: {existing_media["oid"]}, skipping')
-                self.skipped_count += 1
-                # consider uploaded so that the final condition works
-            else:
-                # store presentation id in order to skip upload if already present on MS
-                media_data['external_ref'] = presentation_id
-                media_folder = self.composites_folder / presentation_id
-                layout_preset_path = media_folder / 'mediaserver_layout.json'
-                if not media_folder.is_dir():
-                    logger.warning(f'Missing downloads folder for {presentation_id}, skipping')
-                    continue
-                if not layout_preset_path.is_file():
-                    self.compositor.merge(media_folder)
-
-                if layout_preset_path.is_file():
-                    file_path = media_folder / 'composite.mp4'
-                    if layout_preset_path.is_file():
-                        with open(layout_preset_path) as f:
-                            media_data['layout_preset'] = f.read()
-
-                    # reduce transcoding priority
-                    media_data['priority'] = 'low'
-
-                    result = self.upload_local_file(file_path.__str__(), media_data)
-                    if result.get('success'):
-                        self.uploaded_count += 1
-                        self.composite_uploaded_count += 1
-
-                        oid = result['oid']
-                        self.add_presentation_redirection(presentation_id, oid)
-
-                        media['ref']['media_oid'] = oid
-                        media['ref']['slug'] = result.get('slug')
-                        if media_data.get('api_key'):
-                            del media_data['api_key']
-
-                        if len(media_data.get('chapters')) > 0:
-                            self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
-                    else:
-                        logger.error(f"Failed to upload media: {presentation_id}")
-                        self.failed.append(presentation_id)
-                else:
-                    logger.error(f'Failed to merge videos for presentation {presentation_id}')
-
-    def download_composites_videos(self):
-        logger.info(f'Downloading composite videos into {self.composites_folder}.')
-        if self.compositor is None:
-            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
-
-        for i, v_composite in enumerate(self.composites_medias):
-            print(utils.get_progress_string(i, len(self.composites_medias)) + ' Downloading composite', end='\r')
-            data = v_composite.get('data', {})
-            presentation_id = json.loads(data.get('external_data', {})).get('id')
-            logger.debug(f"Downloading for presentation {presentation_id}")
-            media_folder = self.composites_folder / presentation_id
-            media_folder.mkdir(parents=True, exist_ok=True)
-            urls = data.get('composites_videos_urls', {})
-            if (media_folder / 'mediaserver_layout.json').is_file():
-                pass
-            elif not self.compositor.download_all(urls, media_folder):
-                logger.warning(f'Failed to download composite videos for presentation {presentation_id}.')
-            else:
-                pass
-
-    def upload_local_file(self, file_path, data):
-        logger.debug(f'Uploading local file (composite video) : {file_path}')
-        result = self.ms_client.add_media(file_path=file_path, **data)
-        return result
-
-    @lru_cache
-    def get_channel(self, oid=None, title=None):
-        channel = None
-        if oid:
-            params = {'oid': oid}
-        elif title:
-            params = {'title': title}
-        else:
-            logger.error('No title or oid provided for getting channel')
-            return channel
-
-        channel = self.ms_client.api('channels/get', method='get', params=params)
-        if channel and channel.get('success'):
-            channel = channel.get('info')
-        else:
-            logger.error(f'Channel {params.values()} does not exist.')
-
-        return channel
-
-    @lru_cache
-    def get_root_channel(self):
-        oid = str()
-        root_channel = dict()
-        try:
-            with open('config.json') as f:
-                config = json.load(f)
-            oid = config.get('mediaserver_parent_channel')
-        except Exception as e:
-            logger.error('No parent channel configured. See in config.json.')
-            logger.debug(e)
-            sys.exit(1)
-
-        root_channel = self.get_channel(oid)
-        if not root_channel:
-            logger.error('Root channel does not exist. Please provide an existing channel oid in config.json')
-            sys.exit(1)
-        return root_channel
 
     @lru_cache
     def get_user_channel_oid(self, user_email=None, user_id=None):
@@ -509,6 +359,236 @@ class MediaTransfer():
 
         return user_id
 
+    def find_folder_path(self, folder_id, folders=None, path=''):
+        if folders is None:
+            folders = self.mediasite_folders
+
+        for folder in folders:
+            if folder['Id'] == folder_id:
+                path += self.find_folder_path(folder['ParentFolderId'], folders, path)
+                path += '/' + folder['Name']
+                return path
+        return ''
+
+    def get_ms_media_by_ref(self, external_ref):
+        oid = self.search_mediasite_id_in_redirections(external_ref)
+        if oid:
+            return {'oid': oid}
+        return self.search_by_external_ref(external_ref, object_type='media')
+
+    def get_ms_channel_by_ref(self, external_ref):
+        oid = self.search_mediasite_id_in_redirections(external_ref)
+        if oid:
+            return {'oid': oid}
+        return self.search_by_external_ref(external_ref, object_type='channel')
+
+    def search_mediasite_id_in_redirections(self, mediasite_id):
+        # it is much faster to lookup the local redirections file than to perform an API request
+        for from_url, to_url in self.redirections.items():
+            if mediasite_id in from_url:
+                oid = to_url.split('/')[4]
+                return oid
+
+    @lru_cache
+    def search_by_external_ref(self, external_ref, object_type='channel'):
+        data = {
+            'search': external_ref,
+            'fields': 'extref',
+        }
+        if object_type == 'channel':
+            data['content'] = 'c'
+            rkey = 'channels'
+        elif object_type == 'media':
+            data['content'] = 'v'
+            rkey = 'videos'
+
+        result = self.ms_client.api('search/', method='get', params=data)
+        if result and result['success'] and result.get(rkey):
+            # search does not return the external_ref, so lets take the first result
+            return result[rkey][0]
+
+    def migrate_composites_videos(self):
+        total_composite = len(self.composites_medias)
+        logger.info(f'Merging and migrating {total_composite} composite videos')
+
+        self.download_composites_videos()
+
+        for index, media in enumerate(self.composites_medias):
+            self.processed_count += 1
+            if sys.stdout.isatty():
+                utils.print_progress_string(index, total_composite, title='Uploading composite')
+
+            media_data = media.get('data', {})
+            presentation_id = json.loads(media_data.get('external_data', {})).get('Id')
+            existing_media = self.get_ms_media_by_ref(presentation_id)
+            if existing_media:
+                logger.warning(f'Composite presentation {presentation_id} already found on MediaServer (oid: {existing_media["oid"]}, skipping')
+                self.skipped_count += 1
+                # consider uploaded so that the final condition works
+            else:
+                # store presentation id in order to skip upload if already present on MS
+                media_data['external_ref'] = presentation_id
+                media_folder = self.composites_folder / presentation_id
+                layout_preset_path = media_folder / 'mediaserver_layout.json'
+                if not media_folder.is_dir():
+                    logger.warning(f'Missing downloads folder for {presentation_id}, skipping')
+                    continue
+                if not layout_preset_path.is_file():
+                    self.compositor.merge(media_folder)
+
+                if layout_preset_path.is_file():
+                    file_path = media_folder / 'composite.mp4'
+                    if layout_preset_path.is_file():
+                        with open(layout_preset_path) as f:
+                            media_data['layout_preset'] = f.read()
+
+                    # reduce transcoding priority
+                    media_data['priority'] = 'low'
+
+                    result = self.upload_local_file(file_path.__str__(), media_data)
+                    if result.get('success'):
+                        self.uploaded_count += 1
+                        self.composite_uploaded_count += 1
+
+                        oid = result['oid']
+                        self.add_presentation_redirection(presentation_id, oid)
+
+                        media['ref']['media_oid'] = oid
+                        media['ref']['slug'] = result.get('slug')
+                        if media_data.get('api_key'):
+                            del media_data['api_key']
+
+                        if len(media_data.get('chapters')) > 0:
+                            self.add_chapters(media['ref']['media_oid'], chapters=media_data['chapters'])
+                    else:
+                        logger.error(f"Failed to upload media: {presentation_id}")
+                        self.failed.append(presentation_id)
+                else:
+                    logger.error(f'Failed to merge videos for presentation {presentation_id}')
+
+    def download_composites_videos(self):
+        logger.info(f'Downloading composite videos into {self.composites_folder}.')
+        if self.compositor is None:
+            self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
+
+        for i, v_composite in enumerate(self.composites_medias):
+            utils.print_progress_string(i, len(self.composites_medias), title='Downloading composite')
+
+            data = v_composite.get('data', {})
+            presentation_id = json.loads(data.get('external_data', {})).get('Id')
+            logger.debug(f"Downloading for presentation {presentation_id}")
+            media_folder = self.composites_folder / presentation_id
+            media_folder.mkdir(parents=True, exist_ok=True)
+            urls = data.get('composites_videos_urls', {})
+            if (media_folder / 'mediaserver_layout.json').is_file():
+                pass
+            elif not self.compositor.download_all(urls, media_folder):
+                logger.warning(f'Failed to download composite videos for presentation {presentation_id}.')
+            else:
+                pass
+
+    def upload_local_file(self, file_path, data):
+        logger.debug(f'Uploading local file (composite video) : {file_path}')
+        result = self.ms_client.add_media(file_path=file_path, **data)
+        return result
+
+    def get_presentation_url(self, presentation_id):
+        presentation = self.get_presentation_by_id(presentation_id)
+        if presentation:
+            return presentation.get('#Play', {}).get('target')
+
+    @lru_cache
+    def get_presentation_by_id(self, presentation_id):
+        for f in self.mediasite_folders:
+            for presentation in f['Presentations']:
+                if presentation['Id'] == presentation_id:
+                    return presentation
+
+    @lru_cache
+    def get_presentation_parent_folder(self, presentation_id):
+        for folder in self.mediasite_folders:
+            for presentation in folder['Presentations']:
+                if presentation['Id'] == presentation_id:
+                    return folder
+
+    @lru_cache
+    def get_folder_by_path(self, path):
+        for f_id, f_path in self.all_paths.items():
+            if f_path == path:
+                return self.get_folder_by_id(f_id)
+
+    @lru_cache
+    def get_folder_by_id(self, folder_id):
+        for f in self.mediasite_folders:
+            if f['Id'] == folder_id:
+                return f
+
+    @lru_cache
+    def get_channel(self, oid=None, title=None):
+        channel = None
+        if oid:
+            params = {'oid': oid}
+        elif title:
+            params = {'title': title}
+        else:
+            logger.error('No title or oid provided for getting channel')
+            return channel
+
+        channel = self.ms_client.api('channels/get', method='get', params=params)
+        if channel and channel.get('success'):
+            channel = channel.get('info')
+        else:
+            logger.error(f'Channel {params.values()} does not exist.')
+
+        return channel
+
+    @lru_cache
+    def get_root_channel(self):
+        oid = str()
+        root_channel = dict()
+        try:
+            with open('config.json') as f:
+                config = json.load(f)
+            oid = config.get('mediaserver_parent_channel')
+        except Exception as e:
+            logger.error('No parent channel configured. See in config.json.')
+            logger.debug(e)
+            sys.exit(1)
+
+        root_channel = self.get_channel(oid)
+        if not root_channel:
+            logger.error('Root channel does not exist. Please provide an existing channel oid in config.json')
+            sys.exit(1)
+        return root_channel
+
+    @lru_cache
+    def get_channel_title_by_path(self, path):
+        folder = self.get_folder_by_path(path)
+        if folder:
+            title = self.get_final_channel_title(folder)
+        else:
+            logger.warning(f'Did not find folder for {path}, falling back to last item')
+            title = path.split('/')[-1]
+        return title
+
+    def get_final_channel_title(self, folder):
+        '''
+        The MediaServer channel title should take the most recent
+        catalog name (if any), otherwise use the folder name.
+        '''
+        name = folder['Name']
+        most_recent_time = None
+        most_recent_catalog = None
+        for c in folder['Catalogs']:
+            catalog_date = mediasite_utils.parse_mediasite_date(c['CreationDate'])
+            if most_recent_time is None or catalog_date > most_recent_time:
+                most_recent_time = catalog_date
+                most_recent_catalog = c
+        if most_recent_catalog is not None:
+            name = most_recent_catalog['Name']
+            logger.debug(f'Overriding channel name with the most recent catalog name {name}')
+        return name
+
     @lru_cache
     def channel_has_catalog(self, channel_path):
         for f in self.mediaserver_data:
@@ -549,15 +629,14 @@ class MediaTransfer():
             urls = list()
             folder = self.get_folder_by_path(leaf)
             if folder:
-                folder_id = folder['id']
+                folder_id = folder['Id']
                 external_data = json.dumps({
-                    'id': folder['id'],
-                    'name': folder['name'],
-                    'catalogs': folder['catalogs']},
+                    'id': folder['Id'],
+                    'name': folder['Name'],
+                    'catalogs': folder['Catalogs']},
                     indent=2)
-                for c in folder['catalogs']:
-                    urls.append(c['url'])
-
+                for c in folder['Catalogs']:
+                    urls.append(c['CatalogUrl'])
             existing_channel = self.get_ms_channel_by_ref(folder_id)
             if existing_channel:
                 new_oid = existing_channel['oid']
@@ -579,39 +658,6 @@ class MediaTransfer():
         # last item in list is the final channel, return it's oid
         # because he will be the parent of the video
         return oid
-
-    def get_full_ms_url(self, suffix):
-        ms_prefix = self.config["mediaserver_url"].rstrip('/')
-        return f'{ms_prefix}/{suffix.lstrip("/")}'
-
-    def _update_channel(self, channel_oid, unlisted_bool=True, external_ref=None, external_data=None):
-        data = {'oid': channel_oid}
-        self._set_channel_unlisted(channel_oid, unlisted_bool)
-        if external_ref:
-            data['external_ref'] = external_ref
-        if external_data:
-            data['external_data'] = external_data
-
-        result = self.ms_client.api('channels/edit/', method='post', data=data)
-        if result and not result.get('success'):
-            logdata = dict(data)
-            logdata.pop('api_key', None)  # hide api key from logs
-            logger.error(f"Failed to edit channel {channel_oid} with data {logdata} / Error: {result.get('error')}")
-        elif not result:
-            logger.error(f'Unknown error when trying to edit channel {channel_oid} with data {data}: {result}')
-
-    def _set_channel_unlisted(self, channel_oid, unlisted_bool):
-        data = {'oid': channel_oid}
-        # perms/edit/default/ doc:
-        # "If any value is given, the unlisted setting will be set as enabled on the channel or media, otherwise it will be disabled."
-        # In other terms, calling perms/edit/default/ without unlisted makes it listed
-        if unlisted_bool:
-            data['unlisted'] = 'yes'
-        result = self.ms_client.api('perms/edit/default/', method='post', data=data)
-        if result and not result.get('success'):
-            logger.error(f"Failed to edit channel perms {channel_oid} with data {data} / Error: {result.get('error')}")
-        elif not result:
-            logger.error(f'Unknown error when trying to edit channel perms {channel_oid} with data {data}: {result}')
 
     def _create_channel(self, parent_channel, channel_title, is_unlisted, original_path, external_ref=None, external_data=None):
         logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
@@ -659,21 +705,53 @@ class MediaTransfer():
 
         return channel
 
+    def get_full_ms_url(self, suffix):
+        ms_prefix = self.config["mediaserver_url"].rstrip('/')
+        return f'{ms_prefix}/{suffix.lstrip("/")}'
+
+    def _update_channel(self, channel_oid, unlisted_bool=True, external_ref=None, external_data=None):
+        data = {'oid': channel_oid}
+        self._set_channel_unlisted(channel_oid, unlisted_bool)
+        if external_ref:
+            data['external_ref'] = external_ref
+        if external_data:
+            data['external_data'] = external_data
+
+        result = self.ms_client.api('channels/edit/', method='post', data=data)
+        if result and not result.get('success'):
+            logdata = dict(data)
+            logdata.pop('api_key', None)  # hide api key from logs
+            logger.error(f"Failed to edit channel {channel_oid} with data {logdata} / Error: {result.get('error')}")
+        elif not result:
+            logger.error(f'Unknown error when trying to edit channel {channel_oid} with data {data}: {result}')
+
+    def _set_channel_unlisted(self, channel_oid, unlisted_bool):
+        data = {'oid': channel_oid}
+        # perms/edit/default/ doc:
+        # "If any value is given, the unlisted setting will be set as enabled on the channel or media, otherwise it will be disabled."
+        # In other terms, calling perms/edit/default/ without unlisted makes it listed
+        if unlisted_bool:
+            data['unlisted'] = 'yes'
+        result = self.ms_client.api('perms/edit/default/', method='post', data=data)
+        if result and not result.get('success'):
+            logger.error(f"Failed to edit channel perms {channel_oid} with data {data} / Error: {result.get('error')}")
+        elif not result:
+            logger.error(f'Unknown error when trying to edit channel perms {channel_oid} with data {data}: {result}')
+
     def migrate_slides(self, media):
-        presentation_id = json.loads(media['data']['external_data'])['id']
+        presentation_id = json.loads(media['data']['external_data'])['Id']
         media_slides = media['data'].get('slides')
         nb_slides_uploaded, nb_slides = 0, 0
 
         if media_slides:
             logger.debug(f"Migrating slides for medias: {media['ref']['media_oid']}")
 
-            if media_slides.get('stream_type') == 'Slide' and media_slides.get('details'):
-                slides_dir = self.slides_folder / presentation_id
-                nb_slides = len(media_slides)
-                nb_slides_uploaded = self._upload_slides(media, slides_dir)
-                self.uploaded_slides_count += nb_slides_uploaded
-            else:
-                logger.debug(f"Media {media['ref']['media_oid']} has slides binded to video (no timecode). Detect slides will be lauched in Mediaserver.")
+            slides_dir = self.slides_folder / presentation_id
+            nb_slides = media_slides.get('Length')
+            nb_slides_uploaded = self._upload_slides(media, slides_dir)
+            self.uploaded_slides_count += nb_slides_uploaded
+            # logger.debug(f"Media {media['ref']['media_oid']} has slides binded to video (no timecode). \
+            #                  Detect slides will be lauched in Mediaserver.")
 
         logger.debug(f"{nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
 
@@ -681,16 +759,16 @@ class MediaTransfer():
 
     def _upload_slides(self, media, slides_dir):
         media_oid = media['ref']['media_oid']
-        media_slides_details = media['data']['slides']['details']
+        media_slides_details = media['data']['slides']['SlideDetails']
         nb_slides_uploaded = 0
 
-        if self.dl_session is None:
-            self.dl_session = requests.Session()
         if self.slide_annot_type is None:
             self.slide_annot_type = self._get_annotation_type_id(media_oid, annotation_type='slide')
 
         logger.debug(f'Uploading slides for medias: {media_oid}')
-        for i, slide_path in enumerate(slides_dir.iterdir()):
+
+        slides_paths = sorted([path for path in slides_dir.iterdir()])
+        for i, slide_path in enumerate(slides_paths):
             details = {
                 'oid': media_oid,
                 'time': media_slides_details[i].get('TimeMilliseconds'),
@@ -700,33 +778,28 @@ class MediaTransfer():
             }
             success = self._add_annotation_safe(details, slide_path)
             if success:
-                with open(slide_path, 'rb') as file:
-                    result = self.ms_client.api('annotations/post/', method='post', data=details, files={'attachment': file})
-                    slide_up_ok = result.get('annotation')
-                if slide_up_ok is not None:
-                    nb_slides_uploaded += 1
-                else:
-                    self.skipped_slides_count += 1
+                nb_slides_uploaded += 1
+            else:
+                self.skipped_slides_count += 1
 
         return nb_slides_uploaded
 
     def _get_annotation_type_id(self, media_oid, annotation_type):
-        annotation_type = int()
+        annot_type_id = int()
 
         result = self.ms_client.api('annotations/types/list/', method='get', params={'oid': media_oid})
         if result.get('success'):
-            for a in result.get('types'):
-                if a.get('slug') == annotation_type:
-                    annotation_type = a.get('id')
+            for annot_type_res in result.get('types'):
+                if annot_type_res.get('slug') == annotation_type:
+                    annot_type_id = annot_type_res.get('id')
 
-        return annotation_type
+        return annot_type_id
 
     def _add_annotation_safe(self, data, path=None):
         media_oid = data['oid']
         arguments = {
             'method': 'post',
-            'data': data,
-            'ignored_error_strings': ["The timecode can't be superior to the video duration"]  # mediasite may have slides with timecodes after the duration of the video
+            'data': data
         }
         if path:
             # slide upload
@@ -761,22 +834,30 @@ class MediaTransfer():
         file.close()
         return result.get('success')
 
+    def add_chapters(self, media_oid, chapters):
+        logger.debug(f'Adding chapters for media {media_oid}')
+
+        ok = True
+        if self.chapters_annot_type is None:
+            self.chapters_annot_type = self._get_annotation_type_id(media_oid, annotation_type='chapter')
+
+        for c in chapters:
+            data = {
+                'oid': media_oid,
+                'title': c.get('Title'),
+                'time': c.get('Position'),
+                'type': self.chapters_annot_type
+            }
+            success = self._add_annotation_safe(data)
+            if not success:
+                self.skipped_chapters_count += 1
+
+        return ok
+
     def add_presentation_redirection(self, presentation_id, oid):
         mediasite_presentation_url = self.get_presentation_url(presentation_id)
         if mediasite_presentation_url:
             self.redirections[mediasite_presentation_url] = self.get_full_ms_url(f'/permalink/{oid}/iframe/')
-
-    def get_presentation_url(self, presentation_id):
-        presentation = self.get_presentation_by_id(presentation_id)
-        if presentation:
-            return presentation.get('url')
-
-    @lru_cache
-    def get_presentation_by_id(self, presentation_id):
-        for f in self.mediasite_data:
-            for presentation in f['presentations']:
-                if presentation['id'] == presentation_id:
-                    return presentation
 
     def to_mediaserver_keys(self):
         logger.debug('Matching Mediasite data to MediaServer keys mapping.')
@@ -787,105 +868,60 @@ class MediaTransfer():
             mediaserver_data = self.mediaserver_data
         else:
             logger.info('No Mediaserver mapping. Generating mapping.')
-            for index, folder in enumerate(self.mediasite_data):
-                print(utils.get_progress_string(index, len(self.mediasite_data)) + ' Pre-processing folders and checking resources', end='\r')
-                if utils.is_folder_to_add(folder.get('path'), config=self.config):
-                    has_catalog = (len(folder.get('catalogs', [])) > 0)
+            for index, folder in enumerate(self.mediasite_folders):
+                utils.print_progress_string(index, len(self.mediasite_folders), title='Mapping data and checking resources')
 
+                folder_path = self.find_folder_path(folder['Id'], self.mediasite_folders)
+                if utils.is_folder_to_add(folder_path, config=self.config):
+                    has_catalog = (len(folder.get('Catalogs', [])) > 0)
                     is_unlisted_channel = not has_catalog
                     for p in self.public_paths:
-                        if folder['path'].startswith(p):
+                        if folder_path.startswith(p):
                             is_unlisted_channel = False
                             break
 
-                    for presentation in folder['presentations']:
-                        v_composites_urls = list()
-                        v_files = v_url = None
-
-                        presentation_id = presentation['id']
+                    for presentation in folder['Presentations']:
+                        data = dict()
+                        pid = presentation['Id']
                         # there is no use in checking if the video is available if we already processed it
-                        if self.search_mediasite_id_in_redirections(presentation_id):
+                        if self.search_mediasite_id_in_redirections(pid):
                             continue
 
-                        presenters = list()
-                        for p in presentation.get('other_presenters'):
-                            presenter_name = p.get('display_name')
-                            if presenter_name:
-                                presenters.append(presenter_name)
-
-                        description = ''
-                        if presenters:
-                            description = 'Presenters: ' + ', '.join(presenters)
-                        original_description = presentation.get('description')
-                        if original_description:
-                            description += '\n<br/>' + original_description
-
-                        videos = presentation.get('videos', [])
-                        v_type, slides_source = self._find_video_type(presentation)
-                        if v_type in ('composite_video', 'composite_slides'):
-                            v_composites_urls = self._get_composite_video_resources(presentation)
-                            if v_composites_urls:
-                                v_url = 'local'
-                        else:
-                            if slides_source:
-                                for v in videos:
-                                    if v.get('stream_type') == slides_source:
-                                        v_files = v.get('files')
-                                        break
-                            else:
-                                v_files = videos[0].get('files', [])
-
-                            v_url = self._find_file_to_upload(v_files)
-
+                        v_url, v_composites_urls, v_type = self._get_video_urls_and_type(presentation)
                         if v_url:
-                            has_catalog = len(folder.get('catalogs', [])) > 0
-                            channel_name = folder.get('name')
-
-                            ext_data = presentation if self.config.get('external_data') else {
-                                key: presentation.get(key) for key in ['id', 'creator', 'total_views', 'last_viewed']
-                            }
-
-                            if v_type == 'video_slides':
-                                layout = 'webinar'
-                            elif v_type in ['composite_video', 'composite_slides']:
-                                layout = 'composition'
+                            if self.config.get('external_data') is True:
+                                ext_data = presentation
                             else:
-                                layout = 'video'
-
-                            do_transcode = 'no'
-                            if v_type in ['audio_only', 'composite_slides', 'composite_video']:
-                                do_transcode = 'yes'
-                            elif v_url.endswith('.wmv'):
-                                do_transcode = 'yes'
+                                ext_data = {key: presentation.get(key) for key in ['Id', 'Creator', 'PresentationAnalytics']}
+                                for key in ['TotalViews', 'LastWatched']:
+                                    ext_data[key] = ext_data['PresentationAnalytics'][key]
 
                             data = {
-                                'title': presentation.get('title'),
-                                'channel_title': channel_name,
+                                'title': presentation.get('Title', ''),
+                                'channel_title': folder.get('Name', ''),
                                 'channel_unlisted': is_unlisted_channel,
-                                'creation': presentation.get('creation_date'),
-                                'speaker_id': presentation.get('owner_username'),
-                                'speaker_name': presentation.get('owner_display_name'),
-                                'speaker_email': presentation.get('owner_mail').lower(),
-                                'validated': 'yes' if presentation.get('published_status') else 'no',
-                                'description': description,
-                                'keywords': ','.join(presentation.get('tags')),
-                                'slug': 'mediasite-' + presentation.get('id'),
+                                'creation': mediasite_utils.get_most_distant_date(presentation),
+                                'validated': self._is_validated(presentation),
+                                'description': self.get_presentation_description(presentation),
+                                'keywords': ','.join(presentation.get('TagList', [])),
+                                'slug': 'mediasite-' + presentation.get('Id'),
                                 'external_data': json.dumps(ext_data, indent=2, sort_keys=True),
-                                'transcode': do_transcode,
+                                'transcode': self._do_transcode(v_type, v_url),
                                 'origin': 'mediatransfer',
                                 'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
-                                'layout': layout,
-                                'slides': presentation.get('slides'),
-                                'chapters': presentation.get('timed_events'),
+                                'slides': presentation.get('SlideDetailsContent'),
+                                'layout': self._find_video_type_layout(v_type),
+                                'chapters': order.to_chapters(presentation.get('TimedEvents')),
                                 'video_type': v_type,
                                 'file_url': v_url,
                                 'composites_videos_urls': v_composites_urls
                             }
+                            speaker_data = self.get_speaker_data(presentation.get('Owner'))
+                            data.update(speaker_data)
 
-                            folder_path = folder.get('path')
                             if has_catalog:
                                 channel_path_splitted = folder_path.split('/')
-                                channel_path_splitted[-1] = channel_name
+                                channel_path_splitted[-1] = data['channel_title']
                                 channel_path = '/'.join(channel_path_splitted)
                             else:
                                 channel_path = folder_path
@@ -895,63 +931,74 @@ class MediaTransfer():
 
                             mediaserver_data.append({'data': data, 'ref': {'channel_path': channel_path, 'folder_path': folder_path}})
                         else:
-                            logger.warning(f"No valid video for presentation {presentation.get('id')}, skipping")
+                            logger.warning(f"No valid video for presentation {presentation.get('Id')}, skipping")
                             self.skipped_count += 1
                             continue
 
         return mediaserver_data
 
-    def _find_video_type(self, presentation):
+    def _get_video_urls_and_type(self, presentation):
+        v_url = v_composites_urls = None
+        videos = order.order_and_filter_videos(presentation)
+        v_type, slides_source = self._find_video_type(presentation, videos)
+
+        if v_type in ('composite_video', 'composite_slides'):
+            v_composites_urls = self._get_composite_video_resources(presentation, videos)
+            if v_composites_urls:
+                v_url = 'local'
+        else:
+            if slides_source is not None:
+                for v in videos:
+                    if v.get('stream_type') == slides_source:
+                        v_files = v.get('files')
+                    break
+            else:
+                v_files = videos[0].get('files', [])
+
+            v_url = self._find_file_to_upload(v_files)
+
+        return v_url, v_composites_urls, v_type
+
+    def _find_video_type(self, presentation, videos):
         video_type = str()
         slides_source = None
-        if presentation.get('slides'):
-            if presentation.get('slides').get('details'):
-                if len(presentation.get('videos')) > 1:
-                    video_type = 'composite_video'
+        videos_count = len(videos)
+
+        if presentation.get('SlideDetailsContent') is not None:
+            if videos_count > 1:
+                video_type = 'composite_video'
+            else:
+                video_type = 'audio_slides'
+                for f in videos[0].get('files'):
+                    encoding_settings_parsed = f.get('encoding_settings', {})
+                    if encoding_settings_parsed.get('video_codec'):
+                        video_type = 'video_slides'
+                        break
+        elif presentation['SlideContent'].get('StreamType', '').startswith('Video'):
+            slides = presentation['SlideContent']
+            slides_source = slides['StreamType']
+            slides_count = int(slides['Length'])
+            if slides_count > 0:
+                if videos_count > 1:
+                    video_type = 'composite_slides'
                 else:
-                    video_type = 'audio_slides'
-                    for f in presentation.get('videos', [])[0].get('files'):
-                        if f.get('encoding_infos').get('video_codec'):
-                            video_type = 'video_slides'
-                            break
-            elif presentation['slides'].get('stream_type', '').startswith('Video'):
-                slides_source = presentation['slides'].get('stream_type')
-                if len(presentation['slides'].get('urls')) > 0:
-                    if len(presentation.get('videos')) > 1:
-                        video_type = 'composite_slides'
-                    else:
-                        video_type = 'computer_slides'
-                else:
-                    video_type = 'audio_only'
-                    for f in presentation.get('videos', [])[0].get('files', []):
-                        if f.get('encoding_infos', {}).get('video_codec'):
-                            video_type = 'computer_only'
-                            break
-        elif len(presentation.get('videos')) > 1:
+                    video_type = 'computer_slides'
+            else:
+                video_type = 'audio_only'
+                for f in videos[0].get('files', []):
+                    encoding_settings_parsed = f.get('encoding_settings', {})
+                    if encoding_settings_parsed.get('video_codec'):
+                        video_type = 'computer_only'
+                        break
+        elif videos_count > 1:
             video_type = 'composite_video'
         else:
             video_type = 'audio_only'
-            for f in presentation.get('videos', [])[0].get('files', []):
+            for f in videos[0].get('files', []):
                 if f.get('encoding_infos', {}).get('video_codec'):
                     video_type = 'video_only'
 
         return video_type, slides_source
-
-    def _get_composite_video_resources(self, presentation):
-        videos = dict()
-        presentation_id = presentation['id']
-        slides_stream_type = presentation.get('slides', {}).get('stream_type')
-        for video in presentation['videos']:
-            name = video['stream_type']
-            if name == slides_stream_type:
-                name = 'Slides'
-            for f in video['files']:
-                if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
-                    url = f['url']
-                    if (self.composites_folder / presentation_id / 'mediaserver_layout.json').is_file() or http.url_exists(url, self.dl_session):
-                        videos[name] = f['url']
-                        break
-        return videos
 
     def _find_file_to_upload(self, video_files):
         video_url = ''
@@ -965,58 +1012,76 @@ class MediaTransfer():
                 if http.url_exists(url, self.dl_session):
                     video_url = file['url']
                     break
-
         return video_url
 
-    def add_chapters(self, media_oid, chapters):
-        logger.debug(f'Adding chapters for media {media_oid}')
+    def _get_composite_video_resources(self, presentation, videos):
+        composites_videos_resources = dict()
+        pid = presentation['Id']
+        slides = presentation.get('SlideDetailsContent')
+        if slides is None:
+            slides = presentation.get('SlideContent')
+        slides_stream_type = slides.get('StreamType')
 
-        ok = True
-        if self.chapters_annot_type is None:
-            self.chapters_annot_type = self._get_annotation_type_id(media_oid, annot_type='chapter')
+        for video in videos:
+            name = video['stream_type']
+            if name == slides_stream_type:
+                name = 'Slides'
+            for f in video['files']:
+                if f['size_bytes'] > 0 and f['format'] == 'video/mp4':
+                    url = f['url']
+                    if (self.composites_folder / pid / 'mediaserver_layout.json').is_file() or http.url_exists(url, self.dl_session):
+                        composites_videos_resources[name] = f['url']
+                        break
+        return composites_videos_resources
 
-        for c in chapters:
-            data = {
-                'oid': media_oid,
-                'title': c.get('chapter_title'),
-                'time': c.get('chapter_position_ms'),
-                'type': self.chapters_annot_type
-            }
-            success = self._add_annotation_safe(data)
-            if not success:
-                self.skipped_chapters_count += 1
+    def _find_video_type_layout(self, video_type):
+        layout = str()
 
-        return ok
-
-    def get_folder_by_path(self, path):
-        for f in self.mediasite_data:
-            if f['path'] == path:
-                return f
-
-    @lru_cache
-    def get_channel_title_by_path(self, path):
-        folder = self.get_folder_by_path(path)
-        if folder:
-            title = self.get_final_channel_title(folder)
+        if video_type == 'video_slides':
+            layout = 'webinar'
+        elif video_type in ['composite_video', 'composite_slides']:
+            layout = 'composition'
         else:
-            logger.warning(f'Did not find folder for {path}, falling back to last item')
-            title = path.split('/')[-1]
-        return title
+            layout = 'video'
 
-    def get_final_channel_title(self, folder):
-        '''
-        The MediaServer channel title should take the most recent
-        catalog name (if any), otherwise use the folder name.
-        '''
-        name = folder['name']
-        most_recent_time = None
-        most_recent_catalog = None
-        for c in folder['catalogs']:
-            catalog_date = utils.parse_mediasite_date(c['creation_date'])
-            if most_recent_time is None or catalog_date > most_recent_time:
-                most_recent_time = catalog_date
-                most_recent_catalog = c
-        if most_recent_catalog is not None:
-            name = most_recent_catalog['name']
-            logger.debug(f'Overriding channel name with the most recent catalog name {name}')
-        return name
+        return layout
+
+    def get_presentation_description(self, presentation):
+        description = str()
+        presenters = list()
+        for p in presentation.get('Presenters'):
+            presenter_name = p.get('DisplayName')
+            if presenter_name:
+                presenters.append(presenter_name)
+
+        if presenters:
+            description = f'Presenters: {", ".join(presenters)}'
+        original_description = presentation.get('Description')
+        if original_description:
+            description += '\n<br/>' + original_description
+
+        return description
+
+    def get_speaker_data(self, username):
+        speaker_data = dict()
+        for user in self.mediasite_users:
+            if username == user['UserName']:
+                speaker_data = {
+                    'speaker_id': username,
+                    'speaker_name': user.get('DisplayName'),
+                    'speaker_email': user.get('Email').lower(),
+                }
+        return speaker_data
+
+    def _do_transcode(self, video_type, video_url):
+        do_transcode = 'no'
+        if video_type in ['audio_only', 'composite_slides', 'composite_video']:
+            do_transcode = 'yes'
+        elif video_url.endswith('.wmv'):
+            do_transcode = 'yes'
+
+        return do_transcode
+
+    def _is_validated(self, presentation):
+        return presentation.get('Status') == 'Viewable' and presentation.get('Private') is False
+

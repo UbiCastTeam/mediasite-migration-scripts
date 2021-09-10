@@ -4,13 +4,10 @@
             "stream_type": "Video1",
             "files": [
                 {
-                    "FileNameWithExtension": "bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4",
-                    "StreamType": "Video1",
-                    "ContentMimeType": "video/mp4",
-                    "ContentServer": {
-                        "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                        "DistributionUrl": "https://anon.com/fake"
-                    }
+                    "url": "https://beta.ubicast.net/",
+                    "format": "video/mp4",
+                    "size_bytes": 2091246582,
+                    "encoding_infos": {}
                 }
             ]
         },
@@ -18,13 +15,10 @@
             "stream_type": "Video3",
             "files": [
                 {
-                    "FileNameWithExtension": "bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4",
-                    "StreamType": "Video3",
-                    "ContentMimeType": "video/mp4",
-                    "ContentServer": {
-                        "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                        "DistributionUrl": "https://anon.com/fake"
-                    }
+                    "url": "https://beta.ubicast.net/",
+                    "format": "video/mp4",
+                    "size_bytes": 2091246582,
+                    "encoding_infos": {}
                 }
             ]
         }
@@ -34,13 +28,10 @@
             "stream_type": "Video1",
             "files": [
                 {
-                    "FileNameWithExtension": "2b2b1b1a-8053-4ae0-90f4-507282a1a4fb.mp4",
-                    "StreamType": "Video1",
-                    "ContentMimeType": "video/mp4",
-                    "ContentServer": {
-                        "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                        "DistributionUrl": "https://anon.com/fake"
-                    }
+                    "url": "https://beta.ubicast.net/",
+                    "format": "video/mp4",
+                    "size_bytes": 1125147761,
+                    "encoding_infos": {}
                 }
             ]
         }
@@ -50,13 +41,10 @@
             "stream_type": "Video1",
             "files": [
                 {
-                    "FileNameWithExtension": "ca81e5e8-4f05-48bb-a5fe-c20a4e6186a7.mp4",
-                    "StreamType": "Video1",
-                    "ContentMimeType": "video/mp4",
-                    "ContentServer": {
-                        "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                        "DistributionUrl": "https://anon.com/fake"
-                    }
+                    "url": "https://beta.ubicast.net/",
+                    "format": "video/mp4",
+                    "size_bytes": 1016415594,
+                    "encoding_infos": {}
                 }
             ]
         }
