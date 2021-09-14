@@ -1,11 +1,50 @@
 import logging
 from copy import copy
 
-import mediasite_migration_scripts.utils.common as utils
+import utils.common as utils
 
 
 logger = logging.getLogger(__name__)
 config = utils.read_json('config-test.json')
+
+
+class DataFilter():
+    def __init__(self, filter_fields):
+        self.filter_fields = filter_fields
+
+    def filter_data(self, data):
+        logger.info('Filtering data')
+        self.data = data
+        self.filtered_data = self._filter_data(data, self.filter_fields)
+        return self.filtered_data
+
+    def _filter_data(self, data, filter_fields):
+        filtered_data = dict()
+        for key, val in data.items():
+            if key in filter_fields.keys():
+                filtered_data[key] = self._filter_fields(val, filter_fields[key])
+        return filtered_data
+
+    def _filter_fields(self, data, filter_fields):
+        filtered_data = None
+        if isinstance(data, list):
+            filtered_data = list()
+            for item in data:
+                filtered_data.append(self._filter_fields(item, filter_fields))
+        elif isinstance(data, dict):
+            filtered_data = dict()
+            for field in filter_fields:
+                if isinstance(field, dict):
+                    for key, val in field.items():
+                        field_value = self._filter_fields(data.get(key), val)
+                        if field_value is not None:
+                            filtered_data[key] = field_value
+                elif isinstance(field, str):
+                    field_value = data.get(field)
+                    if field_value is not None:
+                        filtered_data[field] = field_value
+
+        return filtered_data
 
 
 def set_logger(*args, **kwargs):
@@ -50,13 +89,17 @@ def anonymize_data(data):
     return anon_data
 
 
-def filter_for_tests(data):
+def to_small_data(data):
     filtered_data = dict()
-    for f_index, folder in enumerate(data['Folders']):
-        for p_index, presentation in enumerate(folder['Presentations']):
-            if presentation.get('TimedEvents'):
-                filtered_data['Folders'] = [data['Folders'][f_index]]
-                filtered_data['Folders'][0]['Presentations'][p_index]['TimedEvents'] = generate_timed_events()
+
+    folders = data['Folders'][:2]
+    if len(folders[0]['Presentations']) > 6:
+        folders[0]['Presentations'] = folders[0]['Presentations'][:6]
+    filtered_data['Folders'] = folders
+
+    for i in range(2):
+        filtered_data['Folders'][0]['Presentations'][i]['TimedEvents'] = generate_timed_events()
+
     users = data.get('UserProfiles')
     if users:
         filtered_data['UserProfiles'] = users[:1]

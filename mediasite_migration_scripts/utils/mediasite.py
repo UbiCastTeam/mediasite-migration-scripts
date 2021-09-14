@@ -194,7 +194,7 @@ def parse_mediasite_date(date_str):
 
 
 def format_mediasite_date(data):
-    date_format = '%Y-%m-%dT%H:%M:%S'
+    date_format = '%Y-%m-%d %H:%M:%S'
     return data.strftime(date_format)
 
 

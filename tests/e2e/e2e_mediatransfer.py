@@ -1,7 +1,9 @@
+from os import mkdir
 from pathlib import Path
 from unittest import TestCase
 import logging
 import json
+import shutil
 
 from mediasite_migration_scripts.mediatransfer import MediaTransfer
 import mediasite_migration_scripts.utils.common as utils
@@ -39,7 +41,11 @@ try:
             for video in presentation['OnDemandContent']:
                 video['FileNameWithExtension'] = media_url_without_base
 
-    mediatransfer = MediaTransfer(config, mediasite_data)
+    try:
+        mediatransfer = MediaTransfer(config, mediasite_data)
+    except Exception as e:
+        logger.error(f'Failed to init MediaTransfer: {e}')
+        raise AssertionError
 
     test_channel_oid = ms_utils.create_test_channel()
     mediatransfer.root_channel = mediatransfer.get_channel(test_channel_oid)
@@ -50,8 +56,13 @@ try:
         else:
             m_data['file_url'] = media_sample
 
-    mediatransfer.slides_folder = Path('tests/samples/slides')
-    mediatransfer.mediaserver_data[0]['data']['slides'] = test_utils.generate_slides_details()
+    for media in mediatransfer.mediaserver_data:
+        media_data = media['data']
+        if json.loads(media_data['external_data'])['Id'] == '44896a6161684fbab7ccd714d09302a21d':
+            media_with_slides = media_data
+            mediatransfer.slides_folder = Path('tests/samples/slides')
+            media['data']['slides'] = test_utils.generate_slides_details()
+            media['data']['detect_slides'] = 'no'
 
 except Exception as e:
     logger.debug(e)
@@ -64,8 +75,8 @@ def setUpModule():
 
 
 def tearDownModule():
-    body = {'oid': test_channel_oid, 'delete_resources': 'yes', 'delete_content': 'yes'}
-    ms_client.api('channels/delete', method='post', data=body)
+    # body = {'oid': test_channel_oid, 'delete_resources': 'yes', 'delete_content': 'yes'}
+    # ms_client.api('channels/delete', method='post', data=body)
 
     mediatransfer.ms_client.session.close()
     ms_client.session.close()
@@ -83,47 +94,55 @@ class TestMediaTransferE2E(TestCase):
 
     def test_upload_medias(self):
         print('-> test_upload_medias', 20 * '-')
-        medias_examples = self.mediatransfer.mediaserver_data
         self.mediatransfer.upload_medias()
+        medias_examples = self.mediatransfer.mediaserver_data
 
-        for media in medias_examples:
-            result = self.ms_client.api('medias/get', method='get', params={'oid': media['ref']['media_oid'], 'full': 'yes'})
+        keys_to_skip_checking = [
+            'channel_title',
+            'channel_unlisted',
+            'transcode',
+            'detect_slides',
+            'slides',
+            'chapters',
+            'video_type',
+            'file_url',
+            'composites_videos_urls',
+            'speaker_id',
+            'speaker_name',
+            'channel',
+            'priority',
+            'validated',
+            'layout_preset'
+        ]
+        for media_origin in medias_examples:
+            result = self.ms_client.api('medias/get', method='get', params={'oid': media_origin['ref']['media_oid'], 'full': 'yes'})
             self.assertTrue(result.get('success'))
-            media_info = result.get('info')
-            media_origin_pid = json.loads(media['data']['external_data'])['Id']
-            presentation_origin = mediatransfer.get_presentation_by_id(media_origin_pid)
 
-            presentation_key_mapping = {
-                'Id': 'external_ref',
-                'Title': 'title',
-                'Owner': 'speaker_id',
-            }
-            for mst_key, ms_key in presentation_key_mapping.items():
-                self.assertEqual(presentation_origin[mst_key], media_info[ms_key], msg=f'{mst_key} -> {ms_key}')
+            media_result = result.get('info')
+            for key, val in media_origin['data'].items():
+                res = media_result.get(key)
+                if key not in keys_to_skip_checking:
+                    self.maxDiff = None
+                    self.assertEqual(val, res, msg=f'on key [{key}]')
+                elif key == 'validated':
+                    self.assertEqual(val == 'yes', res, msg=f'on key [{key}]')
+                elif key == 'layout_preset':
+                    layout_origin_dict = json.loads(val)
+                    layout_res_dict = json.loads(res)
+                    self.assertEqual(layout_origin_dict['composition_area'], layout_res_dict['composition_area'])
+                    for i, layer_res in enumerate(layout_res_dict['composition_data'][0]['layers']):
+                        del layer_res['z']
+                        self.assertEqual(layout_origin_dict['layers'][i], layer_res)
 
-            creation_date = mediasite_utils.get_most_distant_date(presentation_origin)
-            mst_date = mediasite_utils.parse_mediasite_date(creation_date)
-            ms_date = mediaserver_utils.parse_mediaserver_date(media_info['creation'])
-            self.assertEqual(mst_date, ms_date)
+            if media_origin.get('chapters'):
+                self._check_chapters(media_origin, media)
+            self._check_slides(media_origin)
 
-            pid = presentation_origin["Id"]
-            expected_results = {
-                'slug': f'mediasite-{pid}',
-                'keywords': ','.join(presentation_origin['TagList']),
-                'parent_title': mediatransfer.get_presentation_parent_folder(pid)['Name']
-            }
-            for key, expected in expected_results.items():
-                self.assertEqual(media_info[key], expected)
-
-            if presentation_origin.get('TimedEvents'):
-                self._check_chapters(presentation_origin, media)
-            self._check_slides(presentation_origin, media)
-
-    def _check_slides(self, presentation, media):
-        result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media['ref'].get('media_oid')}, ignore_404=True)
+    def _check_slides(self, media_origin,):
+        result = self.ms_client.api('annotations/slides/list/', method='get', params={'oid': media_origin['ref'].get('media_oid')}, ignore_404=True)
         if result:
             slides_up = result.get('slides')
-            slides = presentation.get('SlideDetailsContent')
+            slides = media_origin.get('slides')
 
             if slides:
                 slides_count = slides.get('Length')
@@ -148,4 +167,4 @@ class TestMediaTransferE2E(TestCase):
                 self.assertEqual(chapter.get('Title'), chapters_up[i].get('title'))
         else:
             logger.error('Failed to migrate chapters')
-            raise AssertionError()
+            raise AssertionError

@@ -133,12 +133,4 @@ if __name__ == '__main__':
     mediatransfer.write_redirections_file()
     mediatransfer.dump_incomplete_media()
 
-    if options.verbose:
-        mediaserver_data = mediatransfer.mediaserver_data
-        try:
-            utils.write_json(mediaserver_data, 'data/mediaserver_data.json')
-        except Exception:
-            logger.error('Failed to save Mediaserver mapping')
-            sys.exit(1)
-
     logger.info('----- END SCRIPT ' + 50 * '-' + '\n')

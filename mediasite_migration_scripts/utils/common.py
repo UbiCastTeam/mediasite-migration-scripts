@@ -49,7 +49,7 @@ def set_logger(options=None, verbose=False):
             level = logging.DEBUG
             logging_format += ' - [%(funcName)s]'
         elif options.quiet:
-            level = logging.ERRORm
+            level = logging.ERROR
     elif verbose:
         level = logging.DEBUG
         logging_format += ' - [%(funcName)s]'
@@ -79,9 +79,6 @@ def set_logger(options=None, verbose=False):
 
 
 def is_folder_to_add(path, config=dict()):
-    # if a sub folder is in whitelist, all path is accepted
-    # e.g. : config = {'whitelist': 'example'} => '/example' as well as '/parent_folder/example' will return True
-    # TODO : filtering if parent or not ? force user to write the all path for whitelisting ?
     if config.get('whitelist'):
         for whitelisted_path in config['whitelist']:
             if whitelisted_path in path:

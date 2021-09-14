@@ -743,15 +743,19 @@ class MediaTransfer():
         media_slides = media['data'].get('slides')
         nb_slides_uploaded, nb_slides = 0, 0
 
-        if media_slides:
+        if media_slides and media['data']['detect_slides'] != 'yes':
+            if not media_slides.get('SlideDetails'):
+                media['data']['detect_slides'] = 'yes'
+                return 0, 0
             logger.debug(f"Migrating slides for medias: {media['ref']['media_oid']}")
 
             slides_dir = self.slides_folder / presentation_id
             nb_slides = media_slides.get('Length')
             nb_slides_uploaded = self._upload_slides(media, slides_dir)
             self.uploaded_slides_count += nb_slides_uploaded
-            # logger.debug(f"Media {media['ref']['media_oid']} has slides binded to video (no timecode). \
-            #                  Detect slides will be lauched in Mediaserver.")
+        else:
+            logger.debug(f"Media {media['ref']['media_oid']} has slides binded to video (no timecode). \
+                          Detect slides will be lauched in Mediaserver.")
 
         logger.debug(f"{nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
 
@@ -901,17 +905,17 @@ class MediaTransfer():
                                 'channel_title': folder.get('Name', ''),
                                 'channel_unlisted': is_unlisted_channel,
                                 'creation': mediasite_utils.get_most_distant_date(presentation),
-                                'validated': self._is_validated(presentation),
+                                'validated': 'yes' if self._is_validated(presentation) else 'no',
                                 'description': self.get_presentation_description(presentation),
                                 'keywords': ','.join(presentation.get('TagList', [])),
                                 'slug': 'mediasite-' + presentation.get('Id'),
                                 'external_data': json.dumps(ext_data, indent=2, sort_keys=True),
                                 'transcode': self._do_transcode(v_type, v_url),
-                                'origin': 'mediatransfer',
+                                'origin': 'mediasite-migration-client',
                                 'detect_slides': 'yes' if v_type in ['computer_slides', 'composite_slides'] else 'no',
                                 'slides': presentation.get('SlideDetailsContent'),
                                 'layout': self._find_video_type_layout(v_type),
-                                'chapters': order.to_chapters(presentation.get('TimedEvents')),
+                                'chapters': self.get_chapters(presentation),
                                 'video_type': v_type,
                                 'file_url': v_url,
                                 'composites_videos_urls': v_composites_urls
@@ -954,7 +958,6 @@ class MediaTransfer():
                     break
             else:
                 v_files = videos[0].get('files', [])
-
             v_url = self._find_file_to_upload(v_files)
 
         return v_url, v_composites_urls, v_type
@@ -974,6 +977,7 @@ class MediaTransfer():
                     if encoding_settings_parsed.get('video_codec'):
                         video_type = 'video_slides'
                         break
+
         elif presentation['SlideContent'].get('StreamType', '').startswith('Video'):
             slides = presentation['SlideContent']
             slides_source = slides['StreamType']
@@ -1041,8 +1045,6 @@ class MediaTransfer():
             layout = 'webinar'
         elif video_type in ['composite_video', 'composite_slides']:
             layout = 'composition'
-        else:
-            layout = 'video'
 
         return layout
 
@@ -1058,7 +1060,7 @@ class MediaTransfer():
             description = f'Presenters: {", ".join(presenters)}'
         original_description = presentation.get('Description')
         if original_description:
-            description += '\n<br/>' + original_description
+            description += '\n<br>' + original_description
 
         return description
 
@@ -1073,6 +1075,16 @@ class MediaTransfer():
                 }
         return speaker_data
 
+    def get_chapters(self, presentation):
+        chapters = order.to_chapters(presentation['TimedEvents'])
+        for chapter in chapters:
+            videos = presentation['OnDemandContent']
+            for video in videos:
+                video_length = int(video['Length'])
+                if chapter['Position'] > video_length:
+                    return []
+        return chapters
+
     def _do_transcode(self, video_type, video_url):
         do_transcode = 'no'
         if video_type in ['audio_only', 'composite_slides', 'composite_video']:
@@ -1084,4 +1096,3 @@ class MediaTransfer():
 
     def _is_validated(self, presentation):
         return presentation.get('Status') == 'Viewable' and presentation.get('Private') is False
-

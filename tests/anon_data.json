@@ -1,257 +1,43 @@
 {
     "Folders": [
         {
-            "odata.id": "https://anon.com/fake",
-            "Presentations@odata.navigationLinkUrl": "https://anon.com/fake",
-            "#UpdatePermissions": {
-                "target": "https://anon.com/fake"
-            },
-            "#UpdateOwner": {
-                "target": "https://anon.com/fake"
-            },
-            "#DeleteFolder": {
-                "target": "https://anon.com/fake"
-            },
-            "Id": "9d809449bd00490a87f340c124881a2c14",
-            "Name": "anon Name",
+            "Id": "00256a42f59641ff865d57f2784374f314",
+            "ParentFolderId": "f239e98088ff4dc9b9d76d2f808f964c14",
+            "Name": "Channel with Catalog - Folder Name !",
             "Owner": "anon@mail.com",
-            "Description": "",
-            "CreationDate": "2018-01-05T11:24:38",
-            "LastModified": "2018-01-05T11:24:38",
-            "ParentFolderId": "75ca676c34e3409aa67de6813736475914",
-            "Recycled": false,
-            "Type": "Folder",
-            "IsShared": false,
-            "IsCopyDestination": false,
-            "IsReviewEditApproveEnabled": false,
-            "Catalogs": [],
+            "Description": "Share folder for mymediasite users diergeneeskunde",
+            "Catalogs": [
+                {
+                    "Id": "b9660ea784f14294a08977c9dc9e414021",
+                    "Name": "Channel with Catalog - Catalog Name",
+                    "Description": "Share folder for mymediasite users diergeneeskunde",
+                    "CatalogUrl": "https://anon.com/fake",
+                    "Owner": "anon@mail.com",
+                    "CreationDate": "2013-09-11T09:41:44",
+                    "LinkedFolderId": "00256a42f59641ff865d57f2784374f314"
+                }
+            ],
             "Presentations": [
                 {
-                    "odata.type": "SonicFoundry.Mediasite.WebApi.Model.PresentationFullRepresentation",
-                    "odata.id": "https://anon.com/fake",
-                    "RelatedPresentations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Tags@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "TimedEvents@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Presenters@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Questions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Comments@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ThumbnailContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideDetailsContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OnDemandContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "BroadcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PublishToGoContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OcrContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "CaptionContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "AudioPeaksContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "LayoutOptions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "EmailInvitation@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannels@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannelsForAllInstances@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "VideoPodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Modules@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Categories@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ExternalPublishingContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Annotations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ModerateOrAnnotate@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "#CreateLike": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CreateShortcut": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Upload": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Play": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SendInvitation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CopyPresentation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddVideoPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddExternalPublishing": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ConvertVideoToSlide": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddCaptionContent": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#GetCommentCount": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ResetMedia": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#EnableAnnotationCreation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SetThumbnail": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SubmitPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateCommentVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteComments": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateAnnotationVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteAnnotations": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "Id": "060b8f361a40420bbcba77d5ff4287a41d",
-                    "Title": "anon Title",
-                    "Status": "Viewable",
-                    "Source": "HardwareRecorder",
-                    "RootId": "060b8f361a40420bbcba77d5ff4287a41d",
-                    "RootOwner": "anon RootOwner",
-                    "RegistrationRequired": false,
-                    "CurrentlyAvailableInShowcase": null,
-                    "ViewableByPlaylistOwner": null,
-                    "Description": "",
-                    "RecordDate": "2017-11-20T10:00:00",
-                    "RecordDateLocal": "2017-11-20T11:00:00",
-                    "Duration": 2534000,
-                    "NumberOfViews": 4,
+                    "Id": "0e2710f9f0bb4397a841ed64af41474b1d",
+                    "Title": "Media with good chapters",
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
+                    "CreationDate": "2013-09-06T13:28:32.32Z",
+                    "RecordDate": "2013-09-06T13:28:00",
                     "Owner": "anon@mail.com",
-                    "Creator": "anon Creator",
+                    "Creator": "anon@mail.com",
                     "PrimaryPresenter": "anon PrimaryPresenter",
-                    "ThumbnailUrl": "https://anon.com/fake",
-                    "IsLive": false,
-                    "CreationDate": "2018-01-05T11:58:34.363Z",
-                    "PlayerId": "f57edb6d5d36416ca39f2ed973071d510a",
-                    "PresentationTemplateId": null,
-                    "AlternateName": null,
-                    "CopyrightNotice": null,
-                    "MaximumConnections": -1,
-                    "PublishingPointName": null,
-                    "IsUploadAutomatic": true,
-                    "TimeZone": "W. Europe Standard Time",
-                    "PollsEnabled": false,
-                    "LiveCountdownEnabled": false,
-                    "LiveIndicationDelayed": false,
-                    "ForumsEnabled": false,
-                    "SharingEnabled": false,
-                    "PlayerLocked": false,
-                    "PollsInternal": true,
+                    "Status": "Viewable",
                     "Private": false,
-                    "NotifyOnMetadataChanged": false,
-                    "ApprovalState": "Approved",
-                    "ApprovalRequiredChangeTypes": "DefaultApprovalChanges, DefaultNotificationChanges",
-                    "IsApproved": true,
-                    "ContentRevision": 1,
-                    "PollLink": null,
-                    "ParentFolderName": "anon ParentFolderName",
-                    "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                    "DisplayRecordDate": "2017-11-20T10:00:00Z",
-                    "IsLiveEnabled": false,
-                    "PlayStatus": "OnDemand",
-                    "CustomFieldValues": [],
-                    "TagList": [
-                        "B-B3GKA16"
-                    ],
-                    "IsHeadRevisionContentComplete": true,
-                    "TotalFileLength": "46138098",
-                    "ExternalLinks": [],
+                    "TagList": [],
                     "Streams": [
                         {
                             "StreamType": "Video1",
                             "StreamName": null
                         }
                     ],
-                    "UseAdaptiveCapture": false,
-                    "AnnotationMode": "Open",
-                    "InheritPermissions": true,
-                    "ThumbnailGenerateOption": "CaptureApplicationDefault",
-                    "IsDvrPlaybackEnabled": false,
-                    "DvrBufferDurationMaximum": null,
-                    "OnDemandContent": [
-                        {
-                            "odata.id": "https://anon.com/fake",
-                            "Id": "873e9bac7746400898e64749cd25d17430",
-                            "ParentResourceId": "060b8f361a40420bbcba77d5ff4287a41d",
-                            "ContentType": "OnDemandFile",
-                            "Status": "Completed",
-                            "ContentMimeType": "video/mp4",
-                            "EncodingOrder": 2,
-                            "Length": "2534199",
-                            "FileNameWithExtension": "8fe92d35-c75d-43e8-8d9d-9f6f4878d3bf.mp4",
-                            "ContentEncodingSettingsId": null,
-                            "ContentServerId": "ad0fce8edc61432998839c3f860b6d4429",
-                            "ArchiveType": 0,
-                            "IsTranscodeSource": true,
-                            "ContentRevision": 1,
-                            "FileLength": "34772041",
-                            "StreamType": "Video1",
-                            "LastModified": "2018-01-05T11:58:34.333Z",
-                            "ContentServer": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.type": "SonicFoundry.Mediasite.WebApi.Model.IIsProgressiveContentServerRepresentation",
-                                "odata.id": "https://anon.com/fake",
-                                "StorageEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "DistributionEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                                "Name": "anon Name",
-                                "ServerType": "IIsProgressiveServer",
-                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
-                            },
-                            "ContentEncodingSettings": {}
-                        }
-                    ],
-                    "SlideContent": {
-                        "odata.id": "https://anon.com/fake",
-                        "IsGeneratedFromVideoStream": true,
-                        "Id": "67237aa425c74fc5ac75e3dfe498506d30",
-                        "ParentResourceId": "060b8f361a40420bbcba77d5ff4287a41d",
-                        "ContentType": "Slides",
-                        "Status": "Completed",
-                        "ContentMimeType": "image/jpeg",
-                        "EncodingOrder": 1,
-                        "Length": "25",
-                        "FileNameWithExtension": "slide_{0:D4}_591df5d6b4704f69a834b87998f82256.jpg",
-                        "ContentEncodingSettingsId": "01b38a8f17704cc2b7ffdb2ebc5765d528",
-                        "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                        "ArchiveType": 0,
-                        "IsTranscodeSource": false,
-                        "ContentRevision": 1,
-                        "FileLength": "1191632",
-                        "StreamType": "Video1",
-                        "LastModified": "2018-01-05T11:58:40.327Z",
-                        "ContentServer": {
-                            "odata.metadata": "https://anon.com/fake",
-                            "odata.id": "https://anon.com/fake",
-                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                            "EndpointType": "Storage",
-                            "UseMediasiteFileServer": true,
-                            "EnableFileServerSecurity": true,
-                            "LocalUrl": "https://anon.com/fake",
-                            "Url": "https://anon.com/fake"
-                        }
+                    "#Play": {
+                        "target": "https://anon.com/fake"
                     },
                     "TimedEvents": [
                         {
@@ -267,1217 +53,479 @@
                             "Payload": "<ChapterEntry ><Number>2</Number><Time>0</Time><Title>Chapter 2</Title></ChapterEntry>"
                         }
                     ],
+                    "Presenters": [],
+                    "PresentationAnalytics": {
+                        "TotalViews": 193,
+                        "LastWatched": "2021-08-06T12:21:20.37"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "bec1b239-f06e-436a-83a8-6f196bea6e2e.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "2091246582",
+                            "Length": "2973269",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {
+                        "FileNameWithExtension": "slide_{0:D4}_1fd0eb59e96341caa517319a41f54a4d.jpg",
+                        "Length": "25",
+                        "StreamType": "Video1",
+                        "ContentServer": {
+                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
+                            "Url": "https://anon.com/fake"
+                        }
+                    }
+                },
+                {
+                    "Id": "2c83dd0e79734f41a09194d73e883e601d",
+                    "Title": "Media with wrong chapters",
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
+                    "CreationDate": "2013-09-04T07:07:32.217Z",
+                    "RecordDate": "2013-09-04T07:05:00",
+                    "Owner": "anon@mail.com",
+                    "Creator": "anon@mail.com",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [
+                        {
+                            "Position": 0,
+                            "Payload": "<ChapterEntry ><Number>0</Number><Time>0</Time><Title>Chapter 0</Title></ChapterEntry>"
+                        },
+                        {
+                            "Position": 1500,
+                            "Payload": "<ChapterEntry ><Number>1</Number><Time>0</Time><Title>Chapter 1</Title></ChapterEntry>"
+                        },
+                        {
+                            "Position": 1500000,
+                            "Payload": "<ChapterEntry ><Number>2</Number><Time>0</Time><Title>Chapter 2</Title></ChapterEntry>"
+                        }
+                    ],
+                    "Presenters": [],
+                    "PresentationAnalytics": {
+                        "TotalViews": 69,
+                        "LastWatched": "2021-03-19T10:48:40.197"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "2b2b1b1a-8053-4ae0-90f4-507282a1a4fb.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "1125147761",
+                            "Length": "12000",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {
+                        "FileNameWithExtension": "slide_{0:D4}_df77ee919b6c4f329a5f93d45cee2e05.jpg",
+                        "Length": "32",
+                        "StreamType": "Video1",
+                        "ContentServer": {
+                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
+                            "Url": "https://anon.com/fake"
+                        }
+                    }
+                },
+                {
+                    "Id": "44896a6161684fbab7ccd714d09302a21d",
+                    "Title": "Media with slides",
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
+                    "CreationDate": "2013-09-03T11:20:59.28Z",
+                    "RecordDate": "2013-09-03T11:20:00",
+                    "Owner": "anon@mail.com",
+                    "Creator": "anon@mail.com",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
                     "Presenters": [
                         {
-                            "odata.id": "https://anon.com/fake",
-                            "Id": "aec507fb7e5443019a60ad2c32b14c6b2a",
-                            "MediasiteId": "060b8f361a40420bbcba77d5ff4287a41d",
-                            "Prefix": "Dr.",
-                            "FirstName": "anon FirstName",
-                            "MiddleName": null,
-                            "LastName": "anon LastName",
-                            "Suffix": null,
-                            "ImageUrl": "https://anon.com/fake",
-                            "ImageName": "p1a1jcothd17eo12t715pt1hbc1kk63.jpg",
-                            "Email": "anon@mail.com",
-                            "BioUrl": null,
-                            "AdditionalInfo": null,
-                            "DisplayName": "anon DisplayName",
-                            "Order": 1
+                            "DisplayName": "anon DisplayName"
                         }
                     ],
                     "PresentationAnalytics": {
-                        "odata.metadata": "https://anon.com/fake",
-                        "odata.id": "https://anon.com/fake",
-                        "Presentation@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "Users@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "IPAddresses@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingTrends@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingSessions@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "BrowserTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "MediaPluginTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "SystemTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "PresentationId": "060b8f361a40420bbcba77d5ff4287a41d",
-                        "Title": "anon Title",
-                        "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                        "ParentFolderName": "anon ParentFolderName",
-                        "MinViewLength": 15,
-                        "TotalViews": 4,
-                        "LiveViews": 0,
-                        "OnDemandViews": 4,
-                        "TotalUsers": 2,
-                        "TotalIPAddresses": 1,
-                        "PeakConnections": 0,
-                        "FirstWatched": "2018-01-05T12:04:35.027",
-                        "LastWatched": "2018-01-09T08:50:59.767",
-                        "TotalTimeWatchedSeconds": "198",
-                        "DatesWatched": [
-                            "2018-01-05T12:04:35.027",
-                            "2018-01-08T09:56:44.137",
-                            "2018-01-08T10:24:37.74",
-                            "2018-01-09T08:50:59.767"
-                        ]
+                        "TotalViews": 158,
+                        "LastWatched": "2021-02-25T09:20:00.797"
                     },
-                    "Availability": "Available"
-                },
-                {
-                    "odata.type": "SonicFoundry.Mediasite.WebApi.Model.PresentationFullRepresentation",
-                    "odata.id": "https://anon.com/fake",
-                    "RelatedPresentations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Tags@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "TimedEvents@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Presenters@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Questions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Comments@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ThumbnailContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideDetailsContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OnDemandContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "BroadcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PublishToGoContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OcrContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "CaptionContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "AudioPeaksContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "LayoutOptions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "EmailInvitation@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannels@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannelsForAllInstances@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "VideoPodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Modules@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Categories@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ExternalPublishingContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Annotations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ModerateOrAnnotate@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "#CreateLike": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CreateShortcut": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Upload": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Play": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SendInvitation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CopyPresentation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddVideoPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddExternalPublishing": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ConvertVideoToSlide": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddCaptionContent": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#GetCommentCount": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ResetMedia": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#EnableAnnotationCreation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SetThumbnail": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SubmitPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateCommentVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteComments": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateAnnotationVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteAnnotations": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "Id": "9e530cba52634cf7adb027954a4dc9231d",
-                    "Title": "anon Title",
-                    "Status": "Viewable",
-                    "Source": "DesktopRecorder",
-                    "RootId": "9e530cba52634cf7adb027954a4dc9231d",
-                    "RootOwner": "anon RootOwner",
-                    "RegistrationRequired": false,
-                    "CurrentlyAvailableInShowcase": null,
-                    "ViewableByPlaylistOwner": null,
-                    "Description": "",
-                    "RecordDate": "2017-11-06T14:03:27",
-                    "RecordDateLocal": "2017-11-06T15:03:27",
-                    "Duration": 6214000,
-                    "NumberOfViews": 3,
-                    "Owner": "anon@mail.com",
-                    "Creator": "anon Creator",
-                    "PrimaryPresenter": "anon PrimaryPresenter",
-                    "ThumbnailUrl": "https://anon.com/fake",
-                    "IsLive": false,
-                    "CreationDate": "2018-01-05T11:36:53.74Z",
-                    "PlayerId": "d3641b73caca4d37b5d868b9ada57aba0a",
-                    "PresentationTemplateId": null,
-                    "AlternateName": null,
-                    "CopyrightNotice": null,
-                    "MaximumConnections": -1,
-                    "PublishingPointName": null,
-                    "IsUploadAutomatic": false,
-                    "TimeZone": "W. Europe Standard Time",
-                    "PollsEnabled": false,
-                    "LiveCountdownEnabled": false,
-                    "LiveIndicationDelayed": false,
-                    "ForumsEnabled": false,
-                    "SharingEnabled": false,
-                    "PlayerLocked": false,
-                    "PollsInternal": true,
-                    "Private": false,
-                    "NotifyOnMetadataChanged": false,
-                    "ApprovalState": "Approved",
-                    "ApprovalRequiredChangeTypes": "DefaultApprovalChanges, DefaultNotificationChanges",
-                    "IsApproved": true,
-                    "ContentRevision": 1,
-                    "PollLink": null,
-                    "ParentFolderName": "anon ParentFolderName",
-                    "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                    "DisplayRecordDate": "2017-11-06T14:03:27Z",
-                    "IsLiveEnabled": false,
-                    "PlayStatus": "OnDemand",
-                    "CustomFieldValues": [],
-                    "TagList": [],
-                    "IsHeadRevisionContentComplete": true,
-                    "TotalFileLength": "4328246723",
-                    "ExternalLinks": [],
-                    "Streams": [
-                        {
-                            "StreamType": "Video3",
-                            "StreamName": null
-                        }
-                    ],
-                    "UseAdaptiveCapture": false,
-                    "AnnotationMode": "Open",
-                    "InheritPermissions": true,
-                    "ThumbnailGenerateOption": "CaptureApplicationDefault",
-                    "IsDvrPlaybackEnabled": false,
-                    "DvrBufferDurationMaximum": null,
                     "OnDemandContent": [
                         {
-                            "odata.id": "https://anon.com/fake",
-                            "Id": "29da84731c164afdb7cf244840809bb430",
-                            "ParentResourceId": "9e530cba52634cf7adb027954a4dc9231d",
-                            "ContentType": "OnDemandFile",
-                            "Status": "Completed",
+                            "FileNameWithExtension": "ca81e5e8-4f05-48bb-a5fe-c20a4e6186a7.mp4",
                             "ContentMimeType": "video/mp4",
-                            "EncodingOrder": 2,
-                            "Length": "6214267",
-                            "FileNameWithExtension": "99dfb0cd-a595-45ef-b732-1d564fc16d5d.mp4",
-                            "ContentEncodingSettingsId": "7079dee9833a4587bd25ff6c6fb1105528",
-                            "ContentServerId": "ad0fce8edc61432998839c3f860b6d4429",
-                            "ArchiveType": 0,
+                            "FileLength": "1016415594",
+                            "Length": "2431454",
                             "IsTranscodeSource": true,
-                            "ContentRevision": 1,
-                            "FileLength": "4321555185",
-                            "StreamType": "Video3",
-                            "LastModified": "2018-01-05T11:36:53.71Z",
+                            "StreamType": "Video1",
                             "ContentServer": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.type": "SonicFoundry.Mediasite.WebApi.Model.IIsProgressiveContentServerRepresentation",
-                                "odata.id": "https://anon.com/fake",
-                                "StorageEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "DistributionEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
                                 "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                                "Name": "anon Name",
-                                "ServerType": "IIsProgressiveServer",
                                 "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
                             },
                             "ContentEncodingSettings": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.id": "https://anon.com/fake",
-                                "EncodingSettingsFilters@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "EncodingStreamDescriptions@odata.navigationLinkUrl": "https://anon.com/fake",
                                 "Id": "7079dee9833a4587bd25ff6c6fb1105528",
-                                "Owner": "anon@mail.com",
-                                "CreationDate": "2015-01-27T08:12:40",
-                                "LastModified": "2020-03-03T09:22:12",
-                                "ParentFolderId": "7bc2794c-79a8-449b-bfc0-a68f311f321a",
-                                "Recycled": false,
-                                "Name": "anon Name",
-                                "Description": "Desktop Recorder encoding settings for recording video at 1280x960.",
-                                "MimeType": "video/mp4",
                                 "SerializedSettings": "https://anon.com/fake"
                             }
                         }
                     ],
                     "SlideContent": {
-                        "odata.id": "https://anon.com/fake",
-                        "IsGeneratedFromVideoStream": true,
-                        "Id": "01e9db9b3e8444cab5f425cddcd32a7830",
-                        "ParentResourceId": "9e530cba52634cf7adb027954a4dc9231d",
-                        "ContentType": "Slides",
-                        "Status": "Completed",
-                        "ContentMimeType": "image/jpeg",
-                        "EncodingOrder": 1,
-                        "Length": "48",
-                        "FileNameWithExtension": "slide_{0:D4}_9b5bd22e73f241629b00993d8951af19.jpg",
-                        "ContentEncodingSettingsId": "01b38a8f17704cc2b7ffdb2ebc5765d528",
-                        "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                        "ArchiveType": 0,
-                        "IsTranscodeSource": false,
-                        "ContentRevision": 1,
-                        "FileLength": "4963243",
-                        "StreamType": "Video3",
-                        "LastModified": "2018-01-05T11:36:55.343Z",
+                        "FileNameWithExtension": "slide_{0:D4}_72096f33162c4b2fa054f4639b4e3a2d.jpg",
+                        "Length": "36",
+                        "StreamType": "Video1",
                         "ContentServer": {
-                            "odata.metadata": "https://anon.com/fake",
-                            "odata.id": "https://anon.com/fake",
                             "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                            "EndpointType": "Storage",
-                            "UseMediasiteFileServer": true,
-                            "EnableFileServerSecurity": true,
-                            "LocalUrl": "https://anon.com/fake",
                             "Url": "https://anon.com/fake"
                         }
-                    },
-                    "TimedEvents": [],
-                    "Presenters": [],
-                    "PresentationAnalytics": {
-                        "odata.metadata": "https://anon.com/fake",
-                        "odata.id": "https://anon.com/fake",
-                        "Presentation@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "Users@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "IPAddresses@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingTrends@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingSessions@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "BrowserTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "MediaPluginTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "SystemTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "PresentationId": "9e530cba52634cf7adb027954a4dc9231d",
-                        "Title": "anon Title",
-                        "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                        "ParentFolderName": "anon ParentFolderName",
-                        "MinViewLength": 15,
-                        "TotalViews": 3,
-                        "LiveViews": 0,
-                        "OnDemandViews": 3,
-                        "TotalUsers": 2,
-                        "TotalIPAddresses": 1,
-                        "PeakConnections": 0,
-                        "FirstWatched": "2018-01-05T12:06:30.977",
-                        "LastWatched": "2018-01-09T08:56:14.383",
-                        "TotalTimeWatchedSeconds": "93",
-                        "DatesWatched": [
-                            "2018-01-05T12:06:30.977",
-                            "2018-01-08T10:51:17.747",
-                            "2018-01-09T08:56:14.383"
-                        ]
-                    },
-                    "Availability": "Available"
+                    }
                 },
                 {
-                    "odata.type": "SonicFoundry.Mediasite.WebApi.Model.PresentationFullRepresentation",
-                    "odata.id": "https://anon.com/fake",
-                    "RelatedPresentations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Tags@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "TimedEvents@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Presenters@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Questions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Comments@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ThumbnailContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideDetailsContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OnDemandContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "BroadcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PublishToGoContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OcrContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "CaptionContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "AudioPeaksContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "LayoutOptions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "EmailInvitation@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannels@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannelsForAllInstances@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "VideoPodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Modules@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Categories@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ExternalPublishingContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Annotations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ModerateOrAnnotate@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "#CreateLike": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CreateShortcut": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Upload": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Play": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SendInvitation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CopyPresentation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddVideoPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddExternalPublishing": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ConvertVideoToSlide": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddCaptionContent": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#GetCommentCount": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ResetMedia": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#EnableAnnotationCreation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SetThumbnail": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SubmitPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateCommentVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteComments": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateAnnotationVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteAnnotations": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "Id": "ad82d2f6179d40478a7415a9629573921d",
+                    "Id": "6284e39ab6504e52ac0f03aa2f54547f1d",
                     "Title": "anon Title",
-                    "Status": "Viewable",
-                    "Source": "DesktopRecorder",
-                    "RootId": "ad82d2f6179d40478a7415a9629573921d",
-                    "RootOwner": "anon RootOwner",
-                    "RegistrationRequired": false,
-                    "CurrentlyAvailableInShowcase": null,
-                    "ViewableByPlaylistOwner": null,
-                    "Description": "",
-                    "RecordDate": "2016-12-09T12:22:57",
-                    "RecordDateLocal": "2016-12-09T13:22:57",
-                    "Duration": 10312000,
-                    "NumberOfViews": 5,
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
+                    "CreationDate": "2013-09-05T09:43:08.903Z",
+                    "RecordDate": "2013-09-05T09:42:00",
                     "Owner": "anon@mail.com",
-                    "Creator": "anon Creator",
+                    "Creator": "anon@mail.com",
                     "PrimaryPresenter": "anon PrimaryPresenter",
-                    "ThumbnailUrl": "https://anon.com/fake",
-                    "IsLive": false,
-                    "CreationDate": "2018-01-05T11:53:45.813Z",
-                    "PlayerId": "d3641b73caca4d37b5d868b9ada57aba0a",
-                    "PresentationTemplateId": null,
-                    "AlternateName": null,
-                    "CopyrightNotice": null,
-                    "MaximumConnections": -1,
-                    "PublishingPointName": null,
-                    "IsUploadAutomatic": true,
-                    "TimeZone": "W. Europe Standard Time",
-                    "PollsEnabled": false,
-                    "LiveCountdownEnabled": false,
-                    "LiveIndicationDelayed": false,
-                    "ForumsEnabled": false,
-                    "SharingEnabled": false,
-                    "PlayerLocked": false,
-                    "PollsInternal": true,
+                    "Status": "Viewable",
                     "Private": false,
-                    "NotifyOnMetadataChanged": false,
-                    "ApprovalState": "Approved",
-                    "ApprovalRequiredChangeTypes": "DefaultApprovalChanges, DefaultNotificationChanges",
-                    "IsApproved": true,
-                    "ContentRevision": 1,
-                    "PollLink": null,
-                    "ParentFolderName": "anon ParentFolderName",
-                    "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                    "DisplayRecordDate": "2016-12-09T12:22:57Z",
-                    "IsLiveEnabled": false,
-                    "PlayStatus": "OnDemand",
-                    "CustomFieldValues": [],
                     "TagList": [],
-                    "IsHeadRevisionContentComplete": true,
-                    "TotalFileLength": "11583211464",
-                    "ExternalLinks": [],
                     "Streams": [
-                        {
-                            "StreamType": "Video3",
-                            "StreamName": null
-                        },
                         {
                             "StreamType": "Video1",
                             "StreamName": null
                         }
                     ],
-                    "UseAdaptiveCapture": false,
-                    "AnnotationMode": "Open",
-                    "InheritPermissions": true,
-                    "ThumbnailGenerateOption": "CaptureApplicationDefault",
-                    "IsDvrPlaybackEnabled": false,
-                    "DvrBufferDurationMaximum": null,
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [],
+                    "PresentationAnalytics": {
+                        "TotalViews": 288,
+                        "LastWatched": "2014-10-15T09:11:40.933"
+                    },
                     "OnDemandContent": [
                         {
-                            "odata.id": "https://anon.com/fake",
-                            "Id": "1304ac6aee0048fcb4e47b4a74245ecf30",
-                            "ParentResourceId": "ad82d2f6179d40478a7415a9629573921d",
-                            "ContentType": "OnDemandFile",
-                            "Status": "Completed",
+                            "FileNameWithExtension": "8e769386-e817-4398-9397-2aa4382abfea.mp4",
                             "ContentMimeType": "video/mp4",
-                            "EncodingOrder": 2,
-                            "Length": "10312491",
-                            "FileNameWithExtension": "0058a140-a296-4f45-9d8a-04108fcc4aa7.mp4",
-                            "ContentEncodingSettingsId": "7079dee9833a4587bd25ff6c6fb1105528",
-                            "ContentServerId": "ad0fce8edc61432998839c3f860b6d4429",
-                            "ArchiveType": 0,
+                            "FileLength": "54146314",
+                            "Length": "169323",
                             "IsTranscodeSource": true,
-                            "ContentRevision": 1,
-                            "FileLength": "7171761315",
-                            "StreamType": "Video3",
-                            "LastModified": "2018-01-05T11:53:45.737Z",
+                            "StreamType": "Video1",
                             "ContentServer": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.type": "SonicFoundry.Mediasite.WebApi.Model.IIsProgressiveContentServerRepresentation",
-                                "odata.id": "https://anon.com/fake",
-                                "StorageEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "DistributionEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
                                 "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                                "Name": "anon Name",
-                                "ServerType": "IIsProgressiveServer",
                                 "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
                             },
                             "ContentEncodingSettings": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.id": "https://anon.com/fake",
-                                "EncodingSettingsFilters@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "EncodingStreamDescriptions@odata.navigationLinkUrl": "https://anon.com/fake",
                                 "Id": "7079dee9833a4587bd25ff6c6fb1105528",
-                                "Owner": "anon@mail.com",
-                                "CreationDate": "2015-01-27T08:12:40",
-                                "LastModified": "2020-03-03T09:22:12",
-                                "ParentFolderId": "7bc2794c-79a8-449b-bfc0-a68f311f321a",
-                                "Recycled": false,
-                                "Name": "anon Name",
-                                "Description": "Desktop Recorder encoding settings for recording video at 1280x960.",
-                                "MimeType": "video/mp4",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {
+                        "FileNameWithExtension": "slide_{0:D4}_c0a2690868b742db935769dfd0a725b8.jpg",
+                        "Length": "6",
+                        "StreamType": "Video1",
+                        "ContentServer": {
+                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
+                            "Url": "https://anon.com/fake"
+                        }
+                    }
+                },
+                {
+                    "Id": "af2857fa6f134818b57b82067bcdb0341d",
+                    "Title": "anon Title",
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
+                    "CreationDate": "2013-09-09T15:33:33.34Z",
+                    "RecordDate": "2013-09-09T15:33:00",
+                    "Owner": "anon@mail.com",
+                    "Creator": "anon@mail.com",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [],
+                    "PresentationAnalytics": {
+                        "TotalViews": 150,
+                        "LastWatched": "2014-11-08T17:01:44"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "3f736388-0323-4a4f-97f8-2c52ad8176d7.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "1876912077",
+                            "Length": "2668577",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {
+                        "FileNameWithExtension": "slide_{0:D4}_b3cc293bb77b4d39ada13ff80dbfdcc8.jpg",
+                        "Length": "51",
+                        "StreamType": "Video1",
+                        "ContentServer": {
+                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
+                            "Url": "https://anon.com/fake"
+                        }
+                    }
+                },
+                {
+                    "Id": "b129e5e803c94f74855e001c1d8b40b21d",
+                    "Title": "anon Title",
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
+                    "CreationDate": "2013-09-03T09:26:55.967Z",
+                    "RecordDate": "2013-09-03T09:24:00",
+                    "Owner": "anon@mail.com",
+                    "Creator": "anon@mail.com",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "Description": "Digestie hoorcollege 2A -Vormen functie Kop I",
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [
+                        {
+                            "DisplayName": "anon DisplayName"
+                        }
+                    ],
+                    "PresentationAnalytics": {
+                        "TotalViews": 542,
+                        "LastWatched": "2021-01-29T11:14:02.273"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "e379b7b1-2a49-4c34-8f6c-a1bb1ac0cb9a.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "1009464041",
+                            "Length": "3073486",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideDetailsContent": {
+                        "odata.metadata": "https://acc.lecturenet.uu.nl/Site1/Api/v1/$metadata#SlideDetailsContent/@Element",
+                        "odata.id": "https://acc.lecturenet.uu.nl/Site1/Api/v1/Presentations('84e2f44943474ac991f858567639c3491d')/SlideDetailsContent",
+                        "SlideDetails": [],
+                        "Id": "693e2d66ca8a4119b1af66da0a59077330",
+                        "ParentResourceId": "84e2f44943474ac991f858567639c3491d",
+                        "ContentType": "Slides",
+                        "Status": "Completed",
+                        "ContentMimeType": "image/jpeg",
+                        "EncodingOrder": 1,
+                        "Length": "0",
+                        "FileNameWithExtension": "slide_{0:D4}_4394093ee8b948b8b9caf455a5dc95b2.jpg",
+                        "ContentEncodingSettingsId": "b73095b594ca41cfa235f77059a3eeae28",
+                        "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
+                        "ArchiveType": 0,
+                        "IsTranscodeSource": false,
+                        "ContentRevision": 1,
+                        "FileLength": "0",
+                        "StreamType": "Slide",
+                        "LastModified": "2014-03-20T12:39:38.983Z",
+                        "ContentServer": {
+                          "odata.metadata": "https://acc.lecturenet.uu.nl/Site1/Api/v1/$metadata#StorageContentServerEndpoints/@Element",
+                          "odata.id": "https://acc.lecturenet.uu.nl/Site1/Api/v1/ContentServers('2127f2fa7dee41aba6cf64c777e5611829')/StorageEndpoint",
+                          "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
+                          "EndpointType": "Storage",
+                          "UseMediasiteFileServer": true,
+                          "EnableFileServerSecurity": true,
+                          "LocalUrl": "file://soliscom.uu.nl/uu/Data/LectureNet/acceptatie/qt_lecturenet/Slides",
+                          "Url": "https://acc.lecturenet.uu.nl/Site1/FileServer"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "Id": "00a0ee4e7e104790a4d2e335564bf5c614",
+            "ParentFolderId": "8264ff71e2214db0b506f6df37e3c27614",
+            "Name": "Channel without Catalog - Folder Name",
+            "Owner": "anon@mail.com",
+            "Catalogs": [],
+            "Presentations": [
+                {
+                    "Id": "c26381c30fe44326be1621fc671c48c81d",
+                    "Title": "Keywords > 300",
+                    "ParentFolderId": "00a0ee4e7e104790a4d2e335564bf5c614",
+                    "CreationDate": "2013-01-24T08:04:19.813Z",
+                    "RecordDate": "2013-09-02T14:00:00",
+                    "Owner": "anon@mail.com",
+                    "Creator": "anon Creator",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "TagList": [
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    ],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [
+                        {
+                            "DisplayName": "anon DisplayName"
+                        },
+                        {
+                            "DisplayName": "anon DisplayName"
+                        }
+                    ],
+                    "PresentationAnalytics": {
+                        "TotalViews": 1005,
+                        "LastWatched": "2020-12-30T16:40:40.98"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "f9659fcb-a61f-4eb6-9afb-e1ea0173d383.ism",
+                            "ContentMimeType": "video/x-mp4-fragmented",
+                            "FileLength": "566975814",
+                            "Length": "5926234",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "862edc25c7754beab10651f07d0ef64e29",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "17ab9c2bab8e4a409b628423bcee59e728",
                                 "SerializedSettings": "https://anon.com/fake"
                             }
                         },
                         {
-                            "odata.id": "https://anon.com/fake",
-                            "Id": "374c731fb4154e7da42f27807056ac8f30",
-                            "ParentResourceId": "ad82d2f6179d40478a7415a9629573921d",
-                            "ContentType": "OnDemandFile",
-                            "Status": "Completed",
+                            "FileNameWithExtension": "cac1cf62-3f35-4ba5-81dc-b6537272cd9b.mp4",
                             "ContentMimeType": "video/mp4",
-                            "EncodingOrder": 2,
-                            "Length": "10312491",
-                            "FileNameWithExtension": "9ffa3594-2bde-437c-9636-6106e5e4e375.mp4",
-                            "ContentEncodingSettingsId": "7079dee9833a4587bd25ff6c6fb1105528",
-                            "ContentServerId": "ad0fce8edc61432998839c3f860b6d4429",
-                            "ArchiveType": 0,
-                            "IsTranscodeSource": true,
-                            "ContentRevision": 1,
-                            "FileLength": "4395447528",
+                            "FileLength": "564910074",
+                            "Length": "5926266",
+                            "IsTranscodeSource": false,
                             "StreamType": "Video1",
-                            "LastModified": "2018-01-05T11:53:45.737Z",
                             "ContentServer": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.type": "SonicFoundry.Mediasite.WebApi.Model.IIsProgressiveContentServerRepresentation",
-                                "odata.id": "https://anon.com/fake",
-                                "StorageEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "DistributionEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
                                 "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                                "Name": "anon Name",
-                                "ServerType": "IIsProgressiveServer",
                                 "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
                             },
                             "ContentEncodingSettings": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.id": "https://anon.com/fake",
-                                "EncodingSettingsFilters@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "EncodingStreamDescriptions@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
-                                "Owner": "anon@mail.com",
-                                "CreationDate": "2015-01-27T08:12:40",
-                                "LastModified": "2020-03-03T09:22:12",
-                                "ParentFolderId": "7bc2794c-79a8-449b-bfc0-a68f311f321a",
-                                "Recycled": false,
-                                "Name": "anon Name",
-                                "Description": "Desktop Recorder encoding settings for recording video at 1280x960.",
-                                "MimeType": "video/mp4",
+                                "Id": "87bc9b59ecc34e0b85b8c18d1caa383128",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "98d83c3f-777c-4b18-ac24-25627beada6d.ism",
+                            "ContentMimeType": "video/x-mp4-fragmented",
+                            "FileLength": "748130904",
+                            "Length": "7826641",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "862edc25c7754beab10651f07d0ef64e29",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "17ab9c2bab8e4a409b628423bcee59e728",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "9d86a4da-47c8-46c0-b494-6e949106b9d5.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "744536418",
+                            "Length": "7825148",
+                            "IsTranscodeSource": false,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "87bc9b59ecc34e0b85b8c18d1caa383128",
                                 "SerializedSettings": "https://anon.com/fake"
                             }
                         }
                     ],
-                    "SlideContent": {
-                        "odata.id": "https://anon.com/fake",
-                        "IsGeneratedFromVideoStream": true,
-                        "Id": "9264acbe82264851a698917d7571057c30",
-                        "ParentResourceId": "ad82d2f6179d40478a7415a9629573921d",
-                        "ContentType": "Slides",
-                        "Status": "Completed",
-                        "ContentMimeType": "image/jpeg",
-                        "EncodingOrder": 1,
-                        "Length": "97",
-                        "FileNameWithExtension": "slide_{0:D4}_9ee06ff6a7ad43b386ad31d9e9ee82da.jpg",
-                        "ContentEncodingSettingsId": "01b38a8f17704cc2b7ffdb2ebc5765d528",
-                        "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                        "ArchiveType": 0,
-                        "IsTranscodeSource": false,
-                        "ContentRevision": 1,
-                        "FileLength": "13984516",
-                        "StreamType": "Video3",
-                        "LastModified": "2018-01-05T11:53:48.86Z",
-                        "ContentServer": {
-                            "odata.metadata": "https://anon.com/fake",
-                            "odata.id": "https://anon.com/fake",
-                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                            "EndpointType": "Storage",
-                            "UseMediasiteFileServer": true,
-                            "EnableFileServerSecurity": true,
-                            "LocalUrl": "https://anon.com/fake",
-                            "Url": "https://anon.com/fake"
-                        }
-                    },
-                    "TimedEvents": [],
-                    "Presenters": [],
-                    "PresentationAnalytics": {
-                        "odata.metadata": "https://anon.com/fake",
-                        "odata.id": "https://anon.com/fake",
-                        "Presentation@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "Users@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "IPAddresses@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingTrends@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingSessions@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "BrowserTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "MediaPluginTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "SystemTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "PresentationId": "ad82d2f6179d40478a7415a9629573921d",
-                        "Title": "anon Title",
-                        "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                        "ParentFolderName": "anon ParentFolderName",
-                        "MinViewLength": 15,
-                        "TotalViews": 5,
-                        "LiveViews": 0,
-                        "OnDemandViews": 5,
-                        "TotalUsers": 4,
-                        "TotalIPAddresses": 2,
-                        "PeakConnections": 0,
-                        "FirstWatched": "2018-01-05T12:06:00.363",
-                        "LastWatched": "2021-01-22T14:18:59.703",
-                        "TotalTimeWatchedSeconds": "300",
-                        "DatesWatched": [
-                            "2018-01-05T12:06:00.363",
-                            "2018-01-08T10:45:50.05",
-                            "2018-01-09T08:56:46.97",
-                            "2020-12-31T10:54:48.893",
-                            "2021-01-22T14:18:59.703"
-                        ]
-                    },
-                    "Availability": "Available"
-                },
-                {
-                    "odata.type": "SonicFoundry.Mediasite.WebApi.Model.PresentationFullRepresentation",
-                    "odata.id": "https://anon.com/fake",
-                    "RelatedPresentations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Tags@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "TimedEvents@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Presenters@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Questions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Comments@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ThumbnailContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideDetailsContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OnDemandContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "BroadcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PublishToGoContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OcrContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "CaptionContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "AudioPeaksContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "LayoutOptions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "EmailInvitation@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannels@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannelsForAllInstances@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "VideoPodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Modules@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Categories@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ExternalPublishingContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Annotations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ModerateOrAnnotate@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "#CreateLike": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CreateShortcut": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Upload": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Play": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SendInvitation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CopyPresentation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddVideoPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddExternalPublishing": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ConvertVideoToSlide": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddCaptionContent": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#GetCommentCount": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ResetMedia": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#EnableAnnotationCreation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SetThumbnail": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SubmitPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateCommentVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteComments": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateAnnotationVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteAnnotations": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "Id": "cbed58a47b0346038526a4f4c90ba4531d",
-                    "Title": "anon Title",
-                    "Status": "Viewable",
-                    "Source": "MediaUpload",
-                    "RootId": "cbed58a47b0346038526a4f4c90ba4531d",
-                    "RootOwner": "anon RootOwner",
-                    "RegistrationRequired": false,
-                    "CurrentlyAvailableInShowcase": null,
-                    "ViewableByPlaylistOwner": null,
-                    "Description": "",
-                    "RecordDate": "2017-12-13T14:35:32",
-                    "RecordDateLocal": "2017-12-13T15:35:32",
-                    "Duration": 2901000,
-                    "NumberOfViews": 4,
-                    "Owner": "anon@mail.com",
-                    "Creator": "anon Creator",
-                    "PrimaryPresenter": "anon PrimaryPresenter",
-                    "ThumbnailUrl": "https://anon.com/fake",
-                    "IsLive": false,
-                    "CreationDate": "2018-01-05T11:31:20.097Z",
-                    "PlayerId": "a7573b36c9f44acd8622165042b735680a",
-                    "PresentationTemplateId": null,
-                    "AlternateName": null,
-                    "CopyrightNotice": null,
-                    "MaximumConnections": -1,
-                    "PublishingPointName": null,
-                    "IsUploadAutomatic": true,
-                    "TimeZone": "W. Europe Standard Time",
-                    "PollsEnabled": false,
-                    "LiveCountdownEnabled": false,
-                    "LiveIndicationDelayed": false,
-                    "ForumsEnabled": false,
-                    "SharingEnabled": false,
-                    "PlayerLocked": false,
-                    "PollsInternal": true,
-                    "Private": false,
-                    "NotifyOnMetadataChanged": false,
-                    "ApprovalState": "Approved",
-                    "ApprovalRequiredChangeTypes": "DefaultApprovalChanges, DefaultNotificationChanges",
-                    "IsApproved": true,
-                    "ContentRevision": 2,
-                    "PollLink": null,
-                    "ParentFolderName": "anon ParentFolderName",
-                    "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                    "DisplayRecordDate": "2017-12-13T14:35:32Z",
-                    "IsLiveEnabled": false,
-                    "PlayStatus": "OnDemand",
-                    "CustomFieldValues": [],
-                    "TagList": [],
-                    "IsHeadRevisionContentComplete": true,
-                    "TotalFileLength": "93264742",
-                    "ExternalLinks": [],
-                    "Streams": [
-                        {
-                            "StreamType": "Video1",
-                            "StreamName": null
-                        }
-                    ],
-                    "UseAdaptiveCapture": false,
-                    "AnnotationMode": "Open",
-                    "InheritPermissions": true,
-                    "ThumbnailGenerateOption": "CaptureApplicationDefault",
-                    "IsDvrPlaybackEnabled": false,
-                    "DvrBufferDurationMaximum": null,
-                    "OnDemandContent": [
-                        {
-                            "odata.id": "https://anon.com/fake",
-                            "Id": "301b72ae672f4116a7f608676de2657130",
-                            "ParentResourceId": "cbed58a47b0346038526a4f4c90ba4531d",
-                            "ContentType": "OnDemandFile",
-                            "Status": "Completed",
-                            "ContentMimeType": "video/mp4",
-                            "EncodingOrder": 2,
-                            "Length": "2901496",
-                            "FileNameWithExtension": "c453c1a4-3f63-493d-8032-c3985f576a9c.mp4",
-                            "ContentEncodingSettingsId": null,
-                            "ContentServerId": "ad0fce8edc61432998839c3f860b6d4429",
-                            "ArchiveType": 0,
-                            "IsTranscodeSource": true,
-                            "ContentRevision": 2,
-                            "FileLength": "92500171",
-                            "StreamType": "Video1",
-                            "LastModified": "2018-01-05T11:31:20.067Z",
-                            "ContentServer": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.type": "SonicFoundry.Mediasite.WebApi.Model.IIsProgressiveContentServerRepresentation",
-                                "odata.id": "https://anon.com/fake",
-                                "StorageEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "DistributionEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                                "Name": "anon Name",
-                                "ServerType": "IIsProgressiveServer",
-                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
-                            },
-                            "ContentEncodingSettings": {}
-                        }
-                    ],
-                    "SlideContent": {},
-                    "TimedEvents": [],
-                    "Presenters": [],
-                    "PresentationAnalytics": {
-                        "odata.metadata": "https://anon.com/fake",
-                        "odata.id": "https://anon.com/fake",
-                        "Presentation@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "Users@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "IPAddresses@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingTrends@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingSessions@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "BrowserTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "MediaPluginTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "SystemTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "PresentationId": "cbed58a47b0346038526a4f4c90ba4531d",
-                        "Title": "anon Title",
-                        "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                        "ParentFolderName": "anon ParentFolderName",
-                        "MinViewLength": 15,
-                        "TotalViews": 4,
-                        "LiveViews": 0,
-                        "OnDemandViews": 4,
-                        "TotalUsers": 2,
-                        "TotalIPAddresses": 1,
-                        "PeakConnections": 0,
-                        "FirstWatched": "2018-01-05T12:06:47.36",
-                        "LastWatched": "2018-01-09T08:55:46.717",
-                        "TotalTimeWatchedSeconds": "692",
-                        "DatesWatched": [
-                            "2018-01-05T12:06:47.36",
-                            "2018-01-05T12:09:59.627",
-                            "2018-01-08T10:53:34.703",
-                            "2018-01-09T08:55:46.717"
-                        ]
-                    },
-                    "Availability": "Available"
-                },
-                {
-                    "odata.type": "SonicFoundry.Mediasite.WebApi.Model.PresentationFullRepresentation",
-                    "odata.id": "https://anon.com/fake",
-                    "RelatedPresentations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Tags@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "TimedEvents@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Presenters@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Questions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Comments@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ThumbnailContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "SlideDetailsContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OnDemandContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "BroadcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "PublishToGoContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "OcrContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "CaptionContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "AudioPeaksContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "LayoutOptions@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "EmailInvitation@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannels@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ShowcaseChannelsForAllInstances@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "VideoPodcastContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Modules@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Categories@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ExternalPublishingContent@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "Annotations@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "ModerateOrAnnotate@odata.navigationLinkUrl": "https://anon.com/fake",
-                    "#CreateLike": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CreateShortcut": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Upload": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#Play": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SendInvitation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#CopyPresentation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddVideoPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddExternalPublishing": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ConvertVideoToSlide": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddCaptionContent": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#GetCommentCount": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#ResetMedia": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#EnableAnnotationCreation": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SetThumbnail": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#SubmitPublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePublishToGo": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#AddPodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#RemovePodcast": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateCommentVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteComments": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#UpdateAnnotationVisibility": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "#DeleteAnnotations": {
-                        "target": "https://anon.com/fake"
-                    },
-                    "Id": "dbb3d0eba477463d85bef2d8affcf33d1d",
-                    "Title": "anon Title",
-                    "Status": "Viewable",
-                    "Source": "DesktopRecorder",
-                    "RootId": "dbb3d0eba477463d85bef2d8affcf33d1d",
-                    "RootOwner": "anon RootOwner",
-                    "RegistrationRequired": false,
-                    "CurrentlyAvailableInShowcase": null,
-                    "ViewableByPlaylistOwner": null,
-                    "Description": "",
-                    "RecordDate": "2017-11-01T11:48:15",
-                    "RecordDateLocal": "2017-11-01T12:48:15",
-                    "Duration": 6615000,
-                    "NumberOfViews": 3,
-                    "Owner": "anon@mail.com",
-                    "Creator": "anon Creator",
-                    "PrimaryPresenter": "anon PrimaryPresenter",
-                    "ThumbnailUrl": "https://anon.com/fake",
-                    "IsLive": false,
-                    "CreationDate": "2018-01-05T11:31:07.017Z",
-                    "PlayerId": "d3641b73caca4d37b5d868b9ada57aba0a",
-                    "PresentationTemplateId": null,
-                    "AlternateName": null,
-                    "CopyrightNotice": null,
-                    "MaximumConnections": -1,
-                    "PublishingPointName": null,
-                    "IsUploadAutomatic": false,
-                    "TimeZone": "W. Europe Standard Time",
-                    "PollsEnabled": false,
-                    "LiveCountdownEnabled": false,
-                    "LiveIndicationDelayed": false,
-                    "ForumsEnabled": false,
-                    "SharingEnabled": false,
-                    "PlayerLocked": false,
-                    "PollsInternal": true,
-                    "Private": false,
-                    "NotifyOnMetadataChanged": false,
-                    "ApprovalState": "Approved",
-                    "ApprovalRequiredChangeTypes": "DefaultApprovalChanges, DefaultNotificationChanges",
-                    "IsApproved": true,
-                    "ContentRevision": 1,
-                    "PollLink": null,
-                    "ParentFolderName": "anon ParentFolderName",
-                    "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                    "DisplayRecordDate": "2017-11-01T11:48:15Z",
-                    "IsLiveEnabled": false,
-                    "PlayStatus": "OnDemand",
-                    "CustomFieldValues": [],
-                    "TagList": [],
-                    "IsHeadRevisionContentComplete": true,
-                    "TotalFileLength": "4606377562",
-                    "ExternalLinks": [],
-                    "Streams": [
-                        {
-                            "StreamType": "Video3",
-                            "StreamName": null
-                        }
-                    ],
-                    "UseAdaptiveCapture": false,
-                    "AnnotationMode": "Open",
-                    "InheritPermissions": true,
-                    "ThumbnailGenerateOption": "CaptureApplicationDefault",
-                    "IsDvrPlaybackEnabled": false,
-                    "DvrBufferDurationMaximum": null,
-                    "OnDemandContent": [
-                        {
-                            "odata.id": "https://anon.com/fake",
-                            "Id": "c1b5ddebe33a4b2b87bef71a4521fdc830",
-                            "ParentResourceId": "dbb3d0eba477463d85bef2d8affcf33d1d",
-                            "ContentType": "OnDemandFile",
-                            "Status": "Completed",
-                            "ContentMimeType": "video/mp4",
-                            "EncodingOrder": 2,
-                            "Length": "6615083",
-                            "FileNameWithExtension": "61336fec-0a54-4839-92a2-4eac1866b594.mp4",
-                            "ContentEncodingSettingsId": "7079dee9833a4587bd25ff6c6fb1105528",
-                            "ContentServerId": "ad0fce8edc61432998839c3f860b6d4429",
-                            "ArchiveType": 0,
-                            "IsTranscodeSource": true,
-                            "ContentRevision": 1,
-                            "FileLength": "4600276134",
-                            "StreamType": "Video3",
-                            "LastModified": "2018-01-05T11:31:06.813Z",
-                            "ContentServer": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.type": "SonicFoundry.Mediasite.WebApi.Model.IIsProgressiveContentServerRepresentation",
-                                "odata.id": "https://anon.com/fake",
-                                "StorageEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "DistributionEndpoint@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
-                                "Name": "anon Name",
-                                "ServerType": "IIsProgressiveServer",
-                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
-                            },
-                            "ContentEncodingSettings": {
-                                "odata.metadata": "https://anon.com/fake",
-                                "odata.id": "https://anon.com/fake",
-                                "EncodingSettingsFilters@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "EncodingStreamDescriptions@odata.navigationLinkUrl": "https://anon.com/fake",
-                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
-                                "Owner": "anon@mail.com",
-                                "CreationDate": "2015-01-27T08:12:40",
-                                "LastModified": "2020-03-03T09:22:12",
-                                "ParentFolderId": "7bc2794c-79a8-449b-bfc0-a68f311f321a",
-                                "Recycled": false,
-                                "Name": "anon Name",
-                                "Description": "Desktop Recorder encoding settings for recording video at 1280x960.",
-                                "MimeType": "video/mp4",
-                                "SerializedSettings": "https://anon.com/fake"
-                            }
-                        }
-                    ],
-                    "SlideContent": {
-                        "odata.id": "https://anon.com/fake",
-                        "IsGeneratedFromVideoStream": true,
-                        "Id": "768df2e38d9d4743a6dfbf4eca4fa3da30",
-                        "ParentResourceId": "dbb3d0eba477463d85bef2d8affcf33d1d",
-                        "ContentType": "Slides",
-                        "Status": "Completed",
-                        "ContentMimeType": "image/jpeg",
-                        "EncodingOrder": 1,
-                        "Length": "30",
-                        "FileNameWithExtension": "slide_{0:D4}_3c61542437cf4916a3e06718b4f64d91.jpg",
-                        "ContentEncodingSettingsId": "01b38a8f17704cc2b7ffdb2ebc5765d528",
-                        "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                        "ArchiveType": 0,
-                        "IsTranscodeSource": false,
-                        "ContentRevision": 1,
-                        "FileLength": "4563761",
-                        "StreamType": "Video3",
-                        "LastModified": "2018-01-05T11:31:11.69Z",
-                        "ContentServer": {
-                            "odata.metadata": "https://anon.com/fake",
-                            "odata.id": "https://anon.com/fake",
-                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                            "EndpointType": "Storage",
-                            "UseMediasiteFileServer": true,
-                            "EnableFileServerSecurity": true,
-                            "LocalUrl": "https://anon.com/fake",
-                            "Url": "https://anon.com/fake"
-                        }
-                    },
-                    "TimedEvents": [],
-                    "Presenters": [],
-                    "PresentationAnalytics": {
-                        "odata.metadata": "https://anon.com/fake",
-                        "odata.id": "https://anon.com/fake",
-                        "Presentation@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "Users@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "IPAddresses@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingTrends@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "ViewingSessions@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "BrowserTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "MediaPluginTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "SystemTotals@odata.navigationLinkUrl": "https://anon.com/fake",
-                        "PresentationId": "dbb3d0eba477463d85bef2d8affcf33d1d",
-                        "Title": "anon Title",
-                        "ParentFolderId": "9d809449bd00490a87f340c124881a2c14",
-                        "ParentFolderName": "anon ParentFolderName",
-                        "MinViewLength": 15,
-                        "TotalViews": 3,
-                        "LiveViews": 0,
-                        "OnDemandViews": 3,
-                        "TotalUsers": 2,
-                        "TotalIPAddresses": 1,
-                        "PeakConnections": 0,
-                        "FirstWatched": "2018-01-05T12:07:27.237",
-                        "LastWatched": "2018-01-09T08:55:07.927",
-                        "TotalTimeWatchedSeconds": "91",
-                        "DatesWatched": [
-                            "2018-01-05T12:07:27.237",
-                            "2018-01-08T10:55:41.613",
-                            "2018-01-09T08:55:07.927"
-                        ]
-                    },
-                    "Availability": "Available"
+                    "SlideContent": {}
                 }
             ]
         }
     ],
     "UserProfiles": [
         {
-            "odata.id": "https://anon.com/fake",
-            "QuotaPolicy@odata.navigationLinkUrl": "https://anon.com/fake",
-            "#SetQuotaPolicyFromLevel": {
-                "target": "https://anon.com/fake"
-            },
-            "Id": "3673bed45c5c42b3b54f96eeb935ebde38",
             "UserName": "anon@mail.com",
             "DisplayName": "anon DisplayName",
-            "Email": "anon@mail.com",
-            "Activated": true,
-            "HomeFolderId": "06b3be9f152c4d8280bb1683b3b21ed514",
-            "HasHomeFolder": true,
-            "ModeratorEmail": "anon@mail.com",
-            "ModeratorEmailOptOut": false,
-            "DisablePresentationContentCompleteEmails": true,
-            "DisablePresentationContentFailedEmails": false,
-            "DisablePresentationChangeOwnerEmails": false,
-            "DisableCopyToFolderInitiatedEmails": false,
-            "DisableCopyToTrustedServerCompleteEmails": false,
-            "DisableCopyToTrustedServerFailEmails": false,
-            "DisableCopyToTrustedServerExportProjectFailEmails": false,
-            "DisableMoveToTrustedServerCompleteEmails": false,
-            "DisableMoveToTrustedServerFailEmails": false,
-            "DisableCommentPostedToResourceEmails": false,
-            "DisableCommentHasBeenFlaggedEmails": false,
-            "DisableAnnotationPostedToResourceEmails": false,
-            "DisableAnnotationHasBeenFlaggedEmails": false,
-            "DisableCaptioningCompletedEmails": false,
-            "MaximumRecorderWindows": 5,
-            "MDRPublishImmediatelyViewable": null,
-            "MyMediasitePublishViewable": null,
-            "TimeZone": 72,
-            "PresenterFirstName": null,
-            "PresenterMiddleName": null,
-            "PresenterLastName": null,
-            "PresenterEmail": null,
-            "PresenterPrefix": null,
-            "PresenterSuffix": null,
-            "PresenterAdditionalInfo": null,
-            "PresenterBio": null,
-            "TrustDirectoryEntry": null,
-            "ProviderStatus": "Active",
-            "ProviderStatusDate": "2021-01-26T13:30:44.563Z"
+            "Email": "anon@mail.com"
         }
     ]
-
 }
