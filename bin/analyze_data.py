@@ -12,11 +12,8 @@ from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
-    def usage(message=''):
-        return 'This script is used to extract metadata from mediasite platform'
-
     def manage_opts():
-        parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
+        parser = argparse.ArgumentParser(description='This script is used to extract metadata from mediasite platform')
         parser.add_argument(
             '-q',
             '--quiet',

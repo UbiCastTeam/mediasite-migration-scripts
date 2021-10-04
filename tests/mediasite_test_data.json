@@ -215,7 +215,7 @@
                 },
                 {
                     "Id": "6284e39ab6504e52ac0f03aa2f54547f1d",
-                    "Title": "anon Title",
+                    "Title": "Media with wmv ok",
                     "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
                     "CreationDate": "2013-09-05T09:43:08.903Z",
                     "RecordDate": "2013-09-05T09:42:00",
@@ -243,9 +243,9 @@
                     "OnDemandContent": [
                         {
                             "FileNameWithExtension": "8e769386-e817-4398-9397-2aa4382abfea.mp4",
-                            "ContentMimeType": "video/mp4",
+                            "ContentMimeType": "video/x-ms-wmv",
                             "FileLength": "54146314",
-                            "Length": "169323",
+                            "Length": "13000",
                             "IsTranscodeSource": true,
                             "StreamType": "Video1",
                             "ContentServer": {
@@ -254,7 +254,7 @@
                             },
                             "ContentEncodingSettings": {
                                 "Id": "7079dee9833a4587bd25ff6c6fb1105528",
-                                "SerializedSettings": "https://anon.com/fake"
+                                "SerializedSettings": "<EncodingSettings xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><UserMaximumDeviceClass>-1</UserMaximumDeviceClass><StreamDescriptions /><Filters /><Settings5x>&lt;WmsEncodingSettings xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"&gt;&lt;VideoEncodings&gt;&lt;VideoEncodingDetails&gt;&lt;Name&gt;Windows Media Video 9&lt;/Name&gt;&lt;Description&gt;Corporate LAN or 256 Kbps cable modem/DSL&lt;/Description&gt;&lt;MediaSubType&gt;33564d57-0000-0010-8000-00aa00389b71&lt;/MediaSubType&gt;&lt;Height&gt;240&lt;/Height&gt;&lt;Width&gt;320&lt;/Width&gt;&lt;EffectiveBitRate&gt;225000&lt;/EffectiveBitRate&gt;&lt;FrameRate&gt;15&lt;/FrameRate&gt;&lt;BufferSize&gt;3&lt;/BufferSize&gt;&lt;ImageQuality&gt;75&lt;/ImageQuality&gt;&lt;KeyFrame&gt;3&lt;/KeyFrame&gt;&lt;AudioEncoding&gt;&lt;Name&gt;Windows Media Audio 9.*&lt;/Name&gt;&lt;Description&gt; 32 kbps, 44 kHz, mono (A/V) CBR&lt;/Description&gt;&lt;MediaSubType&gt;00000161-0000-0010-8000-00aa00389b71&lt;/MediaSubType&gt;&lt;BitRate&gt;32048&lt;/BitRate&gt;&lt;SampleRate&gt;44100&lt;/SampleRate&gt;&lt;Channels&gt;1&lt;/Channels&gt;&lt;EncodingBits&gt;0&lt;/EncodingBits&gt;&lt;EncodingMode&gt;ConstantBitRate&lt;/EncodingMode&gt;&lt;EncodingType&gt;AudioVideo&lt;/EncodingType&gt;&lt;/AudioEncoding&gt;&lt;/VideoEncodingDetails&gt;&lt;/VideoEncodings&gt;&lt;AudioEncodings&gt;&lt;AudioEncodingDetails&gt;&lt;Name&gt;Windows Media Audio 9.*&lt;/Name&gt;&lt;Description&gt; 32 kbps, 44 kHz, mono (A/V) CBR&lt;/Description&gt;&lt;MediaSubType&gt;00000161-0000-0010-8000-00aa00389b71&lt;/MediaSubType&gt;&lt;BitRate&gt;32048&lt;/BitRate&gt;&lt;SampleRate&gt;44100&lt;/SampleRate&gt;&lt;Channels&gt;1&lt;/Channels&gt;&lt;EncodingBits&gt;0&lt;/EncodingBits&gt;&lt;EncodingMode&gt;ConstantBitRate&lt;/EncodingMode&gt;&lt;EncodingType&gt;AudioVideo&lt;/EncodingType&gt;&lt;/AudioEncodingDetails&gt;&lt;/AudioEncodings&gt;&lt;/WmsEncodingSettings&gt;</Settings5x></EncodingSettings>"
                             }
                         }
                     ],
@@ -270,7 +270,7 @@
                 },
                 {
                     "Id": "af2857fa6f134818b57b82067bcdb0341d",
-                    "Title": "anon Title",
+                    "Title": "Media with audio only",
                     "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
                     "CreationDate": "2013-09-09T15:33:33.34Z",
                     "RecordDate": "2013-09-09T15:33:00",
@@ -313,15 +313,7 @@
                             }
                         }
                     ],
-                    "SlideContent": {
-                        "FileNameWithExtension": "slide_{0:D4}_b3cc293bb77b4d39ada13ff80dbfdcc8.jpg",
-                        "Length": "51",
-                        "StreamType": "Video1",
-                        "ContentServer": {
-                            "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
-                            "Url": "https://anon.com/fake"
-                        }
-                    }
+                    "SlideContent": {}
                 },
                 {
                     "Id": "b129e5e803c94f74855e001c1d8b40b21d",
@@ -374,8 +366,8 @@
                         }
                     ],
                     "SlideDetailsContent": {
-                        "odata.metadata": "https://acc.lecturenet.uu.nl/Site1/Api/v1/$metadata#SlideDetailsContent/@Element",
-                        "odata.id": "https://acc.lecturenet.uu.nl/Site1/Api/v1/Presentations('84e2f44943474ac991f858567639c3491d')/SlideDetailsContent",
+                        "odata.metadata": "https://anon.com/fake/Site1/Api/v1/$metadata#SlideDetailsContent/@Element",
+                        "odata.id": "https://anon.com/fake/Site1/Api/v1/Presentations('84e2f44943474ac991f858567639c3491d')/SlideDetailsContent",
                         "SlideDetails": [],
                         "Id": "693e2d66ca8a4119b1af66da0a59077330",
                         "ParentResourceId": "84e2f44943474ac991f858567639c3491d",
@@ -394,14 +386,14 @@
                         "StreamType": "Slide",
                         "LastModified": "2014-03-20T12:39:38.983Z",
                         "ContentServer": {
-                          "odata.metadata": "https://acc.lecturenet.uu.nl/Site1/Api/v1/$metadata#StorageContentServerEndpoints/@Element",
-                          "odata.id": "https://acc.lecturenet.uu.nl/Site1/Api/v1/ContentServers('2127f2fa7dee41aba6cf64c777e5611829')/StorageEndpoint",
+                          "odata.metadata": "https://anon.com/fake/Site1/Api/v1/$metadata#StorageContentServerEndpoints/@Element",
+                          "odata.id": "https://anon.com/fake/Site1/Api/v1/ContentServers('2127f2fa7dee41aba6cf64c777e5611829')/StorageEndpoint",
                           "ContentServerId": "2127f2fa7dee41aba6cf64c777e5611829",
                           "EndpointType": "Storage",
                           "UseMediasiteFileServer": true,
                           "EnableFileServerSecurity": true,
-                          "LocalUrl": "file://soliscom.uu.nl/uu/Data/LectureNet/acceptatie/qt_lecturenet/Slides",
-                          "Url": "https://acc.lecturenet.uu.nl/Site1/FileServer"
+                          "LocalUrl": "file://anon.com/fake/Slides",
+                          "Url": "https://anon.com/fake/Site1/FileServer"
                         }
                     }
                 }
@@ -519,13 +511,385 @@
                     "SlideContent": {}
                 }
             ]
+        },
+        {
+            "Id": "00a0ee4e7e104790a4458e335564bf5c614",
+            "ParentFolderId": "8264ff71e2214db0b506f6df37e3c27614",
+            "Name": "Channel with 2 catalogs",
+            "Owner": "anon@mail.com",
+            "Catalogs": [
+                {
+                    "Id": "b9660ea784f14294a08977c9dc9e414021",
+                    "Name": "Recent Catalog",
+                    "Description": "Share folder for mymediasite users diergeneeskunde",
+                    "CatalogUrl": "https://anon.com/fake",
+                    "Owner": "anon@mail.com",
+                    "CreationDate": "2013-09-11T09:41:44",
+                    "LinkedFolderId": "00256a42f59641ff865d57f2784374f314"
+                },
+                {
+                    "Id": "b9660ea784f14294a08977c9dc9e414021",
+                    "Name": "Old Catalog",
+                    "Description": "Share folder for mymediasite users diergeneeskunde",
+                    "CatalogUrl": "https://anon.com/fake",
+                    "Owner": "anon@mail.com",
+                    "CreationDate": "1999-09-11T09:41:44",
+                    "LinkedFolderId": "00256a42f59641ff865d57f2784374f314"
+                }
+            ],
+            "Presentations": [
+                {
+                    "Id": "c26381c30fe44326be1621fc671c48c81a",
+                    "Title": "Media with channel with 2 catalogs",
+                    "ParentFolderId": "00a0ee4e7e104790a4458e335564bf5c614",
+                    "CreationDate": "2013-01-24T08:04:19.813Z",
+                    "RecordDate": "2013-09-02T14:00:00",
+                    "Owner": "anon@mail.com",
+                    "Creator": "anon Creator",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [
+                        {
+                            "DisplayName": "anon DisplayName"
+                        },
+                        {
+                            "DisplayName": "anon DisplayName"
+                        }
+                    ],
+                    "PresentationAnalytics": {
+                        "TotalViews": 1005,
+                        "LastWatched": "2020-12-30T16:40:40.98"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "f9659fcb-a61f-4eb6-9afb-e1ea0173d383.ism",
+                            "ContentMimeType": "video/x-mp4-fragmented",
+                            "FileLength": "566975814",
+                            "Length": "5926234",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "862edc25c7754beab10651f07d0ef64e29",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "17ab9c2bab8e4a409b628423bcee59e728",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "cac1cf62-3f35-4ba5-81dc-b6537272cd9b.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "564910074",
+                            "Length": "5926266",
+                            "IsTranscodeSource": false,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "87bc9b59ecc34e0b85b8c18d1caa383128",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "98d83c3f-777c-4b18-ac24-25627beada6d.ism",
+                            "ContentMimeType": "video/x-mp4-fragmented",
+                            "FileLength": "748130904",
+                            "Length": "7826641",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "862edc25c7754beab10651f07d0ef64e29",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "17ab9c2bab8e4a409b628423bcee59e728",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "9d86a4da-47c8-46c0-b494-6e949106b9d5.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "744536418",
+                            "Length": "7825148",
+                            "IsTranscodeSource": false,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "87bc9b59ecc34e0b85b8c18d1caa383128",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {}
+                }
+            ]
+        },
+        {
+            "Id": "00a0ee4e7e104790a4d2e335564bf5c615",
+            "ParentFolderId": "00a0ee4e7e104790a4d2e335564bf5c614",
+            "Name": "Sub-Channel with Parent Without Catalog - Folder Name",
+            "Owner": "anon@mail.com",
+            "Catalogs": [],
+            "Presentations": [
+                {
+                    "Id": "c26381c30fe44326be98621fc671c48c81d",
+                    "Title": "Media with parent parent folder without catalog",
+                    "ParentFolderId": "00a0ee4e7e104790a4d2e335564bf5c615",
+                    "CreationDate": "2013-01-24T08:04:19.813Z",
+                    "RecordDate": "2013-09-02T14:00:00",
+                    "Owner": "anon@mail.com",
+                    "Creator": "anon Creator",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [
+                        {
+                            "DisplayName": "anon DisplayName"
+                        },
+                        {
+                            "DisplayName": "anon DisplayName"
+                        }
+                    ],
+                    "PresentationAnalytics": {
+                        "TotalViews": 1005,
+                        "LastWatched": "2020-12-30T16:40:40.98"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "f9659fcb-a61f-4eb6-9afb-e1ea0173d383.ism",
+                            "ContentMimeType": "video/x-mp4-fragmented",
+                            "FileLength": "566975814",
+                            "Length": "5926234",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "862edc25c7754beab10651f07d0ef64e29",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "17ab9c2bab8e4a409b628423bcee59e728",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "cac1cf62-3f35-4ba5-81dc-b6537272cd9b.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "564910074",
+                            "Length": "5926266",
+                            "IsTranscodeSource": false,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "87bc9b59ecc34e0b85b8c18d1caa383128",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "98d83c3f-777c-4b18-ac24-25627beada6d.ism",
+                            "ContentMimeType": "video/x-mp4-fragmented",
+                            "FileLength": "748130904",
+                            "Length": "7826641",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "862edc25c7754beab10651f07d0ef64e29",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "17ab9c2bab8e4a409b628423bcee59e728",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "9d86a4da-47c8-46c0-b494-6e949106b9d5.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "744536418",
+                            "Length": "7825148",
+                            "IsTranscodeSource": false,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "87bc9b59ecc34e0b85b8c18d1caa383128",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {}
+                }
+            ]
+        },
+        {
+            "Id": "00256a42f59641ff865d57f2784374f315",
+            "ParentFolderId": "u0",
+            "Name": "Test-User-From-MediaSite",
+            "Owner": "test-user-from-mediasite",
+            "Description": "Share folder for mymediasite users diergeneeskunde",
+            "Catalogs": [],
+            "Presentations": [
+                {
+                    "Id": "b129e5e803c94f74855e001c1d8b40b4258",
+                    "Title": "Media in registered user channel",
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f315",
+                    "CreationDate": "2013-09-03T09:26:55.967Z",
+                    "RecordDate": "2013-09-03T09:24:00",
+                    "Owner": "test-user-from-mediasite",
+                    "Creator": "anon@mail.com",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "Description": "Digestie hoorcollege 2A -Vormen functie Kop I",
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [
+                        {
+                            "DisplayName": "anon DisplayName"
+                        }
+                    ],
+                    "PresentationAnalytics": {
+                        "TotalViews": 542,
+                        "LastWatched": "2021-01-29T11:14:02.273"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "e379b7b1-2a49-4c34-8f6c-a1bb1ac0cb9a.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "1009464041",
+                            "Length": "3073486",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {}
+                }
+            ]
+        },
+        {
+            "Id": "u0",
+            "Name": "Mediasite Users",
+            "ParentFolderId": "f0",
+            "Presentations": [],
+            "SlideContent": {}
+        },
+        {
+            "Id": "00256a42f59641ff865d57f2784374f317",
+            "ParentFolderId": "u0",
+            "Name": "UnknownUser",
+            "Owner": "unknownuser",
+            "Description": "Share folder for mymediasite users diergeneeskunde",
+            "Catalogs": [],
+            "Presentations": [
+                {
+                    "Id": "b129e5e803c94f74855e001c1d8b40b425a",
+                    "Title": "Media in unknown user channel",
+                    "ParentFolderId": "00256a42f59641ff865d57f2784374f317",
+                    "CreationDate": "2013-09-03T09:26:55.967Z",
+                    "RecordDate": "2013-09-03T09:24:00",
+                    "Owner": "test-user-from-mediasite",
+                    "Creator": "anon@mail.com",
+                    "PrimaryPresenter": "anon PrimaryPresenter",
+                    "Status": "Viewable",
+                    "Private": false,
+                    "Description": "",
+                    "TagList": [],
+                    "Streams": [
+                        {
+                            "StreamType": "Video1",
+                            "StreamName": null
+                        }
+                    ],
+                    "#Play": {
+                        "target": "https://anon.com/fake"
+                    },
+                    "TimedEvents": [],
+                    "Presenters": [
+                        {
+                            "DisplayName": "anon DisplayName"
+                        }
+                    ],
+                    "PresentationAnalytics": {
+                        "TotalViews": 542,
+                        "LastWatched": "2021-01-29T11:14:02.273"
+                    },
+                    "OnDemandContent": [
+                        {
+                            "FileNameWithExtension": "e379b7b1-2a49-4c34-8f6c-a1bb1ac0cb9a.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "1009464041",
+                            "Length": "3073486",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        }
+                    ],
+                    "SlideContent": {}
+                }
+            ]
         }
     ],
     "UserProfiles": [
         {
-            "UserName": "anon@mail.com",
-            "DisplayName": "anon DisplayName",
-            "Email": "anon@mail.com"
+            "UserName": "test-user-from-mediasite",
+            "DisplayName": "Test User from MediaSite",
+            "Email": "test-user-from-mediasite@mail.com"
         }
     ]
 }

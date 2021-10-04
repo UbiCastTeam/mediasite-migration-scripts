@@ -44,6 +44,8 @@ def parse_encoding_infos_with_mediainfo(video_url):
     encoding_infos = {}
     try:
         media_tracks = get_tracks(video_url)
+        if not media_tracks:
+            raise
         for track in media_tracks:
             if track.track_type == 'Video':
                 encoding_infos['video_codec'] = 'H264' if track.format == 'AVC' else track.format

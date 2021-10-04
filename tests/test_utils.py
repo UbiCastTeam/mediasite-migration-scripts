@@ -9,7 +9,6 @@ import os
 import mediasite_migration_scripts.utils.common as utils
 import mediasite_migration_scripts.utils.media as media
 import mediasite_migration_scripts.utils.http as http
-from mediasite_migration_scripts.utils.data_filter import DataFilter
 import mediasite_migration_scripts.utils.order as order
 
 logging.getLogger('root').handlers = []
@@ -29,8 +28,7 @@ class TestUtils(TestCase):
         sample_dir = 'tests/samples'
         self.media_with_sound = f'{sample_dir}/MEDIA_WITHSOUND.mp4'
         self.media_wmv_with_no_sound = f'{sample_dir}/MEDIA_WMV_NOSOUND.wmv'
-        self.data = utils.read_json('tests/anon_data.json')
-        self.filtered_data = utils.read_json('tests/anon_data_filtered.json')
+        self.data = utils.read_json('tests/mediasite_test_data.json')
 
     def test_is_folder_to_add(self):
         config_example = {'whitelist': ['/folder/example', '/another_folder']}
@@ -204,67 +202,84 @@ class TestUtils(TestCase):
         self.assertFalse(http.url_exists('wrong-url.com_fr.you', session))
 
     def test_order_and_filter_videos(self):
-        folders = self.data['Folders']
-        ordered_videos = list()
-        for f in folders:
-            for p in f['Presentations']:
-                video = order.order_and_filter_videos(p)
-                if video:
-                    ordered_videos.append(video)
-        expected_ordered_videos = utils.read_json('tests/anon_ordered_videos.json')
-        self.assertListEqual(ordered_videos, expected_ordered_videos)
-
-    def test_filter_data(self):
-        self.skipTest(reason='Method not used')
-        data = self.data
-        filters = {
-            'Folders': [
-                'Id',
-                'Name',
-                {'Catalogs': ['Id', 'Name']},
+        presentation_videos_examples = {
+            'Id': '0',
+            'OnDemandContent': [
                 {
-                    'Presentations': [
-                        'Id',
-                        'Title',
-                        {
-                            'OnDemandContent': [
-                                'FileNameWithExtension',
-                                'StreamType',
-                                'ContentMimeType',
-                                {'ContentServer': ['Id', 'DistributionUrl']}
-                            ]
-                        }
-                    ]
+                    'FileNameWithExtension': 'f9659fcb-a61f-4eb6-9afb-e1ea0173d383.ism',
+                    'ContentMimeType': 'video/x-mp4-fragmented',
+                    'FileLength': '566975814',
+                    'Length': '5926234',
+                    'IsTranscodeSource': True,
+                    'StreamType': 'Video1',
+                    'ContentServer': {
+                        'Id': '862edc25c7754beab10651f07d0ef64e29',
+                        'DistributionUrl': 'https://beta.ubicast.net/$$NAME$$'
+                    },
+                    'ContentEncodingSettings': {
+                        'Id': '17ab9c2bab8e4a409b628423bcee59e728',
+                        'SerializedSettings': 'https://anon.com/fake'
+                    }
+                },
+                {
+                    'FileNameWithExtension': 'cac1cf62-3f35-4ba5-81dc-b6537272cd9b.mp4',
+                    'ContentMimeType': 'video/mp4',
+                    'FileLength': '564910074',
+                    'Length': '5926266',
+                    'IsTranscodeSource': False,
+                    'StreamType': 'Video1',
+                    'ContentServer': {
+                        'Id': 'ad0fce8edc61432998839c3f860b6d4429',
+                        'DistributionUrl': 'https://beta.ubicast.net/$$NAME$$'
+                    },
+                    'ContentEncodingSettings': {
+                        'Id': '87bc9b59ecc34e0b85b8c18d1caa383128',
+                        'SerializedSettings': 'https://anon.com/fake'
+                    }
+                },
+                {
+                    'FileNameWithExtension': '9d86a4da-47c8-46c0-b494-6e949106b9d5.mp4',
+                    'ContentMimeType': 'video/mp4',
+                    'FileLength': '744536418',
+                    'Length': '7825148',
+                    'IsTranscodeSource': False,
+                    'StreamType': 'Video3',
+                    'ContentServer': {
+                        'Id': 'ad0fce8edc61432998839c3f860b6d4429',
+                        'DistributionUrl': 'https://beta.ubicast.net/$$NAME$$'
+                    },
+                    'ContentEncodingSettings': {
+                        'Id': '87bc9b59ecc34e0b85b8c18d1caa383128',
+                        'SerializedSettings': 'https://anon.com/fake'
+                    }
                 }
             ]
         }
-        data_filter = DataFilter(filters)
-        filtered_data = data_filter.filter_data(data)
-        expected_filtered_data = self.filtered_data
-        self.assertDictEqual(filtered_data, expected_filtered_data)
+        expected_ordered_videos = [
+            {
+                "stream_type": "Video1",
+                "files": [
+                    {
+                        "url": "https://beta.ubicast.net/cac1cf62-3f35-4ba5-81dc-b6537272cd9b.mp4",
+                        "format": "video/mp4",
+                        "size_bytes": 564910074,
+                        "encoding_infos": {}
+                    }
+                ]
+            },
+            {
+                "stream_type": "Video3",
+                "files": [
+                    {
+                        "url": "https://beta.ubicast.net/9d86a4da-47c8-46c0-b494-6e949106b9d5.mp4",
+                        "format": "video/mp4",
+                        "size_bytes": 744536418,
+                        "encoding_infos": {}
+                    }
+                ]
+            }
+        ]
 
-        filtered_folders = filtered_data.get('Folders')
-        self.assertIsNotNone(filtered_folders)
-        folders = data['Folders']
-
-        for f_index, f_filtered in enumerate(filtered_folders):
-            f_origin = folders[f_index]
-            self.assertEqual(f_filtered.get('Id'), f_origin['Id'])
-
-            catalogs = f_filtered.get('Catalogs')
-            self.assertIsNotNone(catalogs)
-            for c_index, c_filtered in enumerate(catalogs):
-                self.assertEqual(c_filtered.get('Id'), f_origin['Catalogs'][c_index]['Id'])
-
-            presentations = f_filtered.get('Presentations')
-            self.assertIsNotNone(presentations)
-            for p_index, p_filtered in enumerate(presentations):
-                p_origin = f_origin['Presentations'][p_index]
-                self.assertEqual(p_filtered.get('Id'), p_origin['Id'])
-
-                videos = p_filtered.get('OnDemandContent')
-                self.assertIsNotNone(videos)
-                for v_index, v_filtered in enumerate(videos):
-                    v_origin = p_origin['OnDemandContent'][v_index]
-                    self.assertEqual(v_filtered.get('FileNameWithExtension'), v_origin['FileNameWithExtension'])
-                    self.assertEqual(v_filtered.get('ContentServer', {}).get('Id'), v_origin['ContentServer']['Id'])
+        video_files = order.order_and_filter_videos(presentation_videos_examples)
+        self.assertGreater(len(video_files), 0)
+        self.assertListEqual(video_files, expected_ordered_videos)

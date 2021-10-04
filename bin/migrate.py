@@ -9,11 +9,8 @@ from mediatransfer import MediaTransfer
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
-    def usage(message=''):
-        return 'This script is used to import media from mediasite to mediaserver'
-
     def manage_opts():
-        parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser = argparse.ArgumentParser(description='This script is used to import media from mediasite to mediaserver')
 
         parser.add_argument(
             '-q',

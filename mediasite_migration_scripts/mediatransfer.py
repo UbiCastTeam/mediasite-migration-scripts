@@ -10,12 +10,10 @@ from functools import lru_cache
 
 from mediasite_migration_scripts.ms_client.client import MediaServerClient
 from mediasite_migration_scripts.video_compositor import VideoCompositor
-from mediasite_migration_scripts.ms_client.client import MediaServerRequestError as MSReqErr
 
+from mediasite_migration_scripts.utils import http, order
 import mediasite_migration_scripts.utils.common as utils
-import mediasite_migration_scripts.utils.http as http
 import mediasite_migration_scripts.utils.mediasite as mediasite_utils
-import mediasite_migration_scripts.utils.order as order
 
 
 logger = logging.getLogger(__name__)
@@ -69,7 +67,7 @@ class MediaTransfer():
         for stat in self.stats:
             setattr(self, stat, 0)
 
-        self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel_title', 'Mediasite Unknown Users')
+        self.unknown_users_channel_title = config.get('mediaserver_unknown_users_channel', 'Mediasite Unknown Users')
 
         self.redirections_file = Path(config.get('redirections_file', 'redirections.json'))
         if self.redirections_file.is_file():
@@ -89,7 +87,8 @@ class MediaTransfer():
             self.root_channel = self.get_root_channel()
 
         self.all_paths = {folder['Id']: self.find_folder_path(folder['Id']) for folder in self.mediasite_folders}
-        self.public_paths = [self.find_folder_path(folder['Id']) for folder in self.mediasite_folders if len(folder.get('Catalogs', [])) > 0]
+        self.public_paths = [self.find_folder_path(
+            folder['Id']) for folder in self.mediasite_folders if len(folder.get('Catalogs', [])) > 0]
         self.mediaserver_data = self.to_mediaserver_keys()
 
     def write_redirections_file(self):
@@ -124,7 +123,10 @@ class MediaTransfer():
 
         for index, media in enumerate(self.mediaserver_data):
             if sys.stdout.isatty():
-                utils.print_progress_string(index, total_count, title='Uploading non-composites presentations or preparing folders')
+                utils.print_progress_string(
+                    index,
+                    total_count,
+                    title='Uploading non-composites presentations or preparing folders')
             self.processed_count += 1
 
             if max_videos and index >= max_videos:
@@ -139,7 +141,7 @@ class MediaTransfer():
                     if channel_path.startswith(self.mediasite_userfolder):
                         if self.config.get('skip_userfolders'):
                             continue
-                        folder_id = self.get_folder_by_path(channel_path).get('id')
+                        folder_id = self.get_folder_by_path(channel_path).get('Id')
                         existing_channel = self.get_ms_channel_by_ref(folder_id)
                         if existing_channel:
                             target_channel = 'mscid-' + existing_channel['oid']
@@ -149,7 +151,8 @@ class MediaTransfer():
                                 logger.warning(f'Could not find personal target channel for path {channel_path}, skipping media')
                                 continue
                     else:
-                        channel_oid = self.create_channels(channel_path) or self.root_channel.get('oid')
+                        channel_oid = self.create_channels(
+                            channel_path) or self.root_channel.get('oid')
                         target_channel = 'mscid-' + channel_oid
 
                     logger.debug(f'Will publish {presentation_id} into channel {target_channel}')
@@ -186,12 +189,14 @@ class MediaTransfer():
                             # keeping in mind that it replaces "," by ", " (2 chars) we need to truncate it by
                             # 254 - count(',') * 2
                             if data['keywords']:
-                                truncate_to = 254 - data['keywords'].count(',') * 2
+                                truncate_to = 254 - \
+                                    data['keywords'].count(',') * 2
                                 data['keywords'] = data['keywords'][:truncate_to]
 
                             # lower transcoding priority
                             data['priority'] = 'low'
-                            result = self.ms_client.api('medias/add', method='post', data=data)
+                            result = self.ms_client.api(
+                                'medias/add', method='post', data=data)
                             if result.get('success'):
                                 self.uploaded_count += 1
                                 media_oid = result['oid']
@@ -254,7 +259,8 @@ class MediaTransfer():
         logger.debug(f'Get personal channel target for {channel_path}')
         #"/Mediasite Users/USERNAME/SUBFOLDER"
         target = ''
-        subfolders = channel_path.split(self.mediasite_userfolder)[1].split('/')
+        subfolders = channel_path.split(
+            self.mediasite_userfolder)[1].split('/')
         # ["USERNAME", "SUBFOLDER"]
 
         # mediaserver enforces lowercase usernames
@@ -279,7 +285,13 @@ class MediaTransfer():
         else:
             # user does not exist
             subfolders_path = "/".join(subfolders)
-            target = f'mscpath-{self.unknown_users_channel_title}/{subfolders_path}'
+            base_path = self.root_channel.get('title')
+            parent_channel_title = self.root_channel.get('parent_title')
+            while parent_channel_title:
+                base_path = f'{parent_channel_title}/{base_path}'
+                parent_channel = self.ms_client.api('channels/get', method='get', params={'title': parent_channel_title})
+                parent_channel_title = parent_channel['info'].get('parent_title')
+            target = f'mscpath-{base_path}/{self.unknown_users_channel_title}/{subfolders_path}'
         return target
 
     @lru_cache
@@ -311,53 +323,22 @@ class MediaTransfer():
                     error = result.get('error', '')
                     if user_id and '403' in error:
                         #{'error': 'Access denied (403)', 'message': '', 'success': False}
-                        logger.info(f'Granting permission to own a personal channel to user with id {user_id}')
+                        logger.info(
+                            f'Granting permission to own a personal channel to user with id {user_id}')
                         data = {
                             'type': 'user',
                             'id': user_id,
                             'can_have_personal_channel': 'True',
                             'can_create_media': 'True',
                         }
-                        result = self.ms_client.api('perms/edit/', method='post', data=data)
+                        result = self.ms_client.api(
+                            'perms/edit/', method='post', data=data)
                         return self.get_user_channel_oid(user_id=user_id)
                     else:
-                        logger.error(f'Failed to get user channel for {key}={val} / Error: {error}')
+                        logger.error(
+                            f'Failed to get user channel for {key}={val} / Error: {error}')
             else:
                 logger.error(f'Failed to get user channel: unknown error {result}')
-
-    def create_user(self, user):
-        logger.debug(f"Creating user {user.get('username')}")
-
-        user_id = str()
-
-        try:
-            result = self.ms_client.api('users/add', method='post', data=user)
-        except MSReqErr as e:
-            same_email_error = 'A user with the same email already exists.'
-            same_username_error = 'A user with the same username already exists.'
-            if same_email_error or same_username_error in e.__str__():
-                logger.debug(f"User {user.get('username')} already exists.")
-                del user['api_key']
-                return user_id
-            else:
-                result = {'success': False, 'error': e}
-
-        if result.get('success'):
-            logger.debug(f"Created user {user.get('username')} with id {result.get('id')}")
-
-            user_id = result.get('id')
-            del user['api_key']
-
-            if not user_id:
-                logger.warning(f"MediaServer did not return an id when creating user {user.get('username')}")
-
-            result = self.ms_client.api('perms/edit/', method='post', data={'type': 'user', 'id': user_id, 'can_have_personal_channel': 'True'})
-            if not result.get('success'):
-                logger.error(f"Failed te granted permission to have personnal channel for user {user.get('username')}")
-        else:
-            logger.error(f"Failed te create user {user.get('username')} / Error: {result.get('error')}")
-
-        return user_id
 
     def find_folder_path(self, folder_id, folders=None, path=''):
         if folders is None:
@@ -467,7 +448,8 @@ class MediaTransfer():
                     logger.error(f'Failed to merge videos for presentation {presentation_id}')
 
     def download_composites_videos(self):
-        logger.info(f'Downloading composite videos into {self.composites_folder}.')
+        logger.info(
+            f'Downloading composite videos into {self.composites_folder}.')
         if self.compositor is None:
             self.compositor = VideoCompositor(self.config, self.dl_session, self.mediasite_auth)
 
@@ -580,7 +562,8 @@ class MediaTransfer():
         most_recent_time = None
         most_recent_catalog = None
         for c in folder['Catalogs']:
-            catalog_date = mediasite_utils.parse_mediasite_date(c['CreationDate'])
+            catalog_date = mediasite_utils.parse_mediasite_date(
+                c['CreationDate'])
             if most_recent_time is None or catalog_date > most_recent_time:
                 most_recent_time = catalog_date
                 most_recent_catalog = c
@@ -610,12 +593,14 @@ class MediaTransfer():
         # * any leaf chennels needs to be listed too because mediasite publishes subfolders recursively
         is_unlisted = True
         tree = channel_path.lstrip('/').split('/')
-        tree_list = list()  # turn path 'a/b/c/d' into list ['/a/b/c/d', '/a/b/c', '/a/b', '/a']
+        # turn path 'a/b/c/d' into list ['/a/b/c/d', '/a/b/c', '/a/b', '/a']
+        tree_list = list()
         for i in range(len(tree) + 1):
             if tree:
                 path = '/' + '/'.join(tree)
                 if self.channel_has_catalog(path):
-                    logger.debug(f'Parent folder {path} has a catalog, making complete path {channel_path} listed')
+                    logger.debug(
+                        f'Parent folder {path} has a catalog, making complete path {channel_path} listed')
                     is_unlisted = False
                 tree_list.append(path)
                 tree.pop(-1)
@@ -652,7 +637,8 @@ class MediaTransfer():
                     external_data=external_data,
                 ).get('oid')
                 for url in urls:
-                    self.redirections[url] = self.get_full_ms_url(f'/permalink/{new_oid}/iframe/?header=no')
+                    self.redirections[url] = self.get_full_ms_url(
+                        f'/permalink/{new_oid}/iframe/?header=no')
             oid = new_oid
 
         # last item in list is the final channel, return it's oid
@@ -660,7 +646,8 @@ class MediaTransfer():
         return oid
 
     def _create_channel(self, parent_channel, channel_title, is_unlisted, original_path, external_ref=None, external_data=None):
-        logger.debug(f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
+        logger.debug(
+            f'Creating channel {channel_title} with parent {parent_channel} / is_unlisted : {is_unlisted}')
         channel = dict()
 
         existing_channel = self.created_channels.get(original_path)
@@ -757,7 +744,8 @@ class MediaTransfer():
             logger.debug(f"Media {media['ref']['media_oid']} has slides binded to video (no timecode). \
                           Detect slides will be lauched in Mediaserver.")
 
-        logger.debug(f"{nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
+        logger.debug(
+            f"{nb_slides_uploaded} uploaded (amongs {nb_slides} slides) for media {media['ref']['media_oid']}")
 
         return nb_slides_uploaded, nb_slides
 
@@ -826,7 +814,8 @@ class MediaTransfer():
 
         result = self.ms_client.api('annotations/slides/list', method='get', params={'oid': media_oid})
         # if media not found (success = false), same behavior if already_up (do not upload)
-        already_up = not (result.get('success') and len(result.get('slides')) == 0)
+        already_up = not (result.get('success')
+                          and len(result.get('slides')) == 0)
         if already_up:
             logger.warning(f'Slides already uploaded for media {media_oid}')
 
@@ -873,9 +862,11 @@ class MediaTransfer():
         else:
             logger.info('No Mediaserver mapping. Generating mapping.')
             for index, folder in enumerate(self.mediasite_folders):
-                utils.print_progress_string(index, len(self.mediasite_folders), title='Mapping data and checking resources')
+                utils.print_progress_string(index, len(
+                    self.mediasite_folders), title='Mapping data and checking resources')
 
-                folder_path = self.find_folder_path(folder['Id'], self.mediasite_folders)
+                folder_path = self.find_folder_path(
+                    folder['Id'], self.mediasite_folders)
                 if utils.is_folder_to_add(folder_path, config=self.config):
                     has_catalog = (len(folder.get('Catalogs', [])) > 0)
                     is_unlisted_channel = not has_catalog
@@ -896,7 +887,8 @@ class MediaTransfer():
                             if self.config.get('external_data') is True:
                                 ext_data = presentation
                             else:
-                                ext_data = {key: presentation.get(key) for key in ['Id', 'Creator', 'PresentationAnalytics']}
+                                ext_data = {key: presentation.get(key) for key in [
+                                    'Id', 'Creator', 'PresentationAnalytics']}
                                 for key in ['TotalViews', 'LastWatched']:
                                     ext_data[key] = ext_data['PresentationAnalytics'][key]
 
@@ -933,7 +925,8 @@ class MediaTransfer():
                             if v_type == 'audio_only':
                                 data['thumb'] = 'mediasite_migration_scripts/files/utils/audio.jpg'
 
-                            mediaserver_data.append({'data': data, 'ref': {'channel_path': channel_path, 'folder_path': folder_path}})
+                            mediaserver_data.append(
+                                {'data': data, 'ref': {'channel_path': channel_path, 'folder_path': folder_path}})
                         else:
                             logger.warning(f"No valid video for presentation {presentation.get('Id')}, skipping")
                             self.skipped_count += 1
@@ -1009,7 +1002,9 @@ class MediaTransfer():
         for file in video_files:
             url = file['url']
             if file.get('format') == 'video/mp4':
-                if file['encoding_infos'].get('video_codec', '') == 'H264' and http.url_exists(url, self.dl_session):
+                video_codec = file['encoding_infos'].get('video_codec')
+                # video with audio only have no video_codec key
+                if video_codec is None or video_codec == 'H264' and http.url_exists(url, self.dl_session):
                     video_url = url
                     break
             elif self.formats_allowed.get(file.get('format')):

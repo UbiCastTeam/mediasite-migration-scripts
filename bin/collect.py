@@ -9,11 +9,8 @@ from mediasite_migration_scripts.data_extractor import DataExtractor
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
-    def usage():
-        return 'This script is used to collect metadata from mediasite platform.'
-
     def manage_opts():
-        parser = argparse.ArgumentParser(description=usage(), formatter_class=argparse.RawTextHelpFormatter)
+        parser = argparse.ArgumentParser(description='This script is used to collect metadata from mediasite platform.')
         parser.add_argument('-q', '--quiet',
                             action='store_true',
                             default=False,

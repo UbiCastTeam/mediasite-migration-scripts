@@ -170,8 +170,8 @@ def get_mediasite_host(url):
     return url.split('/')[2]
 
 
-def get_argparser():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def get_argparser(description=''):
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         '-v',
         '--verbose',
