@@ -38,7 +38,7 @@ anonymize: build
 		python3 bin/anonymize.py $(ARGS)
 
 run_CI: build
-	docker run -T \
+	docker run -t \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		python3 -m unittest tests/*.py && python3 -m flake8 --ignore=E501,E265,W503,W505 --exclude=.git/,.virtualenv/,__pycache__/,build/,submodules/,env/
