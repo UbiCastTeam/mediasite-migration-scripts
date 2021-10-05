@@ -67,13 +67,6 @@ def prepare_test_data_and_clients(config):
             raise AssertionError
 
         for media in mediatransfer.mediaserver_data:
-            m_data = media.get('data', {})
-            if m_data.get('video_type') == "composite_video":
-                # m_data['composites_videos_urls'] = {
-                #     'Video1': samples_infos['mp4']['url'], 'Video3': samples_infos['mp4']['url']}
-                breakpoint()
-
-        for media in mediatransfer.mediaserver_data:
             media_data = media['data']
             if media_data['title'] == 'Media with slides':
                 mediatransfer.slides_folder = Path('tests/samples/slides')

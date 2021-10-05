@@ -42,7 +42,7 @@ class TestUtils(TestCase):
             self.assertFalse(utils.is_folder_to_add(path_example, config_example), msg=f'path example = {path_example}')
 
     def test_read_json(self):
-        json_path_example = 'tests/samples/test.json'
+        json_path_example = 'tests/samples/read-test.json'
         json_read = utils.read_json(json_path_example)
         self.assertIsNotNone(json_read)
         self.assertTrue(json_read.get('test'))

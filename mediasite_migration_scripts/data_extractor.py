@@ -392,7 +392,8 @@ class DataExtractor():
                 utils.print_progress_string(self.nb_all_downloaded_slides, self.all_slides_count)
 
                 # do not re-download
-                if file_path.is_file():
+                file_size = file_path.stat().st_size
+                if file_path.is_file() and file_size > 0:
                     nb_slides_downloaded += 1
                 else:
                     r = self.session.get(url)
