@@ -5,7 +5,8 @@ name: Docker Python CI
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - "*"
   pull_request:
     branches: [ master ]
 
@@ -17,6 +18,6 @@ jobs:
     - name: checkout repository
       uses: actions/checkout@v2
     - name: unit tests
-      run: make tests ARGS="-t"
+      run: make tests
     - name: lint code
-      run: make lint ARGS="-t"
+      run: make lint
