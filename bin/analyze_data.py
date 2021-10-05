@@ -4,7 +4,6 @@
 import json
 import logging
 import argparse
-from argparse import RawTextHelpFormatter
 import os
 import sys
 

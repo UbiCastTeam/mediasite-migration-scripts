@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import csv
 import json
 import logging
 from mediasite_migration_scripts.utils import common as utils

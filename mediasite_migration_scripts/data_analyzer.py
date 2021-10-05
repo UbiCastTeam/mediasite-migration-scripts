@@ -3,7 +3,6 @@ import logging
 from mediasite_migration_scripts.utils.common import get_age_days
 import mediasite_migration_scripts.utils.mediasite as mediasite
 import json
-from copy import copy
 
 logger = logging.getLogger(__name__)
 

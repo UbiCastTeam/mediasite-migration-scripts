@@ -18,9 +18,6 @@ def setUpModule():
 
 
 def tearDownModule():
-    # body = {'oid': test_channel_oid, 'delete_resources': 'yes', 'delete_content': 'yes'}
-    # ms_client.api('channels/delete', method='post', data=body)
-
     mediatransfer.ms_client.session.close()
     ms_client.session.close()
 
