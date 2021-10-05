@@ -317,7 +317,7 @@
                 },
                 {
                     "Id": "b129e5e803c94f74855e001c1d8b40b21d",
-                    "Title": "anon Title",
+                    "Title": "Media composite",
                     "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
                     "CreationDate": "2013-09-03T09:26:55.967Z",
                     "RecordDate": "2013-09-03T09:24:00",
@@ -331,6 +331,10 @@
                     "Streams": [
                         {
                             "StreamType": "Video1",
+                            "StreamName": null
+                        },
+                        {
+                            "StreamType": "Video3",
                             "StreamName": null
                         }
                     ],
@@ -355,6 +359,22 @@
                             "Length": "3073486",
                             "IsTranscodeSource": true,
                             "StreamType": "Video1",
+                            "ContentServer": {
+                                "Id": "ad0fce8edc61432998839c3f860b6d4429",
+                                "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"
+                            },
+                            "ContentEncodingSettings": {
+                                "Id": "7079dee9833a4587bd25ff6c6fb1105528",
+                                "SerializedSettings": "https://anon.com/fake"
+                            }
+                        },
+                        {
+                            "FileNameWithExtension": "e379b7b1-2a49-4c34-8f6c-a1bb1ac0cb9a.mp4",
+                            "ContentMimeType": "video/mp4",
+                            "FileLength": "1009464041",
+                            "Length": "3073486",
+                            "IsTranscodeSource": true,
+                            "StreamType": "Video3",
                             "ContentServer": {
                                 "Id": "ad0fce8edc61432998839c3f860b6d4429",
                                 "DistributionUrl": "https://beta.ubicast.net/$$NAME$$"

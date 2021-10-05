@@ -130,7 +130,7 @@ dmypy.json
 # MediaTransfer client
 *.json
 !tests/mediasite_test_data.json
-tests/content/
+!tests/samples/*
 config.json.backup
 *.txt
 *.csv
