@@ -2,7 +2,7 @@
 from pymediainfo import MediaInfo
 import logging
 import utils.http as http
-
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def get_duration_h(videos):
     return round(duration_h, 2)
 
 
-def parse_encoding_infos_with_mediainfo(video_url):
+def parse_encoding_infos_with_mediainfo(video_url, session):
     logger.debug(f'Parsing encoding infos with MediaInfo for: {video_url}')
     encoding_infos = {}
     try:
@@ -58,10 +58,9 @@ def parse_encoding_infos_with_mediainfo(video_url):
     except Exception as e:
         logger.debug(f'Failed to get media info for {video_url}. Error: {e}')
         try:
-            media_exists = http.url_exists(video_url)
+            media_exists = http.url_exists(video_url, session)
             if not media_exists:
                 logger.debug(f'Video {video_url} not reachable.')
         except Exception as e:
             logger.debug(e)
-
     return encoding_infos

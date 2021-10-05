@@ -6,17 +6,17 @@ import mediasite_migration_scripts.utils.media as media
 logger = logging.getLogger(__name__)
 
 
-def order_and_filter_videos(presentation):
+def order_and_filter_videos(presentation, session):
     pid = presentation['Id']
     logger.debug(f'Gathering video info for presentation : {pid}')
 
     ordered_videos = list()
     videos = presentation['OnDemandContent']
-    ordered_videos = order_by_stream_type(videos)
+    ordered_videos = order_by_stream_type(videos, session)
     return ordered_videos
 
 
-def order_by_stream_type(videos):
+def order_by_stream_type(videos, session):
     videos_by_stream = list()
     videos_streams_types = list()
 
@@ -32,7 +32,7 @@ def order_by_stream_type(videos):
                 'format': file.get('ContentMimeType'),
                 'size_bytes': int(file.get('FileLength')),
                 'encoding_infos': mediasite_utils.parse_encoding_settings_xml(file.get('ContentEncodingSettings', ''))
-                or media.parse_encoding_infos_with_mediainfo(file_url)
+                or media.parse_encoding_infos_with_mediainfo(file_url, session)
             }
 
             video_index = get_video_index_by_stream(file_stream_type, videos_by_stream)

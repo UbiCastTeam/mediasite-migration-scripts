@@ -936,7 +936,7 @@ class MediaTransfer():
 
     def _get_video_urls_and_type(self, presentation):
         v_url = v_composites_urls = None
-        videos = order.order_and_filter_videos(presentation)
+        videos = order.order_and_filter_videos(presentation, self.dl_session)
         v_type, slides_source = self._find_video_type(presentation, videos)
 
         if v_type in ('composite_video', 'composite_slides'):

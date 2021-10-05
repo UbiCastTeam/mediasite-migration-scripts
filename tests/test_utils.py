@@ -182,7 +182,7 @@ class TestUtils(TestCase):
             self.assertEqual(media.get_duration_h(v['example']), v['expected'])
 
     def test_parse_encoding_infos_with_mediainfo(self):
-        encoding_infos_example = media.parse_encoding_infos_with_mediainfo(self.media_with_sound)
+        encoding_infos_example = media.parse_encoding_infos_with_mediainfo(self.media_with_sound, session)
         self.assertDictEqual(encoding_infos_example, {
             'video_codec': 'H264',
             'audio_codec': 'AAC',
@@ -190,7 +190,7 @@ class TestUtils(TestCase):
             'width': 1280
         })
 
-        encoding_infos_wmv_with_no_sound_example = media.parse_encoding_infos_with_mediainfo(self.media_wmv_with_no_sound)
+        encoding_infos_wmv_with_no_sound_example = media.parse_encoding_infos_with_mediainfo(self.media_wmv_with_no_sound, session)
         self.assertDictEqual(encoding_infos_wmv_with_no_sound_example, {
             'video_codec': 'MPEG-4 Visual',
             'height': 360,
@@ -280,6 +280,6 @@ class TestUtils(TestCase):
             }
         ]
 
-        video_files = order.order_and_filter_videos(presentation_videos_examples)
+        video_files = order.order_and_filter_videos(presentation_videos_examples, session)
         self.assertGreater(len(video_files), 0)
         self.assertListEqual(video_files, expected_ordered_videos)
