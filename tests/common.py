@@ -1,184 +1,179 @@
-import json
-import os
-from datetime import datetime
 import logging
+from copy import copy
 
+from mediasite_migration_scripts.mediatransfer import MediaTransfer
 import mediasite_migration_scripts.utils.common as utils
-from mediasite_migration_scripts.ms_client.client import MediaServerClient
-
-
-MEDIASITE_DATA_FILE = 'tests/mediasite_data_test.json'
-MEDIASERVER_DATA_FILE = 'tests/mediaserver_data_test.json'
-
-MEDIASERVER_DATA_E2E_FILE = 'tests/e2e/mediaserver_data_e2e.json'
-MEDIASITE_USERS_FILE = 'tests/e2e/mediasite_users_test.json'
-MEDIASERVER_USERS_FILE = 'tests/e2e/mediaserver_users_test.json'
+import mediasite_migration_scripts.utils.mediaserver as mediaserver_utils
+import tests.common as test_utils
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+config = utils.read_json('config-test.json')
+ms_utils = mediaserver_utils.MediaServerUtils(config)
+ms_client = ms_utils.ms_client
+TEST_CHANNEL_NAME = 'mediasite_e2e_target'
+PARENT_TEST_CHANNEL_OID = 'c12619b455e75glxvuja'
 
 
 def set_logger(*args, **kwargs):
     return utils.set_logger(*args, **kwargs)
 
 
-def set_test_users():
-    users = list()
+def prepare_test_data_and_clients(config):
+    try:
+        mediasite_data = utils.read_json('tests/mediasite_test_data.json')
 
-    file = MEDIASERVER_DATA_E2E_FILE
-    if os.path.exists(file):
-        with open(file) as f:
-            data = json.load(f)
+        samples_infos = {
+            'mp4': {
+                'oid': 'v12619b7260509beg5up',
+                'url': 'https://beta.ubicast.net/resources/r12619b72604fpsvrzrflm70x1ad6z/media_720_0t4Q5Qjsx2.mp4'
+            },
+            'audio_only': {
+                'oid': 'v1261b87a09e6oih5wdg',
+                'url': 'https://beta.ubicast.net/resources/r1261b87a09e60ai635y67udj9g37x/grit_tapey_bass_bass_100bpm_dminor_bandlab_original.mp4'
+            },
+            'wmv': {
+                'oid': 'v1261bdb8090ar6v1ttq',
+                'url': 'https://beta.ubicast.net/resources/r1261bdb8090axavshifrvvo519n7c/sample_960x540_clean.wmv'
+            }
+        }
 
-    file = MEDIASITE_USERS_FILE
-    for media in data:
-        media_data = media.get('data', {})
-        already_added = False
-        for u in users:
-            if media_data.get('speaker_email') == u.get('mail'):
-                already_added = True
-                break
-        if not already_added:
-            users.append({
-                "mail": media_data.get('speaker_email'),
-                "username": media_data.get('speaker_name'),
-                "display_name": media_data.get('speaker_id')
-            })
+        for key in samples_infos.keys():
+            result = ms_client.api(
+                'download',
+                method='get',
+                params={'oid': samples_infos[key]['oid'],
+                        'url': samples_infos[key]['url'], 'redirect': 'no'}
+            )
+            if not result.get('success'):
+                logger.error(
+                    'Failed to get urls for medias samples from Mediaserver')
 
-    with open(file, 'w') as f:
-        json.dump(users, f)
+            url_without_base = result.get('url').replace(config.get('mediaserver_url'), '')
+            for folder in mediasite_data['Folders']:
+                for presentation in folder['Presentations']:
+                    for video in presentation['OnDemandContent']:
+                        video_format = video['ContentMimeType']
+                        if video_format == 'video/mp4' and key == 'mp4':
+                            video['FileNameWithExtension'] = url_without_base
+                        elif video_format == 'video/x-ms-wmv' and key == 'wmv':
+                            video['FileNameWithExtension'] = url_without_base
+                    if presentation['Title'] == 'Media with audio only' and key == 'audio_only':
+                        presentation['OnDemandContent'][0]['FileNameWithExtension'] = url_without_base
+        try:
+            mediatransfer = MediaTransfer(config, mediasite_data)
+        except Exception as e:
+            logger.error(f'Failed to init MediaTransfer: {e}')
+            raise AssertionError
 
-    return users
+        for media in mediatransfer.mediaserver_data:
+            media_data = media['data']
+            if media_data['title'] == 'Media with slides':
+                mediatransfer.slides_folder = Path('tests/samples/slides')
+                media_data['slides'] = test_utils.generate_slides_details()
+                media_data['detect_slides'] = 'no'
 
+        test_channel = create_test_channel()
+        mediatransfer.root_channel = mediatransfer.get_channel(test_channel['oid'])
 
-def set_test_data():
-    new_data = list()
-    file = MEDIASITE_DATA_FILE
-
-    if os.path.exists(file):
-        with open(file) as f:
-            new_data = json.load(f)
-    else:
-        data = list()
-        with open(file) as f:
-            data = json.load(f)
-
-        i = 0
-        for folder in data:
-            presentations = folder['presentations']
-            folder['presentations'] = []
-            j = 0
-            for p in presentations:
-                if p['slides']:
-                    slides_urls = p['slides']['urls']
-                    p['slides']['urls'] = []
-                    k = 0
-                    for u in slides_urls:
-                        p['slides']['urls'].append(u)
-                        k += 1
-                        if k >= 2:
-                            break
-
-                    slides_details = p['slides']['details']
-                    if not slides_details:
-                        slides_details = []
-                    p['slides']['details'] = []
-                    x = 0
-                    for d in slides_details:
-                        p['slides']['details'].append(d)
-                        x += 1
-                        if x >= 2:
-                            break
-
-                folder['presentations'].append(p)
-                j += 1
-                if j >= 2:
-                    break
-
-            new_data.append(folder)
-
-            i += 1
-            if i >= 2:
-                break
-
-    return new_data
+        return mediatransfer, ms_client
+    except Exception as e:
+        logger.error(f'Failed to prepare test data: {e}')
+        exit(1)
 
 
-class MediaServerTestUtils():
-    def __init__(self, config={}):
-        self.ms_config = {
-            "API_KEY": config.get('mediaserver_api_key'),
-            "CLIENT_ID": "mediasite-migration-client",
-            "SERVER_URL": config.get('mediaserver_url'),
-            "VERIFY_SSL": False,
-            "LOG_LEVEL": 'WARNING'}
-        self.ms_client = MediaServerClient(local_conf=self.ms_config, setup_logging=False)
+def create_test_channel():
+    test_channel = dict()
+    test_channel_infos = {'title': TEST_CHANNEL_NAME, 'parent': PARENT_TEST_CHANNEL_OID}
 
-    def create_test_channel(self):
-        test_channel = dict()
-        dt = datetime.now()
-        test_channel_name = f'test-{dt.month}/{dt.day}/{dt.year}-{dt.hour + 2}:{dt.minute}:{dt.second}'.format()
+    # channel with medias in it probably already exists if previous tests have been lauched,
+    # we remove the channel to prevent duplicates as it's not well handled by MS
+    result = ms_client.api('channels/get', method='get', params=test_channel_infos, ignore_404=True)
+    if result is not None:
+        rm_ok = ms_utils.remove_channel(oid=result['info']['oid'])
+        if not rm_ok:
+            logger.error(f"Failed to delete previous test channel {result.get('info').get('oid')} with his content")
 
-        # Parent E2E test channel : https://beta.ubicast.net/channels/#mediasite-e2e-tests
-        test_channel = self.ms_client.api('channels/add', method='post', data={'title': test_channel_name, 'parent': 'c12619b455e75glxvuja'})
-        self.ms_client.session.close()
+    test_channel = ms_client.api('channels/add', method='post', data=test_channel_infos)
 
-        return test_channel
+    return test_channel
 
-    def remove_media(self, media=dict()):
-        delete_completed = False
-        nb_medias_removed = 0
 
-        oid = media.get('ref', {}).get('oid')
-        if oid:
-            result = self.ms_client.api('medias/delete',
-                                        method='post',
-                                        data={'oid': oid, 'delete_metadata': True, 'delete_resources': True},
-                                        ignore_404=True)
-            if result:
-                if result.get('success'):
-                    logger.debug(f'Media {oid} removed.')
-                    delete_completed = True
-                    nb_medias_removed += 1
-                else:
-                    logger.error(f'Failed to delete media: {oid} / Error: {result.get("error")}')
-            elif not result:
-                logger.warning(f'Media not found in Mediaserver for removal with oid: {oid}. Searching with title.')
-            else:
-                logger.error(f'Something gone wrong when trying remove media {oid}')
+def anonymize_data(data):
+    fields_to_anonymize = [
+        'Title',
+        'Name',
+        'RootOwner',
+        'Creator',
+        'PrimaryPresenter',
+        'DisplayName',
+        'Email',
+        'ParentFolderName',
+        'FirstName',
+        'LastName'
+    ]
+    user_fields_to_anonymize = ['Owner', 'UserName']
 
-        if not delete_completed:
-            title = media['data']['title']
-            media = self.ms_client.api('medias/get', method='get', params={'title': title}, ignore_404=True)
-            while media and media.get('success'):
-                oid = media.get('info').get('oid')
-                result = self.ms_client.api('medias/delete',
-                                            method='post',
-                                            data={'oid': oid, 'delete_metadata': True, 'delete_resources': True},
-                                            ignore_404=True)
-                if result:
-                    logger.debug(f'Media {oid} removed.')
-                    nb_medias_removed += 1
-                media = self.ms_client.api('medias/get', method='get', params={'title': title}, ignore_404=True)
-            if media and not media.get('success'):
-                logger.error(f'Failed to delete media: {oid} / Error: {result.get("error")}')
+    anon_data = copy(data)
+    if isinstance(anon_data, dict):
+        for key, val in anon_data.items():
+            if isinstance(val, dict) or isinstance(val, list):
+                anon_data[key] = anonymize_data(val)
+            elif isinstance(val, str):
+                if 'http' and '://' in val:
+                    if key == 'DistributionUrl':
+                        anon_data[key] = config.get('mediaserver_url') + '$$NAME$$'
+                    else:
+                        anon_data[key] = 'https://anon.com/fake'
+                elif ('@' in val and '.' in val) or (key in user_fields_to_anonymize):
+                    anon_data[key] = 'anon@mail.com'
+                elif key in fields_to_anonymize:
+                    anon_data[key] = f'anon {key}'
 
-        return nb_medias_removed
+    elif isinstance(anon_data, list):
+        for i, item in enumerate(anon_data):
+            anon_data[i] = anonymize_data(item)
 
-    def remove_channel(self, channel_title=None, channel_oid=None):
-        ok = False
-        if not channel_oid and not channel_title:
-            logger.error('Request to remove channel but no channel provided (title or oid)')
-        elif not channel_oid and channel_title:
-            result = self.ms_client.api('channels/get', method='get', params={'title': channel_title}, ignore_404=True)
-            if result:
-                channel_oid = result.get('info', {}).get('oid')
-            else:
-                logger.error('Channel not found for removing')
+    return anon_data
 
-        if channel_oid:
-            result = self.ms_client.api('channels/delete', method='post', data={'oid': channel_oid, 'delete_content': 'yes', 'delete_resources': 'yes'})
-            ok = result.get('success')
-        else:
-            logger.error(f'Something gone wrong when removing channel. Title: {channel_title} / oid: {channel_oid}')
 
-        return ok
+def to_small_data(data):
+    filtered_data = dict()
+
+    folders = data['Folders'][:2]
+    if len(folders[0]['Presentations']) > 6:
+        folders[0]['Presentations'] = folders[0]['Presentations'][:6]
+    filtered_data['Folders'] = folders
+
+    for i in range(2):
+        filtered_data['Folders'][0]['Presentations'][i]['TimedEvents'] = generate_timed_events()
+
+    users = data.get('UserProfiles')
+    if users:
+        filtered_data['UserProfiles'] = users[:1]
+
+    return filtered_data
+
+
+def generate_timed_events():
+    timed_events = list()
+    total = 3
+    for i in range(total):
+        timed_events.append({
+            'Position': i * 1500,
+            'Payload': f'<ChapterEntry ><Number>{i}</Number><Time>0</Time><Title>Chapter {i}</Title></ChapterEntry>'
+        })
+    return timed_events
+
+
+def generate_slides_details():
+    slides_details = dict()
+    slides_details['Length'] = slides_count = 3
+    slides_details['SlideDetails'] = list()
+    for i in range(slides_count):
+        slides_details['SlideDetails'].append({
+            'Title': f'Slide {i + 1}',
+            'TimeMilliseconds': 1500 * i,
+            'Content': f'Content {i + 1}'
+        })
+    return slides_details

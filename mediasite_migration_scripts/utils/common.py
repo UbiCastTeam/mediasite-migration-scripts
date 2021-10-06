@@ -3,25 +3,21 @@ import json
 import os
 import logging
 from datetime import datetime
+import csv
+from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
+# codes colors
 RED, GREEN, YELLOW, BLUE, WHITE, LIGHT_RED = [1, 2, 3, 4, 67, 61]
 
-# The background is set with 40 plus the number of the color, and the foreground with 30
-#  31 Red 32 Green 33 Yellow 34 Blue 91 Light Red 97 White
+# The background is set with 40 plus the code color:
+# 31 : Red, 32 : Green, 33 : Yellow, 34 : Blue, 91 : Light Red, 97 : White
 
 #These are the sequences need to get colored ouput
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 BOLD_SEQ = "\033[1m"
-
-
-def formatter_message(message, use_color=True):
-    if use_color:
-        message = message.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
-    else:
-        message = message.replace("$RESET", "").replace("$BOLD", "")
-    return message
-
 
 COLORS = {
     'WARNING': YELLOW,
@@ -45,50 +41,34 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
-def parse_mediasite_date(date_str):
-    #2010-05-26T07:16:57Z
-    if '.' in date_str:
-        # some media have msec included
-        #2016-12-07T13:07:27.58Z
-        date_str = date_str.split('.')[0] + 'Z'
-    if not date_str.endswith('Z'):
-        date_str += 'Z'
-    return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
-
-
-def get_age_days(date_str):
-    days = (datetime.now() - parse_mediasite_date(date_str)).days
-    return days
-
-
-def set_logger(options=None, verbose=False, run_path=None):
-    if run_path is None:
-        run_path = os.path.dirname(os.path.realpath(__file__))
-    current_datetime_string = '{dt.month}-{dt.day}-{dt.year}'.format(dt=datetime.now())
+def set_logger(options=None, verbose=False):
     logging_format = '%(asctime)s - %(levelname)s - %(message)s'
-    logging_datefmt = '%m/%d/%Y - %I:%M:%S %p'
-    formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
-    colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
-
     level = logging.INFO
-    if options:
+    if options is not None:
         if options.verbose:
             level = logging.DEBUG
+            logging_format += ' - [%(funcName)s]'
         elif options.quiet:
             level = logging.ERROR
     elif verbose:
         level = logging.DEBUG
+        logging_format += ' - [%(funcName)s]'
+
+    current_datetime_string = '{dt.month}-{dt.day}-{dt.year}'.format(dt=datetime.now())
+
+    logging_datefmt = '%m/%d/%Y - %I:%M:%S %p'
+    formatter = logging.Formatter(logging_format, datefmt=logging_datefmt)
+    colored_formatter = ColoredFormatter(logging_format, datefmt=logging_datefmt)
 
     root_logger = logging.getLogger('root')
     root_logger.setLevel(level)
-
     if not root_logger.handlers:
         console = logging.StreamHandler()
         console.setFormatter(colored_formatter)
 
         logs_folder = 'logs/'
         os.makedirs(logs_folder, exist_ok=True)
-        logfile_path = os.path.join(logs_folder, f'test_{current_datetime_string}.log')
+        logfile_path = os.path.join(logs_folder, f'{current_datetime_string}.log')
         logfile = logging.FileHandler(logfile_path)
         logfile.setFormatter(formatter)
 
@@ -98,10 +78,10 @@ def set_logger(options=None, verbose=False, run_path=None):
     return root_logger
 
 
-def is_folder_to_add(path, config={}):
+def is_folder_to_add(path, config=dict()):
     if config.get('whitelist'):
-        for fw in config['whitelist']:
-            if fw in path:
+        for whitelisted_path in config['whitelist']:
+            if whitelisted_path in path:
                 return True
         return False
     return True
@@ -109,8 +89,45 @@ def is_folder_to_add(path, config={}):
 
 def read_json(path):
     logging.info(f'Loading {path}')
-    with open(path, 'r') as f:
-        return json.load(f)
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f'Failed to read json {path}: {e}')
+
+
+def write_json(data, path, open_text_option='w'):
+    logger.info(f'Writing {path}')
+    try:
+        with open(path, open_text_option) as file:
+            json.dump(data, file)
+    except IOError:
+        parent = Path(path).parent
+        parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(path, open_text_option) as file:
+                json.dump(data, file)
+        except Exception as e:
+            logger.error(f'Failed to write json {path}: {e}')
+    except Exception as e:
+        logger.error(f'Failed to write json {path}: {e}')
+
+
+def write_csv(filename, fieldnames, rows):
+    logger.info(f'Writing {filename}')
+    try:
+        with open(filename, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+    except Exception as e:
+        logger.error(f'Failed to write csv {filename}: {e}')
+
+
+def store_object_data_in_json(obj, data_attr, prefix_filename=str()):
+    mediasite_filename = ''.join([prefix_filename, '_', data_attr, '.json'])
+    mediasite_data = getattr(obj, data_attr)
+    write_json(data=mediasite_data, path=mediasite_filename)
 
 
 def to_mediaserver_conf(config):
@@ -126,26 +143,26 @@ def to_mediaserver_conf(config):
     return msconfig
 
 
-# FIXME: unify
-def setup_logging(verbose=False):
-    logging.addLevelName(logging.ERROR, '\033[1;31m%s\033[1;0m' % logging.getLevelName(logging.ERROR))
-    logging.addLevelName(logging.WARNING, '\033[1;33m%s\033[1;0m' % logging.getLevelName(logging.WARNING))
-    level = getattr(logging, 'DEBUG' if verbose else 'INFO')
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s %(levelname)-8s %(message)s',
-    )
-
-
 def get_progress_string(index, total):
+    if total <= 0:
+        return ''
     percent = 100 * (index) / total
     return f'[{index + 1}/{total} ({percent:.1f}%)]'
 
 
+def print_progress_string(index, total, title=str()):
+    progress_string = get_progress_string(index, total)
+    print(progress_string, title, end='\r')
+
+
 def get_timecode_from_sec(seconds):
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
+    if seconds < 0:
+        h, m, s = 0, 0, 0
+    else:
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
     timecode = "%d:%02d:%02d" % (h, m, s)
+
     return timecode
 
 
@@ -153,8 +170,8 @@ def get_mediasite_host(url):
     return url.split('/')[2]
 
 
-def get_argparser():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def get_argparser(description=''):
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         '-v',
         '--verbose',

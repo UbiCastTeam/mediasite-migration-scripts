@@ -3,6 +3,8 @@ import logging
 import os
 import requests
 
+import mediasite_migration_scripts.utils.common as utils
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,7 +19,7 @@ class VideoCompositor:
 
     def download_all(self, videos, media_folder):
         for filename, url in videos.items():
-            ext = url.split('.')[-1]
+            ext = url.split('.')[-1].split('?')[0]
             if not self.download(url, media_folder / f'{filename}.{ext}'):
                 return False
         return True
@@ -41,7 +43,7 @@ class VideoCompositor:
                 return False
 
             with open(video_path, 'wb') as f:
-                logger.debug(f'Downloading {video_url} to {video_path}')
+                logger.debug(f'Downloading [{video_url}] to : {video_path}')
                 downloaded = 0
                 chunk_size = 8192
                 for chunk in request.iter_content(chunk_size=chunk_size):
@@ -50,7 +52,7 @@ class VideoCompositor:
                     # If you have chunk encoded response uncomment if
                     # and set chunk_size parameter to None.
                     #if chunk:
-                    print(f'Downloading: {int(100 * downloaded/total_length)}%', end='\r')
+                    utils.print_progress_string(downloaded, total_length, title='Downloading')
                     print(' ' * 50, end='\r')
                     f.write(chunk)
             self.nb_folders += 1

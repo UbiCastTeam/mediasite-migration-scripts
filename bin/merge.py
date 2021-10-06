@@ -268,12 +268,12 @@ class Merger:
             result['sample_rate'] = ainfo.get_sample_rate()
             result['a_codec'] = GstPbutils.pb_utils_get_codec_description(ainfo.get_caps())
         except IndexError:
-            logging.warning('File {media_file} contains no audio stream')
+            logging.warning(f'File {media_file} contains no audio stream')
         return result
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser()
 
     parser.add_argument(
         '-v',
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    utils.setup_logging(args.verbose)
+    utils.set_logger(verbose=args.verbose)
 
     mainloop = GLib.MainLoop()
 

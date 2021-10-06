@@ -30,7 +30,7 @@ def get_video_urls(presentation):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser()
 
     parser.add_argument(
         'presentation_ids',

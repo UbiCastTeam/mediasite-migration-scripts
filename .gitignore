@@ -129,12 +129,13 @@ dmypy.json
 
 # MediaTransfer client
 *.json
-!tests/mediasite_data_test.json
-!tests/e2e/mediaserver_data_e2e.json
-tests/content/
+!tests/mediasite_test_data.json
+!tests/samples/*
 config.json.backup
 *.txt
 *.csv
+download/
+data/
 
 # VS Code
 .vscode

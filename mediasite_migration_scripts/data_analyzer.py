@@ -3,7 +3,6 @@ import logging
 from mediasite_migration_scripts.utils.common import get_age_days
 import mediasite_migration_scripts.utils.mediasite as mediasite
 import json
-from copy import copy
 
 logger = logging.getLogger(__name__)
 
@@ -325,52 +324,6 @@ class DataAnalyzer():
                         presentation_copy['name'] = new_name + ' sample (name)'
                         presentation_copy['title'] = new_name + ' sample (title)'
                     return folder_copy
-
-    def anonymize_data(self, data):
-        anon_data = copy(data)
-        fields = [
-            'description',
-            'id',
-            'name',
-            'owner_username',
-            'parent_id',
-            'path',
-            'creator',
-            'title',
-            'display_name',
-            'owner_display_name',
-            'owner_mail',
-            'presenter_display_name',
-            'OcrText',
-            'url'
-        ]
-        if isinstance(anon_data, dict):
-            for key, val in anon_data.items():
-                new_val = None
-                if isinstance(val, dict):
-                    new_val = self.anonymize_data(val)
-                elif isinstance(val, list):
-                    new_val = [self.anonymize_data(i) for i in val]
-                else:
-                    if key in fields:
-                        if 'url' in key:
-                            new_val = f'https://anon.com/{key}'
-                        elif 'mail' in key:
-                            new_val = 'john.doe@server.com'
-                        else:
-                            new_val = f'anonymized {key}'
-                if new_val is not None:
-                    anon_data[key] = new_val
-        elif isinstance(anon_data, list):
-            for i in anon_data:
-                i = self.anonymize_data(i)
-        elif isinstance(anon_data, str):
-            if 'http' and '://' in anon_data:
-                anon_data = 'https://anon.com/fake'
-            else:
-                anon_data = 'anon text'
-
-        return anon_data
 
     def _set_presentations(self):
         presentations = []

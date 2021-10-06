@@ -4,7 +4,6 @@
 import json
 import logging
 import argparse
-from argparse import RawTextHelpFormatter
 import os
 import sys
 
@@ -12,11 +11,8 @@ from mediasite_migration_scripts.data_analyzer import DataAnalyzer
 import mediasite_migration_scripts.utils.common as utils
 
 if __name__ == '__main__':
-    def usage(message=''):
-        return 'This script is used to extract metadata from mediasite platform'
-
     def manage_opts():
-        parser = argparse.ArgumentParser(description=usage(), formatter_class=RawTextHelpFormatter)
+        parser = argparse.ArgumentParser(description='This script is used to extract metadata from mediasite platform')
         parser.add_argument(
             '-q',
             '--quiet',
@@ -77,7 +73,7 @@ if __name__ == '__main__':
         run_import = input('No data to analyze. Do you want to run import data ? [y/N] ').lower()
         if run_import == 'y' or run_import == 'yes':
             args = ' '.join(sys.argv[1:])
-            returncode = os.system(f'python3 bin/import_data.py {args}')
+            returncode = os.system(f'python3 bin/collect.py {args}')
             if returncode != 0:
                 logging.error('Failed to import data')
                 sys.exit(1)

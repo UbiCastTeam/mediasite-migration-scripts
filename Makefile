@@ -13,11 +13,11 @@ shell: build
 		--rm mediasite \
 		/bin/bash
 
-import_data: build
+collect: build
 	docker run -it \
 		-v ${CURDIR}:/src \
 		--rm mediasite \
-		python3 bin/import_data.py $(ARGS)
+		python3 bin/collect.py $(ARGS)
 
 analyze_data: build
 	docker run -it \
@@ -30,6 +30,12 @@ migrate: build
 		-v ${CURDIR}:/src \
 		--rm mediasite \
 		python3 bin/migrate.py $(ARGS)
+
+anonymize: build
+	docker run -it \
+		-v ${CURDIR}:/src \
+		--rm mediasite \
+		python3 bin/anonymize.py $(ARGS)
 
 tests: build
 	docker run -it \
@@ -70,11 +76,11 @@ merge_all:
 clean_collect:
 	sudo rm -rf *mediasite_*.json presentations_*.txt samples.json
 
+clean_migrate:
+	sudo rm -rf downloads/composite redirections.json *mediaserver_data.json
+
 clean_merge:
 	sudo rm -f downloads/composite/*/composite.mp4 downloads/composite/*/mediaserver_layout.json
-
-clean_migrate:
-	sudo rm -rf downloads redirections.json *mediaserver_data.json
 
 clean:
 	$(MAKE) clean_collect

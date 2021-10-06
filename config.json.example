@@ -15,5 +15,6 @@
         "video/mp4": true,
         "video/x-ms-wmv": false
     },
-    "external_data" : false
+    "external_data" : false,
+    "download_folder": "download"
 }

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import csv
 import json
 import logging
 from mediasite_migration_scripts.utils import common as utils
@@ -118,12 +117,11 @@ for f in folders_to_process:
 
 print()
 print(f'{skipped_presentations}/{total_presentations} presentations have not been migrated')
+
 print('Writing csv')
-with open('report.csv', 'w', newline='') as csvfile:
-    fieldnames = ['mediasite_path', 'mediaserver_path', 'mediasite_url', 'mediaserver_url']
-    writer = csv.DictWriter(csvfile, delimiter='|', fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(rows)
+csv_filename = 'report.csv'
+fieldnames = ['mediasite_path', 'mediaserver_path', 'mediasite_url', 'mediaserver_url']
+utils.write_csv(csv_filename, fieldnames, rows)
 
 if redirections_copy != redirections:
     fixed_redirections_path = 'redirections_fixed.json'
