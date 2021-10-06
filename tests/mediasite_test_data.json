@@ -88,7 +88,7 @@
                 },
                 {
                     "Id": "2c83dd0e79734f41a09194d73e883e601d",
-                    "Title": "Media with wrong chapters",
+                    "Title": "Media with wrong chapters with timecodes beyond duration",
                     "ParentFolderId": "00256a42f59641ff865d57f2784374f314",
                     "CreationDate": "2013-09-04T07:07:32.217Z",
                     "RecordDate": "2013-09-04T07:05:00",

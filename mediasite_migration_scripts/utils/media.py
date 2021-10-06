@@ -2,7 +2,6 @@
 from pymediainfo import MediaInfo
 import logging
 import utils.http as http
-import requests
 
 logger = logging.getLogger(__name__)
 

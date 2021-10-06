@@ -79,7 +79,6 @@ class TestMediaTransferE2E(TestCase):
                         self.assertEqual(layout_origin_dict['layers'][i], layer_res)
 
             if media_origin.get('chapters'):
-                breakpoint()
                 self._check_chapters(media_origin)
             self._check_slides(media_origin)
 
