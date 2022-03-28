@@ -998,6 +998,7 @@ class MediaTransfer():
         return video_type, slides_source
 
     def _find_file_to_upload(self, video_files):
+        # FIXME: FIND BEST / HIGHEST QUALITY INSTEAD OF THE FIRST ONE
         video_url = ''
         for file in video_files:
             url = file['url']
