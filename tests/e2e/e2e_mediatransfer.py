@@ -86,9 +86,9 @@ class TestMediaTransferE2E(TestCase):
 
             media_title = media_result['title']
             channel_title = media_result['parent_title']
-            if media_title == 'Media with channel with 2 catalogs':
-                self.assertEqual(channel_title, 'Recent Catalog')
-            elif media_title == 'Media with parent parent folder without catalog':
+            if media_title == 'Media with channel with 2 channels':
+                self.assertEqual(channel_title, 'Recent Channel')
+            elif media_title == 'Media with parent parent folder without channel':
                 channel = self.ms_client.api(
                     'channels/get', method='get', params={'title': channel_title})
                 self.assertTrue(channel['info']['unlisted'])

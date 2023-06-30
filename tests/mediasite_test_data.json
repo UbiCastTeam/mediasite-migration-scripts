@@ -3,15 +3,15 @@
         {
             "Id": "00256a42f59641ff865d57f2784374f314",
             "ParentFolderId": "f239e98088ff4dc9b9d76d2f808f964c14",
-            "Name": "Channel with Catalog - Folder Name !",
+            "Name": "Channel with Channel - Folder Name !",
             "Owner": "anon@mail.com",
             "Description": "Share folder for mymediasite users diergeneeskunde",
-            "Catalogs": [
+            "Channels": [
                 {
                     "Id": "b9660ea784f14294a08977c9dc9e414021",
-                    "Name": "Channel with Catalog - Catalog Name",
+                    "Name": "Channel with Channel - Channel Name",
                     "Description": "Share folder for mymediasite users diergeneeskunde",
-                    "CatalogUrl": "https://anon.com/fake",
+                    "ChannelUrl": "https://anon.com/fake",
                     "Owner": "anon@mail.com",
                     "CreationDate": "2013-09-11T09:41:44",
                     "LinkedFolderId": "00256a42f59641ff865d57f2784374f314"
@@ -422,9 +422,9 @@
         {
             "Id": "00a0ee4e7e104790a4d2e335564bf5c614",
             "ParentFolderId": "8264ff71e2214db0b506f6df37e3c27614",
-            "Name": "Channel without Catalog - Folder Name",
+            "Name": "Channel without Channel - Folder Name",
             "Owner": "anon@mail.com",
-            "Catalogs": [],
+            "Channels": [],
             "Presentations": [
                 {
                     "Id": "c26381c30fe44326be1621fc671c48c81d",
@@ -535,23 +535,23 @@
         {
             "Id": "00a0ee4e7e104790a4458e335564bf5c614",
             "ParentFolderId": "8264ff71e2214db0b506f6df37e3c27614",
-            "Name": "Channel with 2 catalogs",
+            "Name": "Channel with 2 channels",
             "Owner": "anon@mail.com",
-            "Catalogs": [
+            "Channels": [
                 {
                     "Id": "b9660ea784f14294a08977c9dc9e414021",
-                    "Name": "Recent Catalog",
+                    "Name": "Recent Channel",
                     "Description": "Share folder for mymediasite users diergeneeskunde",
-                    "CatalogUrl": "https://anon.com/fake",
+                    "ChannelUrl": "https://anon.com/fake",
                     "Owner": "anon@mail.com",
                     "CreationDate": "2013-09-11T09:41:44",
                     "LinkedFolderId": "00256a42f59641ff865d57f2784374f314"
                 },
                 {
                     "Id": "b9660ea784f14294a08977c9dc9e414021",
-                    "Name": "Old Catalog",
+                    "Name": "Old Channel",
                     "Description": "Share folder for mymediasite users diergeneeskunde",
-                    "CatalogUrl": "https://anon.com/fake",
+                    "ChannelUrl": "https://anon.com/fake",
                     "Owner": "anon@mail.com",
                     "CreationDate": "1999-09-11T09:41:44",
                     "LinkedFolderId": "00256a42f59641ff865d57f2784374f314"
@@ -560,7 +560,7 @@
             "Presentations": [
                 {
                     "Id": "c26381c30fe44326be1621fc671c48c81a",
-                    "Title": "Media with channel with 2 catalogs",
+                    "Title": "Media with channel with 2 channels",
                     "ParentFolderId": "00a0ee4e7e104790a4458e335564bf5c614",
                     "CreationDate": "2013-01-24T08:04:19.813Z",
                     "RecordDate": "2013-09-02T14:00:00",
@@ -665,13 +665,13 @@
         {
             "Id": "00a0ee4e7e104790a4d2e335564bf5c615",
             "ParentFolderId": "00a0ee4e7e104790a4d2e335564bf5c614",
-            "Name": "Sub-Channel with Parent Without Catalog - Folder Name",
+            "Name": "Sub-Channel with Parent Without Channel - Folder Name",
             "Owner": "anon@mail.com",
-            "Catalogs": [],
+            "Channels": [],
             "Presentations": [
                 {
                     "Id": "c26381c30fe44326be98621fc671c48c81d",
-                    "Title": "Media with parent parent folder without catalog",
+                    "Title": "Media with parent parent folder without channel",
                     "ParentFolderId": "00a0ee4e7e104790a4d2e335564bf5c615",
                     "CreationDate": "2013-01-24T08:04:19.813Z",
                     "RecordDate": "2013-09-02T14:00:00",
@@ -779,7 +779,7 @@
             "Name": "Test-User-From-MediaSite",
             "Owner": "test-user-from-mediasite",
             "Description": "Share folder for mymediasite users diergeneeskunde",
-            "Catalogs": [],
+            "Channels": [],
             "Presentations": [
                 {
                     "Id": "b129e5e803c94f74855e001c1d8b40b4258",
@@ -848,7 +848,7 @@
             "Name": "UnknownUser",
             "Owner": "unknownuser",
             "Description": "Share folder for mymediasite users diergeneeskunde",
-            "Catalogs": [],
+            "Channels": [],
             "Presentations": [
                 {
                     "Id": "b129e5e803c94f74855e001c1d8b40b425a",

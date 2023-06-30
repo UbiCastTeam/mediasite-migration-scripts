@@ -11,7 +11,7 @@ class DataAnalyzer():
     def __init__(self, data, config=None):
         self.config = config
         self.folders = self._filter_data(data)
-        self.catalogs = self._set_catalogs()
+        self.channels = self._set_channels()
         self.presentations = self._set_presentations()
         self.mp4_urls = self.set_mp4_urls()
 
@@ -342,11 +342,11 @@ class DataAnalyzer():
                         break
         return mp4_urls
 
-    def _set_catalogs(self):
-        catalogs = list()
+    def _set_channels(self):
+        channels = list()
         for folder in self.folders:
-            catalogs.extend(folder.get('catalogs'))
-        return catalogs
+            channels.extend(folder.get('channels'))
+        return channels
 
     @staticmethod
     def find_best_format(video):

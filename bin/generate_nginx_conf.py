@@ -7,7 +7,7 @@ from mediasite_migration_scripts.utils import common as utils
 
 
 conf_template = '''
-# nginx config file for preserving original presentation and catalog urls
+# nginx config file for preserving original presentation and channel urls
 
 server {
 	listen 80;

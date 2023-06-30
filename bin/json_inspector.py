@@ -41,10 +41,10 @@ fields = args.search_fields.split(',')
 
 folders = 0
 presentations = 0
-catalogs = 0
+channels = 0
 search_results_folders = list()
 search_results_presentations = list()
-search_results_catalogs = list()
+search_results_channels = list()
 
 with open(input_file, 'r') as f:
     print(f'Loading {input_file}')
@@ -55,7 +55,7 @@ with open(input_file, 'r') as f:
     for f in d:
         folders += 1
         presentations += len(f.get('presentations', []))
-        catalogs += len(f.get('catalogs', []))
+        channels += len(f.get('channels', []))
 
         if s:
             # hide content that is too verbose
@@ -76,11 +76,11 @@ with open(input_file, 'r') as f:
                         if p_copy not in search_results_presentations:
                             search_results_presentations.append(p_copy)
                             print(f'Found term "{s}" in field "{field}" of presentation {p_copy["id"]}')
-                for c in f.get('catalogs', []):
+                for c in f.get('channels', []):
                     if s in c.get(field, ''):
-                        if c not in search_results_catalogs:
-                            search_results_catalogs.append(c)
-                            print(f'Found term "{s}" in field "{field}" of catalog {c["id"]}')
+                        if c not in search_results_channels:
+                            search_results_channels.append(c)
+                            print(f'Found term "{s}" in field "{field}" of channel {c["id"]}')
 
 
 def print_short(items, max_items=10):
@@ -99,10 +99,10 @@ def print_short(items, max_items=10):
 results = [
     ['folders', search_results_folders],
     ['presentations', search_results_presentations],
-    ['catalogs', search_results_catalogs],
+    ['channels', search_results_channels],
 ]
 
-print(f'Total: {folders} folders, {presentations} presentations, {catalogs} catalogs')
+print(f'Total: {folders} folders, {presentations} presentations, {channels} channels')
 if args.search:
     for name, result in results:
         print(f'Found {len(result)} in {name} search results')

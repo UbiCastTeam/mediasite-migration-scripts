@@ -89,7 +89,7 @@ if __name__ == '__main__':
                     # needed to get path etc
                     pres['folder_path'] = folder['path']
                     pres['folder_id'] = folder['id']
-                    pres['folder_catalogs'] = folder['catalogs']
+                    pres['folder_channels'] = folder['channels']
                     presentations.append(pres)
     print(f'Found {len(presentations)} presentations')
     if presentations:

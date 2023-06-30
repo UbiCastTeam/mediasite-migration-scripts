@@ -88,7 +88,7 @@ class MediaTransfer():
 
         self.all_paths = {folder['Id']: self.find_folder_path(folder['Id']) for folder in self.mediasite_folders}
         self.public_paths = [self.find_folder_path(
-            folder['Id']) for folder in self.mediasite_folders if len(folder.get('Catalogs', [])) > 0]
+            folder['Id']) for folder in self.mediasite_folders if len(folder.get('Channels', [])) > 0]
         self.mediaserver_data = self.to_mediaserver_keys()
 
     def write_redirections_file(self):
@@ -556,28 +556,28 @@ class MediaTransfer():
     def get_final_channel_title(self, folder):
         '''
         The MediaServer channel title should take the most recent
-        catalog name (if any), otherwise use the folder name.
+        channel name (if any), otherwise use the folder name.
         '''
         name = folder['Name']
         most_recent_time = None
-        most_recent_catalog = None
-        for c in folder['Catalogs']:
-            catalog_date = mediasite_utils.parse_mediasite_date(
+        most_recent_channel = None
+        for c in folder['Channels']:
+            channel_date = mediasite_utils.parse_mediasite_date(
                 c['CreationDate'])
-            if most_recent_time is None or catalog_date > most_recent_time:
-                most_recent_time = catalog_date
-                most_recent_catalog = c
-        if most_recent_catalog is not None:
-            name = most_recent_catalog['Name']
-            logger.debug(f'Overriding channel name with the most recent catalog name {name}')
+            if most_recent_time is None or channel_date > most_recent_time:
+                most_recent_time = channel_date
+                most_recent_channel = c
+        if most_recent_channel is not None:
+            name = most_recent_channel['Name']
+            logger.debug(f'Overriding channel name with the most recent channel name {name}')
         return name
 
     @lru_cache
-    def channel_has_catalog(self, channel_path):
+    def channel_has_channel(self, channel_path):
         for f in self.mediaserver_data:
             if f.get('ref').get('channel_path') == channel_path:
-                has_catalog = not f['data']['channel_unlisted']
-                return has_catalog
+                has_channel = not f['data']['channel_unlisted']
+                return has_channel
         return False
 
     @lru_cache
@@ -588,7 +588,7 @@ class MediaTransfer():
         '''
         logger.debug(f'Creating channel path: {channel_path}')
 
-        # if at least one intermediary folder has a catalog, then the entire tree should be listed:
+        # if at least one intermediary folder has a channel, then the entire tree should be listed:
         # * any upper channels needs to be listed so that users can discover it in MediaServer
         # * any leaf chennels needs to be listed too because mediasite publishes subfolders recursively
         is_unlisted = True
@@ -598,9 +598,9 @@ class MediaTransfer():
         for i in range(len(tree) + 1):
             if tree:
                 path = '/' + '/'.join(tree)
-                if self.channel_has_catalog(path):
+                if self.channel_has_channel(path):
                     logger.debug(
-                        f'Parent folder {path} has a catalog, making complete path {channel_path} listed')
+                        f'Parent folder {path} has a channel, making complete path {channel_path} listed')
                     is_unlisted = False
                 tree_list.append(path)
                 tree.pop(-1)
@@ -618,10 +618,10 @@ class MediaTransfer():
                 external_data = json.dumps({
                     'id': folder['Id'],
                     'name': folder['Name'],
-                    'catalogs': folder['Catalogs']},
+                    'channels': folder['Channels']},
                     indent=2)
-                for c in folder['Catalogs']:
-                    urls.append(c['CatalogUrl'])
+                for c in folder['Channels']:
+                    urls.append(c['ChannelUrl'])
             existing_channel = self.get_ms_channel_by_ref(folder_id)
             if existing_channel:
                 new_oid = existing_channel['oid']
@@ -868,8 +868,8 @@ class MediaTransfer():
                 folder_path = self.find_folder_path(
                     folder['Id'], self.mediasite_folders)
                 if utils.is_folder_to_add(folder_path, config=self.config):
-                    has_catalog = (len(folder.get('Catalogs', [])) > 0)
-                    is_unlisted_channel = not has_catalog
+                    has_channel = (len(folder.get('Channels', [])) > 0)
+                    is_unlisted_channel = not has_channel
                     for p in self.public_paths:
                         if folder_path.startswith(p):
                             is_unlisted_channel = False
@@ -915,7 +915,7 @@ class MediaTransfer():
                             speaker_data = self.get_speaker_data(presentation.get('Owner'))
                             data.update(speaker_data)
 
-                            if has_catalog:
+                            if has_channel:
                                 channel_path_splitted = folder_path.split('/')
                                 channel_path_splitted[-1] = data['channel_title']
                                 channel_path = '/'.join(channel_path_splitted)

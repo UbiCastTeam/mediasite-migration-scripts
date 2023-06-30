@@ -29,7 +29,7 @@ class DataExtractor():
         self.session = http.get_session(config['mediasite_api_user'], config['mediasite_api_password'])
         self.max_folders = options.max_folders
 
-        self.resources_to_get = ['Folders', 'Catalogs', 'Presentations']
+        self.resources_to_get = ['Folders', 'Channels', 'Presentations']
         self.users_types_to_fetch = ['Creator', 'Owner', 'PrimaryPresenter']
         self.presentation_videos_endpoint = 'OnDemandContent'
         self.presentation_content_endpoints = ['TimedEvents', 'Presenters']
@@ -50,7 +50,7 @@ class DataExtractor():
         self.all_data = dict()
         self.folders_presentations = dict()
         self.users = {'UserProfiles': list()}
-        self.linked_catalogs = list()
+        self.linked_channels = list()
 
         self.download_folder = dl = Path(config.get('download_folder', '/downloads'))
         self.slides_download_folder = dl / 'slides'
@@ -90,7 +90,7 @@ class DataExtractor():
     def extract_mediasite_data(self, parent_id=None, filtered=True):
         '''
         Collect all data from Mediasite platform ordered by folder.
-        Folders, presentations, and catalogs data fields will be filtered by default unless filtered is false
+        Folders, presentations, and channels data fields will be filtered by default unless filtered is false
 
         params :
             parent_id : id of the top parent folder where parsing should begin
@@ -144,16 +144,16 @@ class DataExtractor():
         presentations = self.timeit(self.mediasite_client.presentation.get_all_presentations)
         return presentations
 
-    def get_all_catalogs(self):
-        all_catalogs = self.timeit(self.mediasite_client.catalog.get_all_catalogs)
-        return all_catalogs
+    def get_all_channels(self):
+        all_channels = self.timeit(self.mediasite_client.channel.get_all_channels)
+        return all_channels
 
-    def get_folder_catalogs(self, folder_id):
-        folder_catalogs = list()
-        for catalog in self.catalogs:
-            if folder_id == catalog.get('LinkedFolderId'):
-                folder_catalogs.append(catalog)
-        return folder_catalogs
+    def get_folder_channels(self, folder_id):
+        folder_channels = list()
+        for channel in self.channels:
+            if folder_id == channel.get('LinkedFolderId'):
+                folder_channels.append(channel)
+        return folder_channels
 
     def get_folder_presentations(self, folder_id):
         folder_presentations = list()

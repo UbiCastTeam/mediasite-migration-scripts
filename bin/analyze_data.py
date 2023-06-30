@@ -101,10 +101,10 @@ if __name__ == '__main__':
 
     analyzer = DataAnalyzer(data, config_data)
 
-    folder_in_catalogs = list()
+    folder_in_channels = list()
     for folder in analyzer.folders:
-        if len(folder['catalogs']) > 0:
-            folder_in_catalogs.append(folder)
+        if len(folder['channels']) > 0:
+            folder_in_channels.append(folder)
 
     if options.check_resources:
         downloadable_mp4_count = analyzer.count_downloadable_mp4s()
@@ -131,7 +131,7 @@ if __name__ == '__main__':
             f.write(text)
 
     print()
-    print(f'Found {len(analyzer.folders)} folders, {len(analyzer.presentations)} presentations, {len(folder_in_catalogs)} folders linked to a catalog')
+    print(f'Found {len(analyzer.folders)} folders, {len(analyzer.presentations)} presentations, {len(folder_in_channels)} folders linked to a channel')
     print('{total_importable} / {total_video_count} importable videos ({total_duration_h} hours, {total_size_gb} GB), {total_slides} slides'.format(**encoding_infos))
     print()
     print(encoding_infos['video_types_stats'])
